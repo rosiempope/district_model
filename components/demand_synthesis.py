@@ -240,21 +240,21 @@ def _heating_profile(
     cool_full_C: float  = 26.0,
 ) -> np.ndarray:
 
-    """
-    Two-part cooling demand model — returns element-wise maximum:
- 
-    Part A (CDD scaling): distributes annual_cool_kWh proportional to
-    cooling degree-hours. Captures installed A/C load.
- 
-    Part B (comfort urgency ramp): smooth linear ramp 0→1 between
-    cool_onset_C and cool_full_C. Captures forward-looking demand —
-    people WILL seek cooling when it gets to 26°C+ even without
-    existing A/C infrastructure. Only active during occupied hours.
- 
-    Using max() means hot spells always show realistic demand peaks
-    even if the annual CDD total is low due to no A/C infrastructure.
+        """
+        Two-part cooling demand model — returns element-wise maximum:
+    
+        Part A (CDD scaling): distributes annual_cool_kWh proportional to
+        cooling degree-hours. Captures installed A/C load.
+    
+        Part B (comfort urgency ramp): smooth linear ramp 0→1 between
+        cool_onset_C and cool_full_C. Captures forward-looking demand —
+        people WILL seek cooling when it gets to 26°C+ even without
+        existing A/C infrastructure. Only active during occupied hours.
+    
+        Using max() means hot spells always show realistic demand peaks
+        even if the annual CDD total is low due to no A/C infrastructure.
 
-    """
+        """
 
     n = len(T_air)
     occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
@@ -327,13 +327,14 @@ def _dhw_profile(
 # ── Annual demand resolver ─────────────────────────────────────────────────────
  
 def _resolve_annual_demands(building: dict) -> tuple[float, float, float]:
-   """
-    Resolve annual heating, cooling, DHW demands (kWh).
-    Uses explicit config values if provided, otherwise scales benchmarks
-    by floor_area_m2 or units (assuming 75 m²/dwelling).
     """
+        Resolve annual heating, cooling, DHW demands (kWh).
+        Uses explicit config values if provided, otherwise scales benchmarks
+        by floor_area_m2 or units (assuming 75 m²/dwelling).
+        """
 
     btype = building.get("type", "office")
+
     if btype not in BUILDING_TYPES:
         raise ValueError(
             f"Unknown building type '{btype}'. "
