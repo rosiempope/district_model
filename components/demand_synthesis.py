@@ -42,7 +42,7 @@ BUILDING_TYPES = {
     "office": {
         "heat_kWh_m2":    120*0.85,
         "cool_kWh_m2":    30.0,
-        "dhw_kWh_m2":     "heat_kWh_m2" * 0.15,
+        "dhw_kWh_m2":     120*0.15,
         "occupancy":      "office",
         "base_load_frac":  0.15,
         "description":    "General office (naturally ventilated)",
@@ -50,13 +50,13 @@ BUILDING_TYPES = {
     "office_ac": {
         "heat_kWh_m2":    120*0.85,
         "cool_kWh_m2":    50.0,
-        "dhw_kWh_m2":     "heat_kWh_m2" * 0.15,
+        "dhw_kWh_m2":     120*0.15,
         "occupancy":      "office",
         "base_load_frac":  0.15,
         "description":    "Air-conditioned office",
     },
     "residential": {
-        "heat_kWh_m2":    80.0,   # Part L 2021 new build
+        "heat_kWh_m2":    120*0.70,   # Part L 2021 new build
         "cool_kWh_m2":     2.0,   # Near-zero installed A/C; comfort ramp carries this
         "dhw_kWh_m2":     35.0,
         "occupancy":      "residential",
@@ -151,3 +151,346 @@ def _make_occupancy(schedule_key: str, n_hours: int = 8760) -> np.ndarray:
     school_hols = summer_hols | xmas_hols | easter_hols
  
     occ = np.zeros(n_hours)
+
+    if schedule_key == "office":
+        occ = np.where(is_weekday  & (hour_of_day >= 8)  & (hour_of_day < 18), 1.00, occ)
+        occ = np.where(is_saturday & (hour_of_day >= 9)  & (hour_of_day < 13), 0.20, occ)
+ 
+    elif schedule_key == "residential":
+        occ = np.where((hour_of_day >= 6)  & (hour_of_day < 9),  0.70, occ)
+        occ = np.where((hour_of_day >= 9)  & (hour_of_day < 17), 0.30, occ)
+        occ = np.where((hour_of_day >= 17) & (hour_of_day < 23), 0.85, occ)
+        occ = np.where((hour_of_day >= 23) | (hour_of_day < 6),  0.50, occ)
+        occ = np.where(
+            (is_saturday | is_sunday) & (hour_of_day >= 8) & (hour_of_day < 22),
+            0.90, occ
+        )
+
+    elif schedule_key == "hospital":
+        occ = np.where((hour_of_day >= 7)  & (hour_of_day < 21), 1.00, occ)
+        occ = np.where((hour_of_day >= 21) | (hour_of_day < 7),  0.60, occ)
+ 
+    elif schedule_key == "retail":
+        occ = np.where(is_weekday  & (hour_of_day >= 9)  & (hour_of_day < 21), 1.00, occ)
+        occ = np.where(is_saturday & (hour_of_day >= 9)  & (hour_of_day < 21), 0.90, occ)
+        occ = np.where(is_sunday   & (hour_of_day >= 11) & (hour_of_day < 17), 0.60, occ)
+ 
+    elif schedule_key == "retail_extended":
+        occ = np.where(is_weekday  & (hour_of_day >= 7)  & (hour_of_day < 22), 1.00, occ)
+        occ = np.where(is_saturday & (hour_of_day >= 7)  & (hour_of_day < 22), 1.00, occ)
+        occ = np.where(is_sunday   & (hour_of_day >= 10) & (hour_of_day < 16), 0.80, occ)
+ 
+    elif schedule_key == "hotel":
+        occ = np.where((hour_of_day >= 7)  & (hour_of_day < 23), 0.80, occ)
+        occ = np.where((hour_of_day >= 23) | (hour_of_day < 7),  0.50, occ)
+ 
+    elif schedule_key == "school":
+        in_term = ~school_hols
+        occ = np.where(
+            in_term & is_weekday & (hour_of_day >= 8) & (hour_of_day < 18),
+            1.00, occ
+        )
+ 
+    elif schedule_key == "mixed":
+        occ = 0.5 * _make_occupancy("office", n_hours) + \
+              0.5 * _make_occupancy("residential", n_hours)
+ 
+    elif schedule_key == "always_on":
+        occ = np.ones(n_hours)
+ 
+    return occ
+
+# ── Core profile builders ──────────────────────────────────────────────────────
+
+def _heating_profile(
+    T_air: np.ndarray,
+    annual_heat_kWh: float,
+    occupancy: np.ndarray,
+    base_load_frac: float,
+    heat_base_C: float = 15.5,
+) -> np.ndarray:
+
+    """
+    HDD-scaled heating profile modulated by occupancy.
+    base_load_frac ensures fabric heat loss continues when unoccupied.
+    Returns hourly load in kW.
+    """
+
+    HDD_h = np.clip(heat_base_C - T_air, 0, None)
+    HDD_annual = HDD_h.sum()
+
+    if HDD_annual < 1.0:
+        warnings.warn("Annual HDD near zero — check weather data or base temperature.")
+        return np.zeros(len(T_air))
+    
+    # Occupancy modifier: base_load when empty, full load when occupied
+    occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
+    raw = HDD_h * occ_modifier
+ 
+    scale = annual_heat_kWh / raw.sum() if raw.sum() > 0 else 0.0
+    return raw * scale  # kW
+
+    def _cooling_profile(
+    T_air: np.ndarray,
+    annual_cool_kWh: float,
+    occupancy: np.ndarray,
+    base_load_frac: float,
+    cool_base_C: float  = 20.0,
+    cool_onset_C: float = 22.0,
+    cool_full_C: float  = 26.0,
+) -> np.ndarray:
+
+    """
+    Two-part cooling demand model — returns element-wise maximum:
+ 
+    Part A (CDD scaling): distributes annual_cool_kWh proportional to
+    cooling degree-hours. Captures installed A/C load.
+ 
+    Part B (comfort urgency ramp): smooth linear ramp 0→1 between
+    cool_onset_C and cool_full_C. Captures forward-looking demand —
+    people WILL seek cooling when it gets to 26°C+ even without
+    existing A/C infrastructure. Only active during occupied hours.
+ 
+    Using max() means hot spells always show realistic demand peaks
+    even if the annual CDD total is low due to no A/C infrastructure.
+
+    """
+
+    n = len(T_air)
+    occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
+
+    # -- Part A: CDD scaling --------------------------------------------------
+    CDD_h = np.clip(T_air - cool_base_C, 0, None)
+    if CDD_h.sum() > 0.1:
+        raw_A = CDD_h * occ_modifier
+        part_A = raw_A * (annual_cool_kWh / raw_A.sum())
+    else:
+        # Too few hours above base — CDD gives near-zero; Part B takes over
+        part_A = np.zeros(n)
+
+    # -- Part B: Comfort urgency ramp -----------------------------------------
+    # Linear ramp: 0 at onset, 1 at full saturation, capped at 1 above
+    ramp = np.clip(
+        (T_air - cool_onset_C) / (cool_full_C - cool_onset_C),
+        0.0, 1.0
+    )
+    # Only active when people are actually in the building
+    raw_B = ramp * occupancy
+    if raw_B.sum() > 0:
+        part_B = raw_B * (annual_cool_kWh / raw_B.sum())
+    else:
+        part_B = np.zeros(n)
+ 
+    # Final: whichever method gives higher load wins at each hour
+    return np.maximum(part_A, part_B)  # kW
+
+
+def _dhw_profile(
+    annual_dhw_kWh: float,
+    n_hours: int = 8760,
+    occupancy: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """
+    DHW demand profile with seasonal and diurnal shape.
+    Not weather-driven — people shower regardless of outside temperature.
+    Seasonal variation reflects cold inlet water temperature in winter
+    requiring more energy to heat to setpoint.
+    Returns hourly load in kW.
+    """
+
+    hours       = np.arange(n_hours)
+    hour_of_day = hours % 24
+    day_of_year = hours // 24
+ 
+    # Seasonal: ±12% amplitude, peaks mid-winter (day ~30)
+    seasonal = 1.0 + 0.12 * np.cos(2 * np.pi * (day_of_year - 30) / 365)
+ 
+    # Diurnal: morning peak at 07:00 (showers), evening at 19:00 (cooking/bath)
+    diurnal = (
+        0.50 * np.exp(-0.5 * ((hour_of_day - 7)  / 2.0) ** 2) +
+        0.30 * np.exp(-0.5 * ((hour_of_day - 19) / 2.5) ** 2) +
+        0.20   # base overnight load (legionella cycling, commercial kitchens)
+    )
+ 
+    raw = seasonal * diurnal
+ 
+    # Soft occupancy mask: DHW doesn't fully disappear when unoccupied
+    # (legionella prevention cycling continues, some background load remains)
+    
+    if occupancy is not None:
+        raw = raw * (0.10 + 0.90 * occupancy)
+ 
+    scale = annual_dhw_kWh / raw.sum() if raw.sum() > 0 else 0.0
+    return raw * scale  # kW
+
+
+# ── Annual demand resolver ─────────────────────────────────────────────────────
+ 
+def _resolve_annual_demands(building: dict) -> tuple[float, float, float]:
+   """
+    Resolve annual heating, cooling, DHW demands (kWh).
+    Uses explicit config values if provided, otherwise scales benchmarks
+    by floor_area_m2 or units (assuming 75 m²/dwelling).
+    """
+
+    btype = building.get("type", "office")
+    if btype not in BUILDING_TYPES:
+        raise ValueError(
+            f"Unknown building type '{btype}'. "
+            f"Valid: {list(BUILDING_TYPES.keys())}"
+        )
+ 
+    bm = BUILDING_TYPES[btype]
+    floor_area = building.get("floor_area_m2")
+    units       = building.get("units")
+ 
+    if floor_area and float(floor_area) > 0:
+        scale = float(floor_area)
+    elif units and float(units) > 0:
+        scale = float(units) * 75.0   # 75 m²/dwelling assumption
+        building["floor_area_m2"] = scale
+    else:
+        raise ValueError(
+            f"Building '{building.get('name','?')}' needs "
+            f"'floor_area_m2' or 'units'."
+        )
+ 
+    heat = building.get("annual_heat_kWh") or (bm["heat_kWh_m2"] * scale)
+    cool = building.get("annual_cool_kWh") or (bm["cool_kWh_m2"] * scale)
+    dhw  = building.get("annual_dhw_kWh")  or (bm["dhw_kWh_m2"]  * scale)
+ 
+    return float(heat), float(cool), float(dhw)
+
+# ── Public API ─────────────────────────────────────────────────────────────────
+ 
+def synthesise_building(
+    weather_df: pd.DataFrame,
+    building: dict,
+    heat_base_C: float  = 15.5,
+    cool_onset_C: float = 22.0,
+    cool_full_C: float  = 26.0,
+) -> dict:
+    """
+    Generate 8,760-hour heating, cooling, and DHW profiles for one building.
+ 
+    Parameters
+    ----------
+    weather_df   : from wather_data.csv — 'temp_drybulb_C' column, 8760 rows
+    building     : config dict (name, type, floor_area_m2 or units, overrides)
+    heat_base_C  : HDD base temperature (°C) — 15.5 is UK standard
+    cool_onset_C : temperature where comfort cooling demand begins (°C)
+    cool_full_C  : temperature where comfort cooling demand saturates (°C)
+ 
+    Returns
+    -------
+    dict: name, type, annual/peak figures, hourly arrays (heating/cooling/dhw_kW),
+          total_heat_kW (heating + DHW), datetime_index
+    """
+
+    if len(weather_df) != 8760:
+        raise ValueError(f"weather_df must have 8760 rows; got {len(weather_df)}.")
+ 
+    T_air = weather_df["temp_drybulb_C"].values.astype(float)
+    btype = building.get("type", "office")
+    bm    = BUILDING_TYPES[btype]
+ 
+    occupancy = _make_occupancy(bm["occupancy"])
+    heat_kWh, cool_kWh, dhw_kWh = _resolve_annual_demands(building)
+ 
+    heating_kW = _heating_profile(T_air, heat_kWh, occupancy, bm["base_load_frac"], heat_base_C)
+    cooling_kW = _cooling_profile(T_air, cool_kWh, occupancy, bm["base_load_frac"],
+                                  cool_base_C=cool_onset_C,
+                                  cool_onset_C=cool_onset_C,
+                                  cool_full_C=cool_full_C)
+    dhw_kW     = _dhw_profile(dhw_kWh, occupancy=occupancy)
+ 
+    return {
+        "name":            building.get("name", btype),
+        "type":            btype,
+        "annual_heat_kWh": float(heating_kW.sum()),
+        "annual_cool_kWh": float(cooling_kW.sum()),
+        "annual_dhw_kWh":  float(dhw_kW.sum()),
+        "peak_heat_kW":    float(heating_kW.max()),
+        "peak_cool_kW":    float(cooling_kW.max()),
+        "peak_dhw_kW":     float(dhw_kW.max()),
+        "heating_kW":      heating_kW,
+        "cooling_kW":      cooling_kW,
+        "dhw_kW":          dhw_kW,
+        "total_heat_kW":   heating_kW + dhw_kW,
+        "datetime_index":  weather_df.index,
+    }
+
+def to_dataframe(network_result: dict) -> pd.DataFrame:
+    """
+    Flatten synthesise_network output to a single 8760-row DataFrame.
+    Columns: totals + per-node heating/cooling/dhw columns.
+    Suitable for CSV export or passing to the dispatch optimiser.
+    """
+    df = pd.DataFrame(index=network_result["datetime_index"])
+    df["total_heating_kW"] = network_result["total_heating_kW"]
+    df["total_cooling_kW"] = network_result["total_cooling_kW"]
+    df["total_dhw_kW"]     = network_result["total_dhw_kW"]
+    df["total_heat_kW"]    = network_result["total_heat_kW"]
+ 
+    for node in network_result["nodes"]:
+        safe = node["name"].replace(" ", "_").replace("-", "_").lower()
+        df[f"{safe}_heat_kW"] = node["heating_kW"]
+        df[f"{safe}_cool_kW"] = node["cooling_kW"]
+        df[f"{safe}_dhw_kW"]  = node["dhw_kW"]
+ 
+    return df
+
+# ── Self-test ──────────────────────────────────────────────────────────────────
+ 
+if __name__ == "__main__":
+    print("\n" + "="*65)
+    print("  demand_synthesis.py — self-test (synthetic weather)")
+    print("="*65)
+ 
+    np.random.seed(42)
+    hours = np.arange(8760)
+    T = (
+        11.5
+        + 8.0 * np.cos(2 * np.pi * (hours - 4200) / 8760)
+        + 3.0 * np.cos(2 * np.pi * (hours % 24 - 15) / 24)
+        + np.random.normal(0, 1.5, 8760)
+    )
+    dates      = pd.date_range("2023-01-01", periods=8760, freq="h")
+    weather_df = pd.DataFrame({"temp_drybulb_C": T}, index=dates)
+
+    scenario = {
+        "demand_nodes": [
+            {"name": "Perceval House",       "type": "office",              "floor_area_m2": 8500},
+            {"name": "High Street Retail",   "type": "retail",              "floor_area_m2": 3000},
+            {"name": "Ealing Hospital Wing", "type": "hospital",            "floor_area_m2": 12000},
+            {"name": "Dickens Yard Ph1",     "type": "residential",         "units": 350},
+            {"name": "Broadway Hotel",       "type": "hotel",               "floor_area_m2": 5000},
+            {"name": "Ellen Wilkinson Sch",  "type": "school",              "floor_area_m2": 6000},
+        ]
+    }
+
+    network = synthesise_network(weather_df, scenario)
+ 
+    print("\n  Per-building summary:")
+    print(network["summary_df"].to_string(index=False))
+ 
+    hh = network["total_heat_kW"]
+    cc = network["total_cooling_kW"]
+    jan_heat = hh[:744].mean()
+    jul_heat = hh[4344:5088].mean()
+    jul_cool = cc[4344:5088].mean()
+    jan_cool = cc[:744].mean()
+
+    print(f"\n  Network totals:")
+    print(f"    Annual space heat : {network['annual_heat_MWh']:>8.0f} MWh")
+    print(f"    Annual DHW        : {network['annual_dhw_MWh']:>8.0f} MWh")
+    print(f"    Annual cooling    : {network['annual_cool_MWh']:>8.0f} MWh")
+    print(f"    Peak heat demand  : {network['peak_heat_kW']:>8.1f} kW")
+    print(f"    Peak cooling      : {network['peak_cool_kW']:>8.1f} kW")
+    print(f"    Cool:Heat ratio   : {network['annual_cool_MWh']/(network['annual_heat_MWh']+network['annual_dhw_MWh']):.2f}  (expect ~0.05-0.15 for UK)")
+
+    print(f"\n  Seasonal sanity:")
+    print(f"    Jan heat: {jan_heat:.0f} kW  |  Jul heat: {jul_heat:.0f} kW  → {'✓ winter peak' if jan_heat > jul_heat else '✗ FAIL'}")
+    print(f"    Jan cool: {jan_cool:.1f} kW  |  Jul cool: {jul_cool:.1f} kW  → {'✓ summer peak' if jul_cool > jan_cool else '✗ FAIL'}")
+    print(f"    Zero cooling hours: {(cc == 0).sum()} / 8760  (expect majority)")
+    print()
