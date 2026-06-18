@@ -1,6 +1,5 @@
 """
-source.py
-=========
+
 Heat source models for the district energy system.
 
 Each source is a class that produces an 8,760-hour supply array (MW available)
@@ -19,18 +18,8 @@ DataCentre       — Waste heat offtake from a data centre cooling system.
                    Reference: Ealing Town Centre Heat Network Feasibility Report
                               (SEL, 2503-SEL-RP-001-V02), Appendix 9
 
-ASHP             — Air source heat pump. Supply varies with ambient temperature.
-                   COP = f(T_ambient, T_flow) via Carnot with efficiency factor.
-                   Modelled in large_scale_heat_pumps.py — see HeatPump class there.
-                   Included here as a thin wrapper so dispatch sees one interface.
-
-PeakBoiler       — Gas or electric boiler for peak/backup duty only.
-                   Constant capacity, high marginal cost, dispatchable on demand.
-                   Not intended for baseload operation.
-
 Public interface
 ----------------
-Each source exposes:
     source.supply_MW      np.ndarray (8760,) — available heat at each hour (MW)
     source.supply_temp_C  np.ndarray (8760,) — supply temperature at each hour (°C)
     source.marginal_cost  np.ndarray (8760,) — £/MWh at each hour
@@ -451,138 +440,6 @@ class DataCentre:
         )
 
 
-# ── PeakBoiler class ───────────────────────────────────────────────────────────
-
-class PeakBoiler:
-    """
-    Gas or electric boiler for peak load and backup duty.
-
-    Not intended for baseload — high marginal cost ensures the dispatch
-    optimiser only calls on it when lower-cost sources are exhausted.
-
-    The Ealing study (Table 1) uses:
-      - Phase 1: 3.6 MW peak/reserve boiler alongside 2.8 MW ASHP
-      - Phase 2: 5.8 MW peak/reserve boiler
-    Reference: Ealing report p.5, Table 1.
-
-    Parameters
-    ----------
-    name             : descriptive name
-    capacity_MW      : rated thermal output (MW)
-    fuel             : 'gas' or 'electric'
-    efficiency       : thermal efficiency (fraction). Gas: ~0.92, Electric: 0.99
-    gas_price_GBP_per_MWh  : gas commodity price (£/MWh, HHV basis)
-                              DESNZ Q1 2025 industrial gas: ~35–50 £/MWh
-    elec_price_GBP_per_MWh : electricity price (£/MWh)
-                              Used only if fuel='electric'
-    carbon_price_GBP_per_tonne : carbon price for CO2e cost (default 0 = exclude)
-    """
-
-    source_type = "peak_boiler"
-
-    # Carbon intensities (kgCO2e/kWh, BEIS 2024 values)
-    CARBON_INTENSITY = {
-        "gas":      0.183,   # Natural gas (Scope 1, BEIS 2024)
-        "electric": 0.207,   # UK grid average 2024 (approx)
-    }
-
-    def __init__(
-        self,
-        name: str,
-        capacity_MW: float,
-        fuel: str                      = "gas",
-        efficiency: float              = 0.92,
-        gas_price_GBP_per_MWh: float   = 45.0,
-        elec_price_GBP_per_MWh: float  = 120.0,
-        carbon_price_GBP_per_tonne: float = 0.0,
-    ):
-        if fuel not in ("gas", "electric"):
-            raise ValueError(f"fuel must be 'gas' or 'electric', got '{fuel}'")
-
-        self.name         = name
-        self.capacity_MW  = float(capacity_MW)
-        self.fuel         = fuel
-        self.efficiency   = float(efficiency)
-
-        # Fully available all year (boiler has no weather dependency)
-        self.supply_MW     = np.full(N_HOURS, self.capacity_MW)
-        self.supply_temp_C = np.full(N_HOURS, 90.0)  # Can reach full network temp
-
-        # Marginal cost: fuel cost + carbon cost
-        fuel_price = gas_price_GBP_per_MWh if fuel == "gas" else elec_price_GBP_per_MWh
-        fuel_cost_per_MWh_heat = fuel_price / efficiency   # £/MWh heat delivered
-
-        ci = self.CARBON_INTENSITY[fuel]                   # kgCO2e/kWh_fuel
-        carbon_cost_per_MWh_heat = (
-            ci * 1000 / efficiency * carbon_price_GBP_per_tonne / 1000
-        )   # £/MWh heat
-
-        self.marginal_cost = np.full(
-            N_HOURS,
-            fuel_cost_per_MWh_heat + carbon_cost_per_MWh_heat
-        )
-
-    def summary(self) -> dict:
-        return {
-            "name":              self.name,
-            "source_type":       self.source_type,
-            "capacity_MW":       self.capacity_MW,
-            "fuel":              self.fuel,
-            "efficiency":        self.efficiency,
-            "marginal_cost_GBP_per_MWh": round(float(self.marginal_cost[0]), 2),
-        }
-
-    def __repr__(self):
-        return (
-            f"PeakBoiler(name='{self.name}', capacity={self.capacity_MW:.1f} MW, "
-            f"fuel={self.fuel}, η={self.efficiency:.0%})"
-        )
-
-
-# ── Network-level source aggregator ───────────────────────────────────────────
-
-def build_source_stack(sources: list) -> dict:
-    """
-    Aggregate multiple sources into a single supply stack for the dispatcher.
-
-    Sources are stacked in merit order (cheapest first) automatically.
-    The dispatcher should call on them in this order at each hour.
-
-    Returns
-    -------
-    dict with keys:
-        sources_ordered   : list of sources sorted by mean marginal cost
-        total_capacity_MW : sum of all source capacities
-        total_supply_MW   : np.ndarray (8760,) — sum of all supply arrays
-        min_cost_MW       : np.ndarray (8760,) — cheapest source capacity per hour
-        stack_df          : pd.DataFrame — one row per source, summary stats
-    """
-    if not sources:
-        raise ValueError("No sources provided to build_source_stack.")
-
-    # Sort by mean marginal cost — cheapest (DC waste heat) first
-    ordered = sorted(sources, key=lambda s: s.marginal_cost.mean())
-
-    total_supply = sum(s.supply_MW for s in ordered)
-
-    stack_rows = []
-    for s in ordered:
-        row = {
-            "name":              s.name,
-            "type":              s.source_type,
-            "capacity_MW":       round(s.capacity_MW, 2),
-            "annual_MWh":        round(s.supply_MW.sum(), 0),
-            "mean_cost_GBP_MWh": round(float(s.marginal_cost.mean()), 2),
-        }
-        stack_rows.append(row)
-
-    return {
-        "sources_ordered":    ordered,
-        "total_capacity_MW":  sum(s.capacity_MW for s in ordered),
-        "total_supply_MW":    total_supply,
-        "stack_df":           pd.DataFrame(stack_rows),
-    }
-
 
 # ── Self-test ──────────────────────────────────────────────────────────────────
 
@@ -618,18 +475,6 @@ if __name__ == "__main__":
     print(f"    {custom}")
     print(f"    Annual heat available: {custom.supply_MW.sum():,.0f} MWh")
 
-    # Peak boiler
-    print("\n  Peak boiler:")
-    boiler = PeakBoiler("Gas peak boiler", capacity_MW=3.6)
-    for k, v in boiler.summary().items():
-        print(f"    {k:<36} {v}")
-
-    # Source stack (Ealing scenario)
-    print("\n  Source stack — Ealing Phase 1 (Redwire DC + Gas boiler):")
-    stack = build_source_stack([redwire, boiler])
-    print(stack["stack_df"].to_string(index=False))
-    print(f"\n  Total stack capacity: {stack['total_capacity_MW']:.1f} MW")
-    print(f"  Total annual supply:  {stack['total_supply_MW'].sum():,.0f} MWh")
 
     # Sanity checks
     print("\n  Sanity checks:")
