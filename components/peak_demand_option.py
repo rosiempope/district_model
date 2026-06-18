@@ -6,7 +6,7 @@ and electric boilers. These sit at the top of the merit order: high
 marginal cost, fully dispatchable, called on only when lower-cost sources
 (data centre waste heat, ASHP) can't meet demand.
  
-A note on "efficiency vs scale" (see module docstring discussion)
+A note on "efficiency vs scale"
 --------------------------------------------------------------------
 Research into boiler efficiency data found NO meaningful efficiency
 improvement with nameplate size for gas boilers — a study of 41 large-scale

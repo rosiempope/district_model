@@ -209,28 +209,27 @@ def _heating_profile(
     base_load_frac: float,
     heat_base_C: float = 15.5,
 ) -> np.ndarray:
-
     """
     HDD-scaled heating profile modulated by occupancy.
     base_load_frac ensures fabric heat loss continues when unoccupied.
     Returns hourly load in kW.
     """
-
     HDD_h = np.clip(heat_base_C - T_air, 0, None)
     HDD_annual = HDD_h.sum()
 
     if HDD_annual < 1.0:
         warnings.warn("Annual HDD near zero — check weather data or base temperature.")
         return np.zeros(len(T_air))
-    
+
     # Occupancy modifier: base_load when empty, full load when occupied
     occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
     raw = HDD_h * occ_modifier
- 
+
     scale = annual_heat_kWh / raw.sum() if raw.sum() > 0 else 0.0
     return raw * scale  # kW
 
-    def _cooling_profile(
+
+def _cooling_profile(
     T_air: np.ndarray,
     annual_cool_kWh: float,
     occupancy: np.ndarray,
@@ -239,23 +238,20 @@ def _heating_profile(
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
 ) -> np.ndarray:
+    """
+    Two-part cooling demand model — returns element-wise maximum:
 
-        """
-        Two-part cooling demand model — returns element-wise maximum:
-    
-        Part A (CDD scaling): distributes annual_cool_kWh proportional to
-        cooling degree-hours. Captures installed A/C load.
-    
-        Part B (comfort urgency ramp): smooth linear ramp 0→1 between
-        cool_onset_C and cool_full_C. Captures forward-looking demand —
-        people WILL seek cooling when it gets to 26°C+ even without
-        existing A/C infrastructure. Only active during occupied hours.
-    
-        Using max() means hot spells always show realistic demand peaks
-        even if the annual CDD total is low due to no A/C infrastructure.
+    Part A (CDD scaling): distributes annual_cool_kWh proportional to
+    cooling degree-hours. Captures installed A/C load.
 
-        """
+    Part B (comfort urgency ramp): smooth linear ramp 0→1 between
+    cool_onset_C and cool_full_C. Captures forward-looking demand —
+    people WILL seek cooling when it gets to 26°C+ even without
+    existing A/C infrastructure. Only active during occupied hours.
 
+    Using max() means hot spells always show realistic demand peaks
+    even if the annual CDD total is low due to no A/C infrastructure.
+    """
     n = len(T_air)
     occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
 
@@ -269,18 +265,16 @@ def _heating_profile(
         part_A = np.zeros(n)
 
     # -- Part B: Comfort urgency ramp -----------------------------------------
-    # Linear ramp: 0 at onset, 1 at full saturation, capped at 1 above
     ramp = np.clip(
         (T_air - cool_onset_C) / (cool_full_C - cool_onset_C),
         0.0, 1.0
     )
-    # Only active when people are actually in the building
     raw_B = ramp * occupancy
     if raw_B.sum() > 0:
         part_B = raw_B * (annual_cool_kWh / raw_B.sum())
     else:
         part_B = np.zeros(n)
- 
+
     # Final: whichever method gives higher load wins at each hour
     return np.maximum(part_A, part_B)  # kW
 
@@ -419,6 +413,65 @@ def synthesise_building(
         "dhw_kW":          dhw_kW,
         "total_heat_kW":   heating_kW + dhw_kW,
         "datetime_index":  weather_df.index,
+    }
+
+def synthesise_network(
+    weather_df: pd.DataFrame,
+    scenario: dict,
+    heat_base_C: float  = 15.5,
+    cool_onset_C: float = 22.0,
+    cool_full_C: float  = 26.0,
+) -> dict:
+    """
+    Synthesise profiles for all demand nodes in a scenario config dict.
+
+    Parameters
+    ----------
+    weather_df : from parse_epw.py / weather_data.csv loader
+    scenario   : dict with 'demand_nodes' list (mirrors YAML structure)
+
+    Returns
+    -------
+    dict: nodes list, aggregated totals, peak demands, summary_df DataFrame
+    """
+    demand_nodes = scenario.get("demand_nodes", [])
+    if not demand_nodes:
+        raise ValueError("scenario config has no 'demand_nodes'.")
+
+    nodes = [
+        synthesise_building(weather_df, b, heat_base_C, cool_onset_C, cool_full_C)
+        for b in demand_nodes
+    ]
+
+    total_heating = sum(n["heating_kW"] for n in nodes)
+    total_cooling = sum(n["cooling_kW"] for n in nodes)
+    total_dhw     = sum(n["dhw_kW"]     for n in nodes)
+    total_heat    = total_heating + total_dhw
+
+    summary_df = pd.DataFrame([{
+        "name":             n["name"],
+        "type":             n["type"],
+        "annual_heat_MWh":  round(n["annual_heat_kWh"] / 1000, 1),
+        "annual_cool_MWh":  round(n["annual_cool_kWh"] / 1000, 1),
+        "annual_dhw_MWh":   round(n["annual_dhw_kWh"]  / 1000, 1),
+        "annual_total_MWh": round((n["annual_heat_kWh"] + n["annual_dhw_kWh"]) / 1000, 1),
+        "peak_heat_kW":     round(n["peak_heat_kW"], 1),
+        "peak_cool_kW":     round(n["peak_cool_kW"], 1),
+    } for n in nodes])
+
+    return {
+        "nodes":            nodes,
+        "total_heating_kW": total_heating,
+        "total_cooling_kW": total_cooling,
+        "total_dhw_kW":     total_dhw,
+        "total_heat_kW":    total_heat,
+        "peak_heat_kW":     float(total_heat.max()),
+        "peak_cool_kW":     float(total_cooling.max()),
+        "annual_heat_MWh":  float(total_heating.sum() / 1000),
+        "annual_cool_MWh":  float(total_cooling.sum() / 1000),
+        "annual_dhw_MWh":   float(total_dhw.sum()     / 1000),
+        "datetime_index":   weather_df.index,
+        "summary_df":       summary_df,
     }
 
 def to_dataframe(network_result: dict) -> pd.DataFrame:
