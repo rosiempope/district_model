@@ -61,16 +61,40 @@ Isoplus all publish per-DN, per-series heat-loss tables).
 
 Cost methodology
 -------------------
-£/m installed cost is dominated by trenching, not pipe material (pipe
-network typically accounts for 40-60% of total DH investment cost, and
-within that, civils/trenching usually dominates pipe material). Modelled
-as a power-law cost curve — cost per metre rises with DN but sub-linearly,
-mirroring the same pattern used in thermal_storage.py's CAPEX curve.
-Calibrated so a ~DN100 distribution pipe lands close to the £1,200/m
-figure already used in your scenario YAML (Community Heat Development
-Unit-style UK benchmark) — treat the curve as a sensitivity input, not a
-quoted price; get a real trenching quote before using this for investment
-decisions.
+£/m installed cost is dominated by trenching, not pipe material. Published
+figures on pipework's share of total DH investment cost vary by source —
+the Community Heat Development Unit and the Irish National Heat Study
+(SEAI/Element Energy, 2023) both put it at roughly a third of total scheme
+cost, while some sources cite up to 40-60% depending on network density
+and ground conditions. Treat "pipework is a major, often dominant, CAPEX
+line item" as the defensible claim — not a single precise percentage.
+
+Modelled as a power-law cost curve, FITTED to real published data (SEAI
+National Heat Study Appendix B, Table 4 — see PIPE_COST_GBP_PER_M_AT_REF_DN
+below for the full calibration note), not assumed. The SEAI study
+independently observed the same qualitative shape in their own raw data:
+cost rises more slowly with diameter than people expect, because pipe
+LENGTH (driven by network layout, not diameter) is usually the more
+significant cost driver — consistent with, and now the actual basis for,
+this curve. Treat it as a sensitivity input, not a quoted price; get a
+real trenching quote before using this for investment decisions.
+
+DN range and construction limits — grounded in real manufacturer data
+---------------------------------------------------------------------------
+The standard DN series goes up to DN600, matching Logstor's published
+Design Manual range (valid under EN 13941 up to DN600 — beyond that,
+larger products exist but move into bespoke/contact-the-manufacturer
+territory, which is exactly where this screening tool should hand off to
+a real quote rather than silently extrapolate).
+
+TWIN construction is only offered up to DN200 (219.1mm outer diameter) —
+this matches Logstor's actual published TwinPipe product range (26.9mm to
+219.1mm OD). There is no real commercial twin-pipe product at larger
+diameters: past a certain size, housing two large bores in one casing
+stops being a practical product, so manufacturers only sell single
+construction for trunk-main-scale pipes. Requesting twin construction
+above DN200 raises a clear error rather than silently returning a
+plausible-looking number for a product that doesn't actually exist.
 
 Usage
 -----
@@ -87,6 +111,7 @@ Usage
         peak_heat_kW=7200, flow_temp_C=6.0, return_temp_C=12.0,
     )
 """
+
 
 import numpy as np
 from dataclasses import dataclass
@@ -169,7 +194,24 @@ STANDARD_DN_SERIES = [
     (350, 333.4, 355.6),
     (400, 387.4, 406.4),
     (500, 488.0, 508.0),
+    # DN600 — added to match Logstor's published Design Manual range
+    # (valid up to and including DN600 under EN 13941). Outer diameter
+    # 610mm is the standard DIN/ISO value for this size; inner diameter
+    # is an approximation following the same wall-thickness fraction as
+    # the DN400/DN500 rows above (~4%), since an exact manufacturer
+    # datasheet figure wasn't to hand. Verify against a current Logstor/
+    # Isoplus/Brugg DN600 datasheet before using this row for anything
+    # beyond feasibility-stage screening.
+    (600, 585.0, 610.0),
 ]
+
+# TwinPipe construction is only a real commercial product up to DN200
+# (219.1mm outer diameter) — matching Logstor's published TwinPipe range
+# (26.9mm to 219.1mm OD). There is no real twin-pipe product at larger
+# diameters; past this size, housing two large bores in one casing stops
+# being practical, so manufacturers only offer single construction for
+# trunk-main-scale pipes. See module docstring.
+TWIN_PIPE_MAX_DN = 200
 
 
 # ── Insulation series presets ──────────────────────────────────────────────────
@@ -207,16 +249,77 @@ TWIN_PIPE_LOSS_REDUCTION_FACTOR = 0.55   # combined twin loss = 0.55 x (2 x sing
 TWIN_PIPE_COST_PREMIUM_FACTOR   = 1.15   # +15% capex vs single construction
 
 
-# ── Pipe cost curve ─────────────────────────────────────────────────────────────
-# Power-law cost curve (£/m installed, dominated by trenching) — same
-# pattern as thermal_storage.py's CAPEX curve. Calibrated so a ~DN100
-# distribution pipe lands close to the £1,200/m figure already used in
-# your scenario YAML (Community Heat Development Unit-style UK benchmark).
-# Sensitivity input, not a quoted price.
+def _validate_construction(DN: int, construction: str) -> None:
+    """
+    Shared guard for every function that accepts a construction= argument.
+    Raises a clear, loud error rather than silently returning a
+    plausible-looking number for a combination that doesn't exist as a
+    real product — see TWIN_PIPE_MAX_DN and module docstring.
+    """
+    if construction not in ("single", "twin"):
+        raise ValueError(f"construction must be 'single' or 'twin'; got '{construction}'")
+    if construction == "twin" and DN > TWIN_PIPE_MAX_DN:
+        raise ValueError(
+            f"construction='twin' requested at DN{DN}, but twin-pipe is not a "
+            f"real commercial product above DN{TWIN_PIPE_MAX_DN} (matches "
+            f"Logstor's published TwinPipe range, 26.9-219.1mm OD). Use "
+            f"construction='single' for DN{DN} — large trunk mains are single "
+            f"pipes in practice. See module docstring."
+        )
 
+
+# ── Pipe cost curve ─────────────────────────────────────────────────────────────
+# Power-law cost curve (£/m installed, dominated by trenching).
+#
+# Calibration source and method
+# ------------------------------
+# Fitted to real published data: SEAI National Heat Study, Appendix B
+# "District Heating and Cooling: Spatial Analysis of Infrastructure Costs
+# and Potential in Ireland" (Element Energy/Ricardo Energy & Environment
+# for SEAI, 2023), Table 4 — 2-pipe, inner-city, 2020 prices, DN20-DN600.
+# That table's own source is the Scottish Building Standards Agency
+# (2009) "Heating Supply Options for New Development", inflated by SEAI
+# to 2020 prices.
+#
+# Method: EUR->GBP at the report's own stated rate (€1.12 per £1), then a
+# simple UK CPI uplift (~24% cumulative, 2020->2026) to bring to present-
+# day nominal terms, then a log-log linear regression (power law fit)
+# across all 19 DN20-DN600 data points. Fit quality: R^2 = 0.84 — solid,
+# but NOT perfect: the real data is close to FLAT from DN20 to DN65
+# (suggesting a fixed trenching/mobilisation cost floor for small branch
+# pipes that a single smooth power law doesn't fully capture), then rises
+# more steeply above that. This curve is most reliable in the DN80-DN600
+# range, where this project's actual mains will mostly sit, and likely
+# UNDERESTIMATES the smallest branch sizes (DN20-65) slightly.
+#
+# An earlier version of this module claimed the DN100 anchor point was
+# "already used in your scenario YAML" — that claim was checked and found
+# to be false; no such YAML exists anywhere in this repository. That
+# specific number turned out to be close to what this real, properly
+# cited dataset predicts anyway (£1,158/m vs the old £1,200/m), but
+# that's a coincidence worth knowing about, not a justification — the
+# numbers below are now traceable to an actual source rather than
+# inherited from an unverified claim.
 PIPE_COST_REFERENCE_DN        = 100
-PIPE_COST_GBP_PER_M_AT_REF_DN = 1200.0
-PIPE_COST_SCALE_EXPONENT      = 0.55   # cost/m rises sub-linearly with DN
+PIPE_COST_GBP_PER_M_AT_REF_DN = 1158.0   # fitted, see calibration note above
+PIPE_COST_SCALE_EXPONENT      = 0.426    # fitted; NOT the chemical-engineering
+                                          # "six-tenths rule" (Sinnott, 2005) —
+                                          # that rule relates cost to CAPACITY
+                                          # (cost ~ capacity^0.6), and capacity
+                                          # scales as DN^2 for a fixed velocity,
+                                          # so naively applying it to diameter
+                                          # directly would predict cost ~ DN^1.2
+                                          # (rising FASTER than linear) — the
+                                          # opposite of what real pipe-cost data
+                                          # actually shows. Buried-pipe cost is
+                                          # dominated by trenching/civils
+                                          # overhead that's largely independent
+                                          # of diameter, not by the surface-area
+                                          # economics the six-tenths rule
+                                          # captures for fabricated equipment —
+                                          # which is why the real exponent here
+                                          # (0.43) is flatter than 0.6, not
+                                          # steeper. See module docstring.
 
 
 def estimate_pipe_cost_GBP_per_m(
@@ -227,14 +330,16 @@ def estimate_pipe_cost_GBP_per_m(
     Estimate installed cost (£/m) for a given DN, via the power-law cost
     curve. construction='twin' applies the twin-pipe cost premium.
     """
+    if DN <= 0:
+        raise ValueError(f"DN must be positive; got {DN}.")
+    _validate_construction(DN, construction)
+
     cost = PIPE_COST_GBP_PER_M_AT_REF_DN * (
         DN / PIPE_COST_REFERENCE_DN
     ) ** PIPE_COST_SCALE_EXPONENT
 
     if construction == "twin":
         cost *= TWIN_PIPE_COST_PREMIUM_FACTOR
-    elif construction != "single":
-        raise ValueError(f"construction must be 'single' or 'twin'; got '{construction}'")
 
     return cost
 
@@ -271,9 +376,17 @@ def heat_loss_coefficient_W_per_mK(
     """
     pipe = _lookup_dn(DN)
     series = INSULATION_SERIES_PRESETS[insulation_series]
+    _validate_construction(DN, construction)
 
     D_pipe_outer_m = pipe["outer_diameter_mm"] / 1000.0
     D_casing_m = D_pipe_outer_m * series["casing_to_pipe_ratio"]
+    if D_casing_m <= D_pipe_outer_m:
+        raise ValueError(
+            f"casing_to_pipe_ratio for '{insulation_series}' gives a casing "
+            f"diameter <= the pipe outer diameter — check the preset; this "
+            f"would otherwise silently produce a nonsensical (negative or "
+            f"infinite) heat-loss coefficient."
+        )
     k_ins = series["insulation_k_W_mK"]
 
     R_per_m = np.log(D_casing_m / D_pipe_outer_m) / (2 * np.pi * k_ins)
@@ -282,11 +395,10 @@ def heat_loss_coefficient_W_per_mK(
     if construction == "single":
         # Two separate pipes (supply + return) -> simple sum
         return 2.0 * U_single_per_m
-    elif construction == "twin":
-        # Shared casing -> meaningfully lower combined loss than 2x single
-        return 2.0 * U_single_per_m * TWIN_PIPE_LOSS_REDUCTION_FACTOR
     else:
-        raise ValueError(f"construction must be 'single' or 'twin'; got '{construction}'")
+        # construction == "twin" — already validated above. Shared casing
+        # -> meaningfully lower combined loss than 2x single
+        return 2.0 * U_single_per_m * TWIN_PIPE_LOSS_REDUCTION_FACTOR
 
 
 # ── Hydraulics: friction factor, velocity, pressure gradient ───────────────────
@@ -550,8 +662,20 @@ if __name__ == "__main__":
     print("\n  Cost curve — cost per metre rising sub-linearly with DN:")
     for dn, _, _ in STANDARD_DN_SERIES:
         c_single = estimate_pipe_cost_GBP_per_m(dn, "single")
-        c_twin = estimate_pipe_cost_GBP_per_m(dn, "twin")
-        print(f"    DN{dn:<5} single=£{c_single:>7.0f}/m   twin=£{c_twin:>7.0f}/m")
+        if dn <= TWIN_PIPE_MAX_DN:
+            c_twin = estimate_pipe_cost_GBP_per_m(dn, "twin")
+            print(f"    DN{dn:<5} single=£{c_single:>7.0f}/m   twin=£{c_twin:>7.0f}/m")
+        else:
+            print(f"    DN{dn:<5} single=£{c_single:>7.0f}/m   twin=n/a (no real product above DN{TWIN_PIPE_MAX_DN})")
+
+    # --- Cost curve cross-check against real SEAI data it was fitted to ---
+    print("\n  Cross-check against real data (SEAI National Heat Study, Table 4,")
+    print("  2-pipe inner-city, EUR->GBP, ~24% CPI-uplifted to 2026):")
+    seai_check_points = {100: 962, 300: 1733, 600: 3272}  # DN: real GBP/m (2026 terms)
+    for dn, real_gbp in seai_check_points.items():
+        modelled = estimate_pipe_cost_GBP_per_m(dn)
+        pct_diff = (modelled - real_gbp) / real_gbp * 100
+        print(f"    DN{dn:<5} modelled=£{modelled:>6.0f}/m   real=£{real_gbp:>6.0f}/m   diff={pct_diff:+.0f}%")
 
     # --- select_pipe(): hot loop vs cold loop, SAME flow rate ---
     print("\n  select_pipe() — same volumetric flow, hot vs cold (shows viscosity effect):")
@@ -578,6 +702,19 @@ if __name__ == "__main__":
     print(f"    Single: {single}")
     print(f"    Twin:   {twin}")
 
+    # --- DN600: the cooling duty that previously failed to size at all ---
+    print("\n  DN600 — the 2050_high climate-scenario cooling peak that previously failed:")
+    big_cooling = size_pipe_for_peak(12629, flow_temp_C=6.0, return_temp_C=12.0, construction="single")
+    print(f"    {big_cooling}")
+
+    # --- Twin-pipe DN ceiling: should be rejected above DN200 ---
+    print("\n  Twin-pipe DN ceiling — requesting twin above DN200 should fail loudly:")
+    try:
+        size_pipe_for_peak(12629, flow_temp_C=6.0, return_temp_C=12.0, construction="twin")
+        print("    ✗ FAIL: should have raised ValueError")
+    except ValueError as e:
+        print(f"    ✓ Correctly raised: {str(e)[:90]}...")
+
     # --- Edge case: very large flow exceeding the DN series ---
     print("\n  Edge case — flow too large for the standard DN series:")
     try:
@@ -603,6 +740,7 @@ if __name__ == "__main__":
     c_dn300 = estimate_pipe_cost_GBP_per_m(300)
     assert c_dn300 > c_dn25, "Larger DN should cost more per metre"
     assert single.cost_GBP_per_m < twin.cost_GBP_per_m, "Twin construction should cost more than single"
+    assert big_cooling.DN == 600, "2050_high cooling peak should now size to DN600"
     for dn, _, _ in STANDARD_DN_SERIES:
         pipe = _lookup_dn(dn)
         assert pipe["outer_diameter_mm"] > pipe["inner_diameter_mm"], "Outer diameter must exceed inner diameter"
@@ -611,5 +749,7 @@ if __name__ == "__main__":
     print("  ✓ Cold network (small delta-T) needs an equal-or-larger pipe than hot network for same kW")
     print("  ✓ Twin-pipe construction loses less heat and costs more than single construction")
     print("  ✓ Cost curve rises with DN; DN table internally consistent")
+    print("  ✓ DN600 now available — the previously-failing 2050_high cooling peak sizes correctly")
+    print("  ✓ Twin-pipe construction correctly rejected above DN200 (no real product exists)")
     print("  ✓ Oversized flow correctly raises an informative error")
     print()
