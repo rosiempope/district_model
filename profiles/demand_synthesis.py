@@ -373,6 +373,7 @@ def synthesise_building(
     weather_df: pd.DataFrame,
     building: dict,
     heat_base_C: float  = 15.5,
+    cool_base_C: float  = 20.0,
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
 ) -> dict:
@@ -434,7 +435,7 @@ def synthesise_network(
     weather_df: pd.DataFrame,
     scenario: dict,
     heat_base_C: float  = 15.5,
-    cool_base_C: float  = 20.0,S
+    cool_base_C: float  = 20.0,
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
 ) -> dict:
