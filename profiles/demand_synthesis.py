@@ -36,7 +36,7 @@ import warnings
 #   Heating EUI — CIBSE TM46 / Ealing Feasibility Report cross-check
 #   Cooling EUI — SEL in-house benchmarks (per Ealing report), CIBSE Guide F
 #   DHW EUI     — CIBSE Guide G, EST data
-#   All values in kWh/m²/yr
+#   All values in kWh/m²/yrs
 
 BUILDING_TYPES = {
     "office": {
