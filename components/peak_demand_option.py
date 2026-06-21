@@ -236,6 +236,49 @@ def gas_boiler_part_load_efficiency(
     return np.clip(eta, 0.45, 0.99)
 
 
+# ── Shared capacity resolver (GasBoiler + ElectricBoiler) ──────────────────────
+
+def _resolve_capacity(
+    capacity_MW: Optional[float],
+    n_units: Optional[int],
+    unit_capacity_MW: Optional[float],
+) -> tuple:
+    """
+    Resolve a boiler's scale from EITHER capacity_MW directly OR
+    (n_units AND unit_capacity_MW) — see GasBoiler/ElectricBoiler
+    docstrings for why both forms exist (matches ASHPArray's pattern,
+    needed for optimisation/sizing.py's discrete-unit capacity sweeps).
+
+    Returns (capacity_MW, n_units, unit_capacity_MW) — always all three,
+    regardless of which form was given, so summary()/resize() have
+    consistent data either way.
+    """
+    n_pair_given = (n_units is not None) or (unit_capacity_MW is not None)
+
+    if n_pair_given:
+        if n_units is None or unit_capacity_MW is None:
+            raise ValueError(
+                "Must provide BOTH n_units and unit_capacity_MW together "
+                "(or neither, and use capacity_MW directly)."
+            )
+        if capacity_MW is not None:
+            raise ValueError(
+                "Provide EITHER capacity_MW OR (n_units and unit_capacity_MW), not both."
+            )
+        n_units = int(n_units)
+        unit_capacity_MW = float(unit_capacity_MW)
+        return n_units * unit_capacity_MW, n_units, unit_capacity_MW
+
+    if capacity_MW is None:
+        raise ValueError(
+            "Must provide either capacity_MW, or both n_units and unit_capacity_MW."
+        )
+    capacity_MW = float(capacity_MW)
+    # Legacy/simple path: treat as "one unit of this size" so summary()
+    # and resize() still have something sensible to report and scale from.
+    return capacity_MW, 1, capacity_MW
+
+
 # ── GasBoiler class ────────────────────────────────────────────────────────────
 
 class GasBoiler:
@@ -256,10 +299,28 @@ class GasBoiler:
     once dispatch has run, or use the rated capacity_MW assumption for an
     initial/standalone sizing pass (defaults to full-load efficiency).
 
+    Sizing — two equivalent ways to specify scale
+    ---------------------------------------------------
+    1. capacity_MW directly — a single design figure (e.g. "3.6 MW",
+       matching how the Ealing report quotes it). Simple, and fine when
+       you're not trying to model discrete real units.
+    2. n_units + unit_capacity_MW — matches ASHPArray's pattern, and
+       matches real practice: energy centres commonly install several
+       smaller boilers in parallel rather than one giant unit, for
+       redundancy and part-load turn-down flexibility. Use this when you
+       want to sweep "how many units of THIS size do I need" via
+       optimisation/sizing.py, the same way you would for ASHP.
+    Provide EITHER capacity_MW OR (n_units AND unit_capacity_MW), not
+    both. If you provide capacity_MW alone, n_units defaults to 1 and
+    unit_capacity_MW defaults to the full capacity_MW (i.e. "one unit of
+    that size") — so summary()/resize() behave consistently either way.
+
     Parameters
     ----------
     name                    : descriptive name for reporting
-    capacity_MW             : rated thermal output (MW)
+    capacity_MW             : rated thermal output (MW) — see sizing note above
+    n_units                 : number of identical boiler units — see sizing note above
+    unit_capacity_MW        : rated output per unit (MW) — see sizing note above
     condensing              : True for condensing technology (UK standard
                                since 2005), False for legacy non-condensing
     eta_full_load           : efficiency at 100% load (datasheet value)
@@ -279,7 +340,9 @@ class GasBoiler:
     def __init__(
         self,
         name: str,
-        capacity_MW: float,
+        capacity_MW: Optional[float] = None,
+        n_units: Optional[int]       = None,
+        unit_capacity_MW: Optional[float] = None,
         condensing: bool                = True,
         eta_full_load: float            = 0.92,
         gas_price_GBP_per_MWh           = None,
@@ -287,7 +350,9 @@ class GasBoiler:
         reference: str                  = "",
     ):
         self.name           = name
-        self.capacity_MW    = float(capacity_MW)
+        self.capacity_MW, self.n_units, self.unit_capacity_MW = _resolve_capacity(
+            capacity_MW, n_units, unit_capacity_MW
+        )
         self.condensing     = condensing
         self.eta_full_load  = float(eta_full_load)
         self.carbon_price_GBP_per_tonne = float(carbon_price_GBP_per_tonne)
@@ -395,10 +460,40 @@ class GasBoiler:
 
         return cls(**cfg)
 
+    def resize(
+        self,
+        n_units: Optional[int] = None,
+        unit_capacity_MW: Optional[float] = None,
+    ) -> "GasBoiler":
+        """
+        Return a NEW GasBoiler at a different scale, reusing all other
+        parameters (tariff, efficiency, condensing, etc.) from this
+        instance. Does not mutate self. Mirrors ASHPArray.resize() —
+        this is the hook optimisation/sizing.py expects for a
+        "how many units do I need" capacity sweep.
+
+        Example
+        -------
+            boiler_small = GasBoiler.from_preset("ealing_phase1")
+            boiler_big   = boiler_small.resize(n_units=3)   # 3x the array
+        """
+        return GasBoiler(
+            name=self.name,
+            n_units=n_units if n_units is not None else self.n_units,
+            unit_capacity_MW=unit_capacity_MW if unit_capacity_MW is not None else self.unit_capacity_MW,
+            condensing=self.condensing,
+            eta_full_load=self.eta_full_load,
+            gas_price_GBP_per_MWh=self._gas_price,
+            carbon_price_GBP_per_tonne=self.carbon_price_GBP_per_tonne,
+            reference=self.reference,
+        )
+
     def summary(self) -> dict:
         return {
             "name":                       self.name,
             "source_type":                self.source_type,
+            "n_units":                    self.n_units,
+            "unit_capacity_MW":           self.unit_capacity_MW,
             "capacity_MW":                self.capacity_MW,
             "condensing":                 self.condensing,
             "eta_full_load":              self.eta_full_load,
@@ -410,8 +505,9 @@ class GasBoiler:
 
     def __repr__(self):
         return (
-            f"GasBoiler(name='{self.name}', capacity={self.capacity_MW:.1f} MW, "
-            f"condensing={self.condensing}, η_full={self.eta_full_load:.0%})"
+            f"GasBoiler(name='{self.name}', {self.n_units}x{self.unit_capacity_MW:.2f}MW "
+            f"= {self.capacity_MW:.1f} MW, condensing={self.condensing}, "
+            f"η_full={self.eta_full_load:.0%})"
         )
 
 
@@ -426,10 +522,20 @@ class ElectricBoiler:
     so no flue losses or part-load combustion effects) — this is a genuine
     technical difference from gas boilers, not a simplification.
 
+    Sizing — two equivalent ways to specify scale
+    ---------------------------------------------------
+    Same pattern as GasBoiler (see its docstring for the full rationale):
+    either capacity_MW directly, or n_units + unit_capacity_MW for
+    discrete real-unit sizing (matches ASHPArray, needed for
+    optimisation/sizing.py capacity sweeps). Provide one or the other,
+    not both.
+
     Parameters
     ----------
     name                          : descriptive name for reporting
-    capacity_MW                   : rated thermal output (MW)
+    capacity_MW                   : rated thermal output (MW) — see sizing note above
+    n_units                       : number of identical units — see sizing note above
+    unit_capacity_MW              : rated output per unit (MW) — see sizing note above
     efficiency                    : conversion efficiency (0-1). Typical
                                      UK commercial electric boilers: 0.98-0.995
     electricity_price_GBP_per_MWh : accepts None (default realistic tariff —
@@ -445,14 +551,18 @@ class ElectricBoiler:
     def __init__(
         self,
         name: str,
-        capacity_MW: float,
+        capacity_MW: Optional[float] = None,
+        n_units: Optional[int]       = None,
+        unit_capacity_MW: Optional[float] = None,
         efficiency: float                       = 0.99,
         electricity_price_GBP_per_MWh           = None,
         carbon_price_GBP_per_tonne: float       = 0.0,
         reference: str                          = "",
     ):
         self.name        = name
-        self.capacity_MW = float(capacity_MW)
+        self.capacity_MW, self.n_units, self.unit_capacity_MW = _resolve_capacity(
+            capacity_MW, n_units, unit_capacity_MW
+        )
         self.efficiency  = float(efficiency)
         self.carbon_price_GBP_per_tonne = float(carbon_price_GBP_per_tonne)
         self.reference   = reference
@@ -519,10 +629,32 @@ class ElectricBoiler:
 
         return cls(**cfg)
 
+    def resize(
+        self,
+        n_units: Optional[int] = None,
+        unit_capacity_MW: Optional[float] = None,
+    ) -> "ElectricBoiler":
+        """
+        Return a NEW ElectricBoiler at a different scale, reusing all
+        other parameters from this instance. Does not mutate self.
+        Mirrors ASHPArray.resize() / GasBoiler.resize().
+        """
+        return ElectricBoiler(
+            name=self.name,
+            n_units=n_units if n_units is not None else self.n_units,
+            unit_capacity_MW=unit_capacity_MW if unit_capacity_MW is not None else self.unit_capacity_MW,
+            efficiency=self.efficiency,
+            electricity_price_GBP_per_MWh=self._elec_price,
+            carbon_price_GBP_per_tonne=self.carbon_price_GBP_per_tonne,
+            reference=self.reference,
+        )
+
     def summary(self) -> dict:
         return {
             "name":                       self.name,
             "source_type":                self.source_type,
+            "n_units":                    self.n_units,
+            "unit_capacity_MW":           self.unit_capacity_MW,
             "capacity_MW":                self.capacity_MW,
             "efficiency":                 self.efficiency,
             "mean_marginal_cost_GBP_per_MWh": round(float(self.marginal_cost.mean()), 2),
@@ -532,8 +664,8 @@ class ElectricBoiler:
 
     def __repr__(self):
         return (
-            f"ElectricBoiler(name='{self.name}', capacity={self.capacity_MW:.1f} MW, "
-            f"η={self.efficiency:.1%})"
+            f"ElectricBoiler(name='{self.name}', {self.n_units}x{self.unit_capacity_MW:.2f}MW "
+            f"= {self.capacity_MW:.1f} MW, η={self.efficiency:.1%})"
         )
 
 
@@ -643,6 +775,35 @@ if __name__ == "__main__":
           f"(elec @ £{elec._elec_price.mean():.0f}/MWh central commercial, η={elec.efficiency:.0%})")
     print(f"    → Electric is {elec.marginal_cost.mean()/gas.marginal_cost.mean():.1f}x more expensive per MWh heat at these realistic prices")
 
+    # --- n_units x unit_capacity_MW sizing — matches ASHPArray's pattern ---
+    print("\n  Discrete-unit sizing (n_units x unit_capacity_MW), matching ASHPArray:")
+    gas_3units = GasBoiler(name="Boiler bank", n_units=3, unit_capacity_MW=1.2)
+    gas_flat_equiv = GasBoiler(name="Boiler bank (flat)", capacity_MW=3.6)
+    print(f"    {gas_3units}")
+    print(f"    Equivalent flat capacity: {gas_flat_equiv}")
+    print(f"    Same marginal cost either way? "
+          f"{np.allclose(gas_3units.marginal_cost, gas_flat_equiv.marginal_cost)}")
+
+    # resize() — the sizing.py sweep hook
+    print("\n  resize() — the hook optimisation/sizing.py expects for capacity sweeps:")
+    ealing_bank = GasBoiler.from_preset("ealing_phase1")   # 1 unit @ 3.6 MW (legacy preset)
+    resized = ealing_bank.resize(n_units=3, unit_capacity_MW=1.2)
+    print(f"    Original: {ealing_bank}")
+    print(f"    Resized:  {resized}")
+
+    # Error handling — providing both forms, or an incomplete pair, should fail loudly
+    print("\n  Error handling — conflicting or incomplete sizing args:")
+    for bad_kwargs, desc in [
+        ({"capacity_MW": 3.6, "n_units": 3, "unit_capacity_MW": 1.2}, "both forms given"),
+        ({"n_units": 3}, "n_units without unit_capacity_MW"),
+        ({}, "neither form given"),
+    ]:
+        try:
+            GasBoiler(name="bad", **bad_kwargs)
+            print(f"    ✗ FAIL: should have raised ValueError ({desc})")
+        except ValueError as e:
+            print(f"    ✓ Correctly raised ({desc}): {str(e)[:70]}...")
+
     # Sanity checks
     print("\n  Sanity checks:")
     assert len(gas.supply_MW)      == N_HOURS, "GasBoiler supply_MW wrong length"
@@ -668,6 +829,15 @@ if __name__ == "__main__":
     assert abs(elec_cfg._elec_price.mean() - 240.0 * 0.80) < 1.0, \
         "from_config nested electricity_tariff block should apply the 20% discount correctly"
 
+    # n_units sizing assertions
+    assert abs(gas_3units.capacity_MW - 3.6) < 1e-9, "3 x 1.2 MW should total 3.6 MW"
+    assert np.allclose(gas_3units.marginal_cost, gas_flat_equiv.marginal_cost), \
+        "n_units and flat capacity_MW paths should produce identical physics for the same total MW"
+    assert abs(resized.capacity_MW - 3.6) < 1e-9 and resized.n_units == 3, \
+        "resize() should apply the new scale correctly"
+    assert ealing_bank.n_units == 1 and ealing_bank.unit_capacity_MW == 3.6, \
+        "Legacy capacity_MW path should default to n_units=1, unit_capacity_MW=capacity_MW"
+
     print("  ✓ All array shapes correct (8760 hours)")
     print("  ✓ Supply never exceeds nameplate capacity")
     print("  ✓ Condensing boiler gains efficiency at low load (as expected)")
@@ -676,4 +846,8 @@ if __name__ == "__main__":
     print("  ✓ Default electricity price now uses realistic tariff (~£240/MWh), not old £120 placeholder")
     print("  ✓ GasTariff/ElectricityTariff objects, flat scalars, and raw arrays all behave correctly")
     print("  ✓ from_config() named scenario and nested tariff block both resolve correctly")
+    print("  ✓ n_units x unit_capacity_MW produces identical physics to the equivalent flat capacity_MW")
+    print("  ✓ resize() correctly rescales to a new unit count/size")
+    print("  ✓ Legacy capacity_MW path still works and defaults n_units=1 for consistent reporting")
+    print("  ✓ Conflicting or incomplete sizing arguments correctly rejected")
     print()
