@@ -384,6 +384,10 @@ def synthesise_building(
     weather_df   : from wather_data.csv — 'temp_drybulb_C' column, 8760 rows
     building     : config dict (name, type, floor_area_m2 or units, overrides)
     heat_base_C  : HDD base temperature (°C) — 15.5 is UK standard
+    cool_base_C  : CDD base temperature (°C) — degree-day method threshold
+                   used to scale the annual cooling benchmark (Part A).
+                   Distinct from cool_onset_C: this is a methodology
+                   constant, not a comfort threshold.
     cool_onset_C : temperature where comfort cooling demand begins (°C)
     cool_full_C  : temperature where comfort cooling demand saturates (°C)
  
@@ -430,6 +434,7 @@ def synthesise_network(
     weather_df: pd.DataFrame,
     scenario: dict,
     heat_base_C: float  = 15.5,
+    cool_base_C: float  = 20.0,S
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
 ) -> dict:
@@ -450,7 +455,7 @@ def synthesise_network(
         raise ValueError("scenario config has no 'demand_nodes'.")
 
     nodes = [
-        synthesise_building(weather_df, b, heat_base_C, cool_onset_C, cool_full_C)
+        synthesise_building(weather_df, b, heat_base_C, cool_base_C, cool_onset_C, cool_full_C)
         for b in demand_nodes
     ]
 
