@@ -26,6 +26,17 @@ DHW      : Flat annual total with sinusoidal seasonal shape (higher in
  
 All profiles returned as numpy arrays of length 8,760 in kW.
 """
+
+"""
+Key Assumptions:
+- Cooling is a two-part estimate e.g. picks whether the CDD or the comfort ramp is higher for each hour, and uses that as the cooling demand for that hour. Such that the model is forward-looking and will show cooling demand even if the building has little historical A/C usage.
+- cool_base_C is the temperature below which no cooling is required (default 20°C). This is used to calculate CDDs.
+- cool_onset_C is the temperature at which comfort cooling demand begins (default 22°C). This is used to calculate the comfort ramp.
+- cool_full_C is the temperature at which comfort cooling demand saturates (default 26°C). This is used to calculate the comfort ramp.
+- School holidays are fixed and approximate
+- 
+"""
+
 import numpy as np
 import pandas as pd
 from typing import Optional
@@ -394,7 +405,7 @@ def synthesise_building(
  
     heating_kW = _heating_profile(T_air, heat_kWh, occupancy, bm["base_load_frac"], heat_base_C)
     cooling_kW = _cooling_profile(T_air, cool_kWh, occupancy, bm["base_load_frac"],
-                                  cool_base_C=cool_onset_C,
+                                  cool_base_C=cool_base_C,
                                   cool_onset_C=cool_onset_C,
                                   cool_full_C=cool_full_C)
     dhw_kW     = _dhw_profile(dhw_kWh, occupancy=occupancy)

@@ -1,6 +1,12 @@
 ### this is to allow for different climate scenarios to be used in the model, and to allow for different climate scenarios to be assessed to understand future trends due to global warming
+"""
+Key assumptions:
+- The climate deltas are applied to the dry bulb temperature only.
+- The dT are based on UKCP18 projections for the UK
+- No changes to humidity or solar weather variables
+- The climate deltas are applied to the TMY weather data, which is a historical dataset, and therefore the results are not representative of future weather conditions.
+"""
 import pandas as pd
-
 
 def apply_climate_scenario(weather_df: pd.DataFrame, scenario: str) -> pd.DataFrame:
     """
@@ -33,6 +39,23 @@ def apply_climate_scenario(weather_df: pd.DataFrame, scenario: str) -> pd.DataFr
             3: 2.5,  4: 3.0, 5: 3.5,
             6: 4.0,  7: 4.0, 8: 4.0,
             9: 3.5,  10:3.0, 11:2.5,
+        },
+    }
+
+    SCENARIOS = {
+        "2050_central": {
+            "period": "2041-2060",
+            "pathway": "RCP4.5",
+            "percentile": "50th",
+            "location": "Site-specific UKCP18 grid cell",
+            "uhi_C": 0.0,
+        },
+        "2050_high": {
+            "period": "2041-2060",
+            "pathway": "RCP8.5",
+            "percentile": "50th",
+            "location": "Site-specific UKCP18 grid cell",
+            "uhi_C": 2.5,
         },
     }
 
