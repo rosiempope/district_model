@@ -100,9 +100,12 @@ Usage
 -----
     from network.pipe_catalog import size_pipe_for_peak, water_properties
 
-    # Gen 3 hot loop: 7.2 MW peak (Ealing Phase 1 figure), 65/35 deg C
+    # Gen 3 hot loop: 7.2 MW peak (Ealing Phase 1 figure), 70/40 deg C
+    # (real network's peak design point -- it's actually variable
+    # temperature, 65-70C flow seasonally, per the Ealing report; this
+    # fixed-temperature model uses the peak figure throughout)
     pipe = size_pipe_for_peak(
-        peak_heat_kW=7200, flow_temp_C=65.0, return_temp_C=35.0,
+        peak_heat_kW=7200, flow_temp_C=70.0, return_temp_C=40.0,
     )
     print(pipe.DN, pipe.velocity_ms, pipe.cost_GBP_per_m)
 
@@ -685,22 +688,21 @@ if __name__ == "__main__":
     print(f"    80°C (hot loop):  {hot}")
     print(f"    8°C  (cold loop): {cold}")
 
-    # --- size_pipe_for_peak(): the real entry point, hot vs cold network ---
+     # --- size_pipe_for_peak(): the real entry point, hot vs cold network ---
     print("\n  size_pipe_for_peak() — SAME peak heat duty, hot network vs cold network:")
     print("  (Ealing Phase 1 scale: 7.2 MW coincident peak)")
-    hot_network = size_pipe_for_peak(peak_heat_kW=7200, flow_temp_C=65.0, return_temp_C=35.0)
+    hot_network = size_pipe_for_peak(peak_heat_kW=7200, flow_temp_C=70.0, return_temp_C=40.0)
     cold_network = size_pipe_for_peak(peak_heat_kW=7200, flow_temp_C=6.0, return_temp_C=12.0)
-    print(f"    Hot  (65/35°C, dT=30K):  {hot_network}")
+    print(f"    Hot  (70/40°C, dT=30K):  {hot_network}")
     print(f"    Cold (6/12°C,  dT=6K):   {cold_network}")
     print(f"    -> cold loop needs a LARGER pipe for the same kW: 5x smaller delta-T")
     print(f"       forces ~5x the mass flow, only partly offset by water being denser when cold.")
 
     # --- Twin pipe vs single, on the same duty ---
-    print("\n  Twin vs single construction, same duty (65/35°C, 5 MW):")
-    single = size_pipe_for_peak(5000, 65.0, 35.0, construction="single")
-    twin = size_pipe_for_peak(5000, 65.0, 35.0, construction="twin")
+    print("\n  Twin vs single construction, same duty (70/40°C, 5 MW):")
+    single = size_pipe_for_peak(5000, 70.0, 40.0, construction="single")
+    twin = size_pipe_for_peak(5000, 70.0, 40.0, construction="twin")
     print(f"    Single: {single}")
-    print(f"    Twin:   {twin}")
 
     # --- DN600: the cooling duty that previously failed to size at all ---
     print("\n  DN600 — the 2050_high climate-scenario cooling peak that previously failed:")

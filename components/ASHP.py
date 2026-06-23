@@ -82,7 +82,7 @@ Usage
 
     # From a preset (Ealing report Phase 1: 2.8 MW) — uses the realistic
     # default tariff automatically, no extra setup needed
-    ashp = ASHPArray.from_preset("ealing_phase1", weather_df, flow_temp_C=65.0)
+    ashp = ASHPArray.from_preset("ealing_phase1", weather_df, flow_temp_C=70.0)
 
     # With a specific negotiated-rate tariff
     ashp = ASHPArray.from_preset(
@@ -95,7 +95,7 @@ Usage
         name="Town centre ASHP bank",
         n_units=4,
         unit_capacity_MW=0.7,        # 4 x 700kW units = 2.8 MW total
-        flow_temp_C=65.0,
+        flow_temp_C=70.0,
         weather_df=weather_df,
     )
 
@@ -148,7 +148,12 @@ ASHP_PRESETS = {
         "description":       "Ealing Town Centre Phase 1 ASHP bank",
         "n_units":            4,
         "unit_capacity_MW":   0.7,     # 4 x 700kW = 2.8 MW total
-        "flow_temp_C":        65.0,    # LTHW network, per Ealing report
+        "flow_temp_C":        70.0,    # Real network's PEAK design flow temp (Ealing
+                                        # report: "maximum flow temperature of 70C, to
+                                        # meet peak heat demands" -- the real network is
+                                        # actually variable, 65-70C seasonally; this
+                                        # fixed-temperature model uses the peak figure
+                                        # throughout, matching network/network.py)
         "min_ambient_temp_C": -10.0,
         "reference":         "Ealing report p.5: '2.8 MW ASHP'",
     },
@@ -156,7 +161,7 @@ ASHP_PRESETS = {
         "description":       "Ealing Town Centre Phase 2 ASHP expansion",
         "n_units":            5,
         "unit_capacity_MW":   1.0,     # 5 x 1.0 MW = 5.0 MW total
-        "flow_temp_C":        65.0,
+        "flow_temp_C":        70.0,    # See ealing_phase1 note above
         "min_ambient_temp_C": -10.0,
         "reference":         "Ealing report Table 1: Phase 2 low carbon capacity 5.0 MW",
     },
@@ -345,7 +350,7 @@ class ASHPArray:
         name: str,
         n_units: int,
         unit_capacity_MW: float,
-        flow_temp_C: float                      = 65.0,
+        flow_temp_C: float                      = 70.0,
         weather_df: Optional[pd.DataFrame]       = None,
         min_ambient_temp_C: float                = -10.0,
         min_capacity_fraction: float             = 0.65,
@@ -472,7 +477,7 @@ class ASHPArray:
                 name: "Town centre ASHP bank"
                 n_units: 4
                 unit_capacity_MW: 0.7
-                flow_temp_C: 65.0
+                flow_temp_C: 70.0
                 min_ambient_temp_C: -10.0
                 electricity_tariff:
                   negotiated_discount_pct: 10.0
@@ -564,9 +569,9 @@ if __name__ == "__main__":
     print(f"\n  Synthetic weather: T min={T.min():.1f}°C  T max={T.max():.1f}°C  T mean={T.mean():.1f}°C")
 
     # Test COP curve directly across a temperature sweep
-    print("\n  COP curve sanity check (flow temp = 65°C, with defrost):")
+    print("\n  COP curve sanity check (flow temp = 70°C, with defrost):")
     test_temps = np.array([-15, -10, -5, -2, 0, 2, 5, 8, 10, 15, 20, 25])
-    cops = ashp_cop(test_temps, T_flow_C=65.0)
+    cops = ashp_cop(test_temps, T_flow_C=70.0)
     for t, c in zip(test_temps, cops):
         print(f"    T_amb={t:>4}°C  COP={c:.2f}")
 
@@ -615,7 +620,7 @@ if __name__ == "__main__":
         "name": "Town centre ASHP bank (from config)",
         "n_units": 4,
         "unit_capacity_MW": 0.7,
-        "flow_temp_C": 65.0,
+        "flow_temp_C": 70.0,
         "electricity_tariff": {"negotiated_discount_pct": 15.0},
     }
     ashp_from_cfg = ASHPArray.from_config(config_block, weather_df)

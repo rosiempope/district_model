@@ -385,17 +385,36 @@ if __name__ == "__main__":
 
     # --- Run WITH storage — same sources, fresh copies so Run 1's
     #     boiler load-profile correction doesn't bleed into Run 2 ---
-    print("\n  Run 2 — with a strategic thermal store:")
+    # Sized to match the REAL Ealing Town Centre Network's Phase 1 thermal
+    # store: "50,000 litres of thermal storage" (Ealing Town Centre Heat
+    # Network Feasibility Report, Table 15 "Energy centre capacity
+    # summary"). Converted to MWh at the network's own quoted design
+    # temperatures (70C peak flow / 40C typical return = 30K usable
+    # delta-T, per the report's section on network operating conditions),
+    # using thermal_storage.py's m3_to_mwh(): 50 m3 at 30K -> 1.74 MWh.
+    # This is a genuinely small OPERATIONAL buffer (the report's own
+    # category 1, not a strategic diurnal store) -- note it's actually
+    # BELOW the 25-50 litres/kW rule of thumb in this module's own
+    # docstring (50,000L / 2,800kW ASHP = ~18 L/kW), so don't be surprised
+    # it does less peak-shaving than the larger illustrative store used
+    # in earlier versions of this self-test.
+    # Charge/discharge rate isn't given in the report -- assumed equal to
+    # ASHP capacity (2.8 MW), since the report describes the store as
+    # "connected in parallel with the heat pump" and charged directly
+    # from its output. Flagged as an assumption, not a cited figure.
+    print("\n  Run 2 — with the real Ealing Phase 1 thermal store (50,000L, ~1.74 MWh):")
     gas2  = GasBoiler.from_preset("ealing_phase1")
     elec2 = ElectricBoiler.from_preset("ealing_backup")
     sources2 = [dc, efw, ashp, gas2, elec2]
     store = ThermalStorage(
-        name="Strategic diurnal store",
-        capacity_MWh=20.0,
-        max_charge_MW=5.0,
-        max_discharge_MW=5.0,
+        name="Ealing Phase 1 thermal store (50,000L)",
+        capacity_MWh=1.74,
+        max_charge_MW=2.8,
+        max_discharge_MW=2.8,
+        delta_T_K=30.0,
     )
     result_storage = run_dispatch(demand_kW, sources2, storage=store)
+    
     s2 = result_storage.summary()
     for k, v in s2.items():
         print(f"    {k:<28} {v}")
@@ -410,10 +429,14 @@ if __name__ == "__main__":
     )
     print(f"\n  Peak SINGLE-HOUR boiler output — no storage:   {peak_boiler_no_storage:.2f} MW")
     print(f"  Peak SINGLE-HOUR boiler output — with storage: {peak_boiler_with_storage:.2f} MW")
-    print(f"  -> this is storage's real value: smaller backup plant CAPEX, "
-          f"NOT a smaller network pipe (the network main still has to carry "
-          f"the full {demand_kW.max()/1000:.2f} MW demand peak either way).")
-
+    print(f"  -> with the REAL Ealing-sized buffer (1.74 MWh), this barely moves -- it's an")
+    print(f"     operational buffer (prevents ASHP short-cycling), not a strategic peak-shaver.")
+    print(f"     A genuinely larger strategic store COULD reduce backup boiler capacity (see")
+    print(f"     thermal_storage.py's docstring on the two storage categories) -- that's a")
+    print(f"     separate sensitivity case to run deliberately, not what this real-world figure shows.")
+    print(f"     Either way, the network MAIN still has to carry the full {demand_kW.max()/1000:.2f} MW")
+    print(f"     demand peak regardless of storage size -- that's a plant-sizing question, not a pipe one.")
+    
     opex_no_storage = s1["total_annual_opex_GBP"]
     opex_with_storage = s2["total_annual_opex_GBP"]
     print(f"\n  Annual OPEX — no storage:   £{opex_no_storage:,.0f}")
