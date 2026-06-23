@@ -219,11 +219,31 @@ def _heating_profile(
     occupancy: np.ndarray,
     base_load_frac: float,
     heat_base_C: float = 15.5,
+    reference_annual_HDD_h: Optional[float] = None,
 ) -> np.ndarray:
     """
     HDD-scaled heating profile modulated by occupancy.
     base_load_frac ensures fabric heat loss continues when unoccupied.
     Returns hourly load in kW.
+
+    Degree-day normalisation
+    -------------------------
+    annual_heat_kWh is a CIBSE-style benchmark, implicitly tied to a
+    "standard" UK weather year. Without correction, simply rescaling the
+    HDD-weighted shape to always sum to that fixed benchmark means weather
+    only changes WHEN heat is used, never HOW MUCH — so a 2050 climate
+    scenario would show identical annual heat to today, just reshuffled.
+    That's wrong: a genuinely milder year should use genuinely less heat.
+
+    reference_annual_HDD_h lets the caller supply the annual HDD of a
+    reference (typically baseline) weather year. The benchmark is then
+    scaled by (this year's actual HDD / reference HDD) before being
+    distributed across the hours, so warmer scenarios correctly show LESS
+    annual heat, not just a reshaped version of the same total.
+
+    If reference_annual_HDD_h is None (default), this year's own HDD is
+    used as its own reference — i.e. the scaling factor is 1.0 and
+    behaviour is identical to a standalone, no-climate-comparison run.
     """
     HDD_h = np.clip(heat_base_C - T_air, 0, None)
     HDD_annual = HDD_h.sum()
@@ -232,11 +252,15 @@ def _heating_profile(
         warnings.warn("Annual HDD near zero — check weather data or base temperature.")
         return np.zeros(len(T_air))
 
+    reference = reference_annual_HDD_h if reference_annual_HDD_h is not None else HDD_annual
+    degree_day_scaling = HDD_annual / reference
+    effective_annual_heat_kWh = annual_heat_kWh * degree_day_scaling
+
     # Occupancy modifier: base_load when empty, full load when occupied
     occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
     raw = HDD_h * occ_modifier
 
-    scale = annual_heat_kWh / raw.sum() if raw.sum() > 0 else 0.0
+    scale = effective_annual_heat_kWh / raw.sum() if raw.sum() > 0 else 0.0
     return raw * scale  # kW
 
 
@@ -248,6 +272,8 @@ def _cooling_profile(
     cool_base_C: float  = 20.0,
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
+    reference_annual_CDD_h: Optional[float] = None,
+    reference_annual_ramp: Optional[float]  = None,
 ) -> np.ndarray:
     """
     Two-part cooling demand model — returns element-wise maximum:
@@ -262,15 +288,39 @@ def _cooling_profile(
 
     Using max() means hot spells always show realistic demand peaks
     even if the annual CDD total is low due to no A/C infrastructure.
+
+    Degree-day normalisation
+    -------------------------
+    Same issue as _heating_profile, but on the cooling side it's worse:
+    Part B is specifically meant to be the climate-change-sensitive
+    signal, but without this correction BOTH parts get rescaled to the
+    same fixed annual_cool_kWh regardless of how much hotter the weather
+    actually is — so the comfort ramp reshapes cooling demand across the
+    year without ever increasing the annual total, silently defeating its
+    own stated purpose.
+
+    reference_annual_CDD_h / reference_annual_ramp let the caller supply
+    the annual CDD-hour sum and ramp sum from a reference (typically
+    baseline) weather year. Each part is then independently scaled by
+    (this year's actual signal / reference signal) before being
+    distributed, so a hotter scenario shows MORE annual cooling from
+    both parts, not just a reshaped version of the same fixed total.
+
+    If either reference is None (default), this year's own signal is used
+    as its own reference (scaling factor 1.0) — identical to a
+    standalone, no-climate-comparison run.
     """
     n = len(T_air)
     occ_modifier = base_load_frac + (1.0 - base_load_frac) * occupancy
 
     # -- Part A: CDD scaling --------------------------------------------------
     CDD_h = np.clip(T_air - cool_base_C, 0, None)
-    if CDD_h.sum() > 0.1:
+    CDD_annual = CDD_h.sum()
+    if CDD_annual > 0.1:
+        reference_A = reference_annual_CDD_h if reference_annual_CDD_h is not None else CDD_annual
+        effective_annual_cool_kWh_A = annual_cool_kWh * (CDD_annual / reference_A)
         raw_A = CDD_h * occ_modifier
-        part_A = raw_A * (annual_cool_kWh / raw_A.sum())
+        part_A = raw_A * (effective_annual_cool_kWh_A / raw_A.sum())
     else:
         # Too few hours above base — CDD gives near-zero; Part B takes over
         part_A = np.zeros(n)
@@ -281,8 +331,11 @@ def _cooling_profile(
         0.0, 1.0
     )
     raw_B = ramp * occupancy
-    if raw_B.sum() > 0:
-        part_B = raw_B * (annual_cool_kWh / raw_B.sum())
+    ramp_annual = raw_B.sum()
+    if ramp_annual > 0:
+        reference_B = reference_annual_ramp if reference_annual_ramp is not None else ramp_annual
+        effective_annual_cool_kWh_B = annual_cool_kWh * (ramp_annual / reference_B)
+        part_B = raw_B * (effective_annual_cool_kWh_B / ramp_annual)
     else:
         part_B = np.zeros(n)
 
@@ -367,6 +420,61 @@ def _resolve_annual_demands(building: dict) -> tuple[float, float, float]:
  
     return float(heat), float(cool), float(dhw)
 
+# ── Climate scenario reference ─────────────────────────────────────────────────
+
+def compute_climate_reference(
+    weather_df: pd.DataFrame,
+    heat_base_C: float  = 15.5,
+    cool_base_C: float  = 20.0,
+    cool_onset_C: float = 22.0,
+    cool_full_C: float  = 26.0,
+) -> dict:
+    """
+    Compute the reference degree-hour signals needed to compare annual
+    heating/cooling demand correctly across climate scenarios.
+
+    CIBSE-style benchmarks are implicitly tied to a "standard" weather
+    year. Without a shared reference, synthesise_building()/
+    synthesise_network() rescale each scenario's weather-driven shape back
+    to that same fixed benchmark — so a 2050 scenario shows the SAME
+    annual heat/cool as today, just redistributed across the year, which
+    hides the very effect you're trying to study.
+
+    Call this ONCE on your baseline (unshifted) weather year, then pass
+    the result as climate_reference= into every scenario you synthesise
+    (including baseline itself, where it will correctly net out to a
+    scaling factor of 1.0).
+
+    Example
+    -------
+        baseline_weather = apply_climate_scenario(weather_df, "baseline")
+        ref = compute_climate_reference(baseline_weather)
+
+        for scenario_name in ["baseline", "2050_central", "2050_high"]:
+            w = apply_climate_scenario(weather_df, scenario_name)
+            result = synthesise_network(w, demand_scenario, climate_reference=ref)
+
+    Returns
+    -------
+    dict with keys 'annual_HDD_h', 'annual_CDD_h', 'annual_ramp' — pass
+    straight through as the climate_reference argument.
+    """
+    if len(weather_df) != 8760:
+        raise ValueError(f"weather_df must have 8760 rows; got {len(weather_df)}.")
+
+    T_air = weather_df["temp_drybulb_C"].values.astype(float)
+
+    HDD_h = np.clip(heat_base_C - T_air, 0, None)
+    CDD_h = np.clip(T_air - cool_base_C, 0, None)
+    ramp  = np.clip((T_air - cool_onset_C) / (cool_full_C - cool_onset_C), 0.0, 1.0)
+
+    return {
+        "annual_HDD_h": float(HDD_h.sum()),
+        "annual_CDD_h": float(CDD_h.sum()),
+        "annual_ramp":  float(ramp.sum()),
+    }
+
+
 # ── Public API ─────────────────────────────────────────────────────────────────
  
 def synthesise_building(
@@ -376,6 +484,7 @@ def synthesise_building(
     cool_base_C: float  = 20.0,
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
+    climate_reference: Optional[dict] = None,
 ) -> dict:
     """
     Generate 8,760-hour heating, cooling, and DHW profiles for one building.
@@ -389,8 +498,19 @@ def synthesise_building(
                    used to scale the annual cooling benchmark (Part A).
                    Distinct from cool_onset_C: this is a methodology
                    constant, not a comfort threshold.
-    cool_onset_C : temperature where comfort cooling demand begins (°C)
+    cool_onset_C : temperature where comfort cooling demand begins (°C) —
+                   used only by the comfort urgency ramp (Part B).
     cool_full_C  : temperature where comfort cooling demand saturates (°C)
+    climate_reference : optional dict from compute_climate_reference(), with
+                   keys 'annual_HDD_h', 'annual_CDD_h', 'annual_ramp'.
+                   Pass the SAME reference (computed once from your baseline
+                   weather year) into every climate scenario you're
+                   comparing, so annual heating/cooling totals genuinely
+                   move with the weather instead of being silently
+                   rescaled back to the fixed CIBSE benchmark every time.
+                   If None (default), each year is its own reference —
+                   i.e. no climate-scenario adjustment is applied, which
+                   is the right behaviour for a standalone, single-year run.
  
     Returns
     -------
@@ -408,11 +528,17 @@ def synthesise_building(
     occupancy = _make_occupancy(bm["occupancy"])
     heat_kWh, cool_kWh, dhw_kWh = _resolve_annual_demands(building)
  
-    heating_kW = _heating_profile(T_air, heat_kWh, occupancy, bm["base_load_frac"], heat_base_C)
+    ref = climate_reference or {}
+    heating_kW = _heating_profile(
+        T_air, heat_kWh, occupancy, bm["base_load_frac"], heat_base_C,
+        reference_annual_HDD_h=ref.get("annual_HDD_h"),
+    )
     cooling_kW = _cooling_profile(T_air, cool_kWh, occupancy, bm["base_load_frac"],
                                   cool_base_C=cool_base_C,
                                   cool_onset_C=cool_onset_C,
-                                  cool_full_C=cool_full_C)
+                                  cool_full_C=cool_full_C,
+                                  reference_annual_CDD_h=ref.get("annual_CDD_h"),
+                                  reference_annual_ramp=ref.get("annual_ramp"))
     dhw_kW     = _dhw_profile(dhw_kWh, occupancy=occupancy)
  
     return {
@@ -438,6 +564,7 @@ def synthesise_network(
     cool_base_C: float  = 20.0,
     cool_onset_C: float = 22.0,
     cool_full_C: float  = 26.0,
+    climate_reference: Optional[dict] = None,
 ) -> dict:
     """
     Synthesise profiles for all demand nodes in a scenario config dict.
@@ -446,6 +573,12 @@ def synthesise_network(
     ----------
     weather_df : from parse_epw.py / weather_data.csv loader
     scenario   : dict with 'demand_nodes' list (mirrors YAML structure)
+    climate_reference : optional dict from compute_climate_reference() — see
+                   synthesise_building() docstring. Pass the same reference
+                   (computed once from baseline weather) into every
+                   scenario you're comparing, so annual heating/cooling
+                   totals actually shift with climate rather than only
+                   reshaping across the year.
 
     Returns
     -------
@@ -456,7 +589,8 @@ def synthesise_network(
         raise ValueError("scenario config has no 'demand_nodes'.")
 
     nodes = [
-        synthesise_building(weather_df, b, heat_base_C, cool_base_C, cool_onset_C, cool_full_C)
+        synthesise_building(weather_df, b, heat_base_C, cool_base_C, cool_onset_C, cool_full_C,
+                             climate_reference=climate_reference)
         for b in demand_nodes
     ]
 
