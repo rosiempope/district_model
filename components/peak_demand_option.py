@@ -124,10 +124,44 @@ from economics.tariffs import (
 
 N_HOURS = 8760
 
-# Carbon intensities (kgCO2e/kWh fuel, BEIS/DESNZ 2024 conversion factors)
+# Carbon intensities (kgCO2e/kWh HEAT delivered, i.e. already reflects
+# each source's own efficiency/COP where that's a fixed property of the
+# fuel pathway — gas and electric here are PER UNIT FUEL/ELECTRICITY
+# input, not per unit heat output, since boiler/heater efficiency varies
+# by load and is applied separately in marginal_cost — see each class's
+# _recompute_marginal_cost()/carbon attribute for how it's actually used.
 CARBON_INTENSITY = {
-    "gas":      0.183,   # Natural gas, gross CV basis (Scope 1)
+    "gas":      0.183,   # Natural gas, gross CV basis (Scope 1). BEIS/DESNZ 2024.
     "electric": 0.207,   # UK grid average 2024 (will fall over time — see note)
+
+    # EfW (Energy from Waste) CHP heat — kgCO2e per kWh of HEAT delivered
+    # (not per unit fuel/waste input; this is already a final heat-output
+    # factor, unlike gas/electric above).
+    # Source: BRE Technical Note "Modelling Energy from Waste Facilities"
+    # (SAP 2012 methodology), calibrated against the real SELCHP plant
+    # (the same reference plant family cited in EfW.py's own docstring).
+    # NOT zero, despite being a "waste heat byproduct": extracting heat
+    # from the steam cycle means LESS electricity is generated and sent
+    # to the grid, so EfW heat carries a real opportunity-cost carbon
+    # factor (lost low-carbon-displacing grid electricity), not a direct
+    # combustion factor. BRE's worked calculation: 0.0580 kgCO2/kWh heat
+    # (heat-displaced-electricity term 0.0503 + backup-boiler-on-the-3%-
+    # shortfall term 0.0076). This factor does NOT vary with ambient
+    # conditions (EfW runs baseload year-round), unlike ASHP below.
+    "efw_heat": 0.0580,
+
+    # DataCentre waste heat — kgCO2e per kWh of heat delivered.
+    # Set to 0.0, and this IS a genuine zero, not a simplification like
+    # "we don't have a number so we used 0" — the mechanism is different
+    # from EfW above: a data centre's IT load (and therefore its cooling/
+    # heat-rejection load) is fixed by computing demand, NOT by whether
+    # district heating captures the waste heat or not. Capturing it
+    # doesn't reduce any other useful output (unlike EfW, where capturing
+    # heat measurably reduces electricity sent to the grid) — it's heat
+    # that would otherwise be rejected to atmosphere via dry air coolers
+    # either way. No displaced-generation term applies, so the BRE-style
+    # calculation that gives EfW its non-zero factor doesn't apply here.
+    "dc_waste_heat": 0.0,
 }
 
 # DIN 4702-8 part-load weighting (matches docstring above)
@@ -405,6 +439,14 @@ class GasBoiler:
         )
         self.marginal_cost = fuel_cost + carbon_cost
 
+        # Carbon intensity PER UNIT HEAT delivered (kgCO2e/kWh_heat), not
+        # per unit gas burned — divides through by efficiency, same as the
+        # carbon_cost term above, so a boiler running at poor part-load
+        # efficiency correctly shows HIGHER carbon per unit heat delivered.
+        # Used by dispatch.py's network-wide carbon compliance check
+        # (London Heat Network Manual Table 8: max 0.216 kgCO2e/kWh).
+        self.carbon_intensity_kgCO2_per_kWh = CARBON_INTENSITY["gas"] / self.efficiency_hourly
+
     @classmethod
     def from_preset(cls, preset_key: str, **overrides) -> "GasBoiler":
         """
@@ -584,6 +626,17 @@ class ElectricBoiler:
             * self.carbon_price_GBP_per_tonne
         )
         self.marginal_cost = fuel_cost + carbon_cost
+
+        # Carbon intensity per unit heat delivered (kgCO2e/kWh_heat).
+        # Constant across all 8760 hours — efficiency doesn't vary with
+        # load (see class docstring) and this model uses a fixed annual
+        # grid average rather than a time-varying grid carbon signal (a
+        # known simplification — see CARBON_INTENSITY note in this
+        # module). Used by dispatch.py's network-wide carbon compliance
+        # check (London Heat Network Manual Table 8: max 0.216 kgCO2e/kWh).
+        self.carbon_intensity_kgCO2_per_kWh = np.full(
+            N_HOURS, CARBON_INTENSITY["electric"] / self.efficiency
+        )
 
     @classmethod
     def from_preset(cls, preset_key: str, **overrides) -> "ElectricBoiler":

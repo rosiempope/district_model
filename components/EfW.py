@@ -84,9 +84,25 @@ Usage
 
 """
  
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from typing import Optional
+
+# Make sure the project root is on sys.path, same pattern as ASHP.py and
+# peak_demand_option.py — lets `from components.peak_demand_option import
+# ...` resolve regardless of how/where this file is run from.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+# Reuse the SAME carbon intensity figures used by the other source
+# classes (BEIS/DESNZ 2024 conversion factors + BRE EfW heat factor)
+# rather than maintaining a second, possibly-drifting copy. See
+# peak_demand_option.py's CARBON_INTENSITY dict for sourcing notes.
+from components.peak_demand_option import CARBON_INTENSITY
  
  
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -300,6 +316,18 @@ class EfWChp:
         # by-product revenue stream once the plant exists for waste
         # disposal duty, not a cost-driven dispatch decision like a boiler
         self.marginal_cost = np.full(N_HOURS, self.heat_export_cost_GBP_per_MWh)
+
+        # Carbon intensity per unit heat delivered (kgCO2e/kWh_heat).
+        # NOT zero, despite being "waste heat" — extracting heat from the
+        # steam cycle reduces electricity sent to the grid, so EfW heat
+        # carries a real opportunity-cost carbon factor (displaced grid
+        # generation), not a direct combustion factor on the heat itself.
+        # See CARBON_INTENSITY["efw_heat"] in peak_demand_option.py for
+        # the full BRE/SAP 2012 sourcing note (calibrated against the
+        # real SELCHP plant). Constant across all 8760 hours — EfW runs
+        # baseload by design (see module docstring), no part-load
+        # variation modelled here unlike the boilers.
+        self.carbon_intensity_kgCO2_per_kWh = np.full(N_HOURS, CARBON_INTENSITY["efw_heat"])
  
         # Electricity also produced alongside heat (informational —
         # useful for revenue-side reporting even though this model focuses
@@ -452,4 +480,3 @@ if __name__ == "__main__":
     print("  ✓ Availability factor within tolerance")
     print("  ✓ Single contiguous annual outage (matches real EfW maintenance pattern)")
     print()
- 

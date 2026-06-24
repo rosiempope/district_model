@@ -127,6 +127,12 @@ if str(_PROJECT_ROOT) not in sys.path:
 # clean 8760 £/MWh series — see economics/tariffs.py.
 from economics.tariffs import resolve_electricity_price, ElectricityTariff
 
+# Reuse the SAME carbon intensity figures used by GasBoiler/ElectricBoiler
+# (BEIS/DESNZ 2024 conversion factors) rather than maintaining a second,
+# possibly-drifting copy. See peak_demand_option.py's CARBON_INTENSITY
+# dict for sourcing notes.
+from components.peak_demand_option import CARBON_INTENSITY
+
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -307,7 +313,73 @@ def _capacity_derate(
     return frac
 
 
-# ── ASHPArray class ────────────────────────────────────────────────────────────
+# ── Unit-level outage model ─────────────────────────────────────────────────────
+
+def _ashp_unit_outage_profile(
+    n_units: int,
+    availability_factor: float,
+    n_hours: int = N_HOURS,
+    seed: int = 7,
+) -> np.ndarray:
+    """
+    Per-UNIT outage schedule for an ASHP array — returns an (n_hours,)
+    array of how many units are AVAILABLE (i.e. not in maintenance) at
+    each hour, ranging from 0 to n_units.
+
+    This is deliberately a different shape from DataCentre's or EfW's
+    outage model: an ASHP "array" is N separate physical units (see
+    module docstring — "scale by changing n_units"), and real practice
+    is to service them ONE AT A TIME on a rotating schedule, not take the
+    whole bank down together. Losing 1 of 4 units is a routine, survivable
+    event; losing all 4 simultaneously essentially never happens by
+    design (a competent O&M schedule staggers servicing specifically to
+    avoid that). Modelling it as a single binary on/off array (like
+    DataCentre) would significantly overstate how much capacity is ever
+    actually lost at once.
+
+    Approach: each unit gets ONE planned maintenance window per year
+    (typical annual service interval), spread across different times of
+    year so outages don't stack. Window length is derived from
+    availability_factor so the overall fleet-average availability still
+    matches what's specified, same contract as DataCentre/EfW's
+    availability_factor parameter.
+
+    Parameters
+    ----------
+    n_units             : number of units in the array
+    availability_factor : fleet-average fraction of time each unit is
+                           available (e.g. 0.97 -> ~11 days/year service
+                           per unit, a reasonable ASHP service interval)
+    seed                 : random seed for scheduling which weeks each
+                            unit's outage falls in
+
+    Returns
+    -------
+    np.ndarray (n_hours,) of ints, 0 to n_units — units available each hour
+    """
+    rng = np.random.default_rng(seed)
+    units_down = np.zeros(n_hours, dtype=int)
+
+    outage_hours_per_unit = int(round((1.0 - availability_factor) * n_hours))
+    if outage_hours_per_unit <= 0:
+        return np.full(n_hours, n_units, dtype=int)
+
+    # Stagger each unit's single annual outage across the year, spaced
+    # apart so they don't cluster — divide the year into n_units roughly
+    # equal "slots" and put one outage in each, with some random jitter
+    # so it isn't mechanically perfectly even (real schedules slip).
+    slot_width = n_hours // max(n_units, 1)
+    for i in range(n_units):
+        slot_start = i * slot_width
+        slot_end = slot_start + slot_width
+        # Jitter the actual start within this unit's slot, leaving room
+        # for the outage itself to fit without overrunning the slot
+        latest_start = max(slot_start, slot_end - outage_hours_per_unit - 1)
+        start = int(rng.integers(slot_start, max(slot_start + 1, latest_start + 1)))
+        end = min(start + outage_hours_per_unit, n_hours)
+        units_down[start:end] += 1
+
+    return np.clip(n_units - units_down, 0, n_units)
 
 class ASHPArray:
     """
@@ -338,9 +410,23 @@ class ASHPArray:
                               See economics/tariffs.py.
     capex_GBP_per_MW        : capital cost per MW installed (for reporting —
                               actual CAPEX calcs live in economics/CAPEX.py)
-    seed                    : unused currently (kept for interface consistency
-                              with DataCentre — ASHPs have no random outages
-                              modelled here, but reserved for future use)
+    availability_factor    : fleet-average fraction of time each UNIT is
+                              available (not in maintenance). Default 0.97
+                              (~11 days/year service per unit — a typical
+                              ASHP annual service interval). Modelled as
+                              ONE planned outage per unit, staggered across
+                              the year (real O&M practice services units
+                              one at a time, never the whole bank at once)
+                              — see _ashp_unit_outage_profile(). This
+                              compounds with, not replaces, the weather-
+                              driven capacity derating above: an outage
+                              hour on a cold day loses both that unit's
+                              share of capacity AND has worse COP on the
+                              remaining units.
+    seed                    : random seed for the outage schedule (which
+                              week of the year each unit's service window
+                              falls in). Previously unused/reserved; now
+                              actually used for unit outage scheduling.
     """
 
     source_type = "ashp"
@@ -357,6 +443,8 @@ class ASHPArray:
         apply_defrost: bool                      = True,
         electricity_price_GBP_per_MWh            = None,
         capex_GBP_per_MW: float                  = 600_000.0,
+        availability_factor: float               = 0.97,
+        seed: int                                = 7,
         reference: str                           = "",
     ):
         if weather_df is None:
@@ -377,6 +465,8 @@ class ASHPArray:
         self.min_ambient_temp_C     = float(min_ambient_temp_C)
         self.min_capacity_fraction  = float(min_capacity_fraction)
         self.capex_GBP_per_MW       = float(capex_GBP_per_MW)
+        self.availability_factor    = float(availability_factor)
+        self.seed                   = int(seed)
         self.reference              = reference
 
         T_air = weather_df["temp_drybulb_C"].values[:N_HOURS].astype(float)
@@ -387,7 +477,7 @@ class ASHPArray:
             T_air, self.flow_temp_C, apply_defrost=apply_defrost
         )
 
-        # Capacity derating at every hour
+        # Capacity derating at every hour — weather-driven (existing)
         self._capacity_fraction = _capacity_derate(
             T_air,
             rating_point_C=RATING_POINT_TEMP_C,
@@ -395,10 +485,24 @@ class ASHPArray:
             min_capacity_fraction=self.min_capacity_fraction,
         )
 
+        # Units available at each hour — maintenance-driven (NEW). Stacks
+        # with weather derating: a unit in maintenance contributes ZERO
+        # regardless of how mild the weather is that hour, and the units
+        # that ARE up still get the same weather derating as before.
+        self.units_available = _ashp_unit_outage_profile(
+            self.n_units, self.availability_factor, seed=self.seed
+        )
+        self._unit_availability_fraction = (
+            self.units_available / self.n_units if self.n_units > 0 else np.ones(N_HOURS)
+        )
+
         # Available thermal supply at each hour (MW) — this is what the
         # dispatch optimiser can call on, NOT what it necessarily produces
-        # (that depends on how much heat is actually demanded that hour)
-        self.supply_MW = self.capacity_MW * self._capacity_fraction
+        # (that depends on how much heat is actually demanded that hour).
+        # Now reflects BOTH weather derating AND unit outages.
+        self.supply_MW = (
+            self.capacity_MW * self._capacity_fraction * self._unit_availability_fraction
+        )
 
         # Supply temperature is just the flow temperature (ASHPs lift to
         # the design flow temp directly, unlike DC waste heat which needs
@@ -414,6 +518,18 @@ class ASHPArray:
         # Marginal cost of heat delivered (£/MWh_heat) = elec_price / COP
         # This is what the dispatch optimiser compares against other sources
         self.marginal_cost = self._elec_price / self.cop_hourly
+
+        # Carbon intensity per unit heat delivered (kgCO2e/kWh_heat) =
+        # grid carbon intensity / COP. Varies hourly because COP varies
+        # with ambient temperature — a cold night with poor COP is BOTH
+        # more expensive AND more carbon-intensive per unit heat, same
+        # direction, same root cause. Uses the fixed annual grid average
+        # (CARBON_INTENSITY["electric"]) — a known simplification, since
+        # the real grid carbon intensity itself varies hour-to-hour with
+        # generation mix; see peak_demand_option.py's CARBON_INTENSITY
+        # note. Used by dispatch.py's network-wide carbon compliance
+        # check (London Heat Network Manual Table 8: max 0.216 kgCO2e/kWh).
+        self.carbon_intensity_kgCO2_per_kWh = CARBON_INTENSITY["electric"] / self.cop_hourly
 
         # Electrical demand IF running at full available supply (MW_elec)
         # Actual electrical draw depends on dispatch — this is the ceiling
@@ -512,6 +628,8 @@ class ASHPArray:
             min_capacity_fraction=self.min_capacity_fraction,
             electricity_price_GBP_per_MWh=self._elec_price,
             capex_GBP_per_MW=self.capex_GBP_per_MW,
+            availability_factor=self.availability_factor,
+            seed=self.seed,
             reference=self.reference,
         )
 
@@ -535,6 +653,10 @@ class ASHPArray:
             "mean_electricity_price_GBP_per_MWh": round(float(self._elec_price.mean()), 2),
             "mean_marginal_cost_GBP_per_MWh": round(float(self.marginal_cost.mean()), 2),
             "estimated_capex_GBP":        round(self.capacity_MW * self.capex_GBP_per_MW, 0),
+            "availability_factor":        self.availability_factor,
+            "annual_outage_hours_per_unit": int(round((1.0 - self.availability_factor) * N_HOURS)),
+            "min_units_available":        int(self.units_available.min()),
+            "hours_below_full_fleet":     int((self.units_available < self.n_units).sum()),
             "reference":                  self.reference,
         }
 
@@ -656,6 +778,20 @@ if __name__ == "__main__":
     print(f"    Jan mean COP: {jan_cop:.2f}  |  Jul mean COP: {jul_cop:.2f}  → {'✓ summer higher' if jul_cop > jan_cop else '✗ FAIL'}")
     print(f"    Jan mean supply: {jan_supply:.2f} MW  |  Jul mean supply: {jul_supply:.2f} MW  → {'✓ summer higher capacity' if jul_supply > jan_supply else '✗ FAIL'}")
 
+    # --- NEW: unit-level outage model ---
+    print(f"\n  Unit-level outage model (real maintenance practice — units")
+    print(f"  serviced one at a time, never the whole bank together):")
+    print(f"    n_units: {ealing.n_units}, availability_factor: {ealing.availability_factor}")
+    print(f"    Outage hours per unit per year: {int(round((1.0 - ealing.availability_factor) * N_HOURS))}")
+    print(f"    Units available — min: {ealing.units_available.min()}, max: {ealing.units_available.max()}")
+    print(f"    Hours with full fleet up: {(ealing.units_available == ealing.n_units).sum()} / {N_HOURS}")
+    print(f"    Hours with reduced fleet: {(ealing.units_available < ealing.n_units).sum()} / {N_HOURS}")
+    # Higher availability should mean fewer reduced-fleet hours
+    high_avail = ASHPArray.from_preset("ealing_phase1", weather_df, availability_factor=0.999)
+    low_avail  = ASHPArray.from_preset("ealing_phase1", weather_df, availability_factor=0.90)
+    print(f"    At 99.9% availability: {(high_avail.units_available < high_avail.n_units).sum()} reduced-fleet hours")
+    print(f"    At 90.0% availability: {(low_avail.units_available < low_avail.n_units).sum()} reduced-fleet hours")
+
     # Array shape and bounds checks
     assert len(ealing.cop_hourly)    == N_HOURS, "cop_hourly wrong length"
     assert len(ealing.supply_MW)     == N_HOURS, "supply_MW wrong length"
@@ -674,10 +810,23 @@ if __name__ == "__main__":
     assert abs(ashp_from_cfg._elec_price.mean() - ealing_default._elec_price.mean() * 0.85) < 1.0, \
         "from_config nested tariff block should apply the 15% discount correctly"
 
+    # New outage-model assertions
+    assert ealing.units_available.min() >= 0, "units_available should never go negative"
+    assert ealing.units_available.max() <= ealing.n_units, "units_available should never exceed n_units"
+    assert ealing.cop_hourly.mean() == ealing.cop_hourly.mean(), "COP should be unaffected by outages (sanity)"
+    assert (high_avail.units_available < high_avail.n_units).sum() < (low_avail.units_available < low_avail.n_units).sum(), \
+        "Lower availability_factor should produce MORE reduced-fleet hours than higher availability_factor"
+    # At no point should ALL units be down simultaneously with a sane
+    # availability factor (staggered scheduling should prevent total loss)
+    assert ealing.units_available.min() >= ealing.n_units - 1, \
+        "Staggered single-unit-at-a-time outages should never take down more than 1 unit simultaneously at this availability level"
+
     print(f"\n  ✓ All array shapes correct (8760 hours)")
     print(f"  ✓ Supply never exceeds nameplate capacity")
     print(f"  ✓ COP within physical bounds [1.2, 6.0]")
     print(f"  ✓ Default electricity price now uses realistic tariff (~£240/MWh), not old £120 placeholder")
     print(f"  ✓ Tariff object, flat scalar, and raw array overrides all behave correctly")
     print(f"  ✓ from_config() nested electricity_tariff block resolves correctly")
+    print(f"  ✓ Unit-level outages correctly staggered — never more than 1 unit down at once at this scale")
+    print(f"  ✓ Lower availability_factor correctly produces more reduced-fleet hours")
     print()

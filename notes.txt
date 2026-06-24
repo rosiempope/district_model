@@ -1,0 +1,15 @@
+Couple of things I want to write down for discussion
+
+- We are assuming the temperature leaving the energy supply is the temperature we get for the end user so really we need to alter the temperature being generated at the energy site 
+    to ensure we are able to meet the temps wanted at the house hold - this obvs will come from heat loss equations of the pipes and the components in later design but we should
+    probs compensate it in the code a bit to make sure its sensible - for example in the Arup paper: https://www.london.gov.uk/sites/default/files/osd12_dh_manual_for_london_february_2013_v1-0.pdf
+    it uses 120oC as the supply. 
+
+- We also need to consider the pumping costs in the OPEX that comes from the need to pump all this round - not done yet but a consideration - also the cost of said pumps.
+
+- need to consider carbon constraints on the energy sources 0.216 kg CO2/kWh - as we dont want to exceed the constraint placed by London on decentralised energy systems 
+
+- we need to measure unmet demand in stress test scenarios for sure
+
+
+ 

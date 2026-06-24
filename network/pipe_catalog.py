@@ -217,31 +217,103 @@ STANDARD_DN_SERIES = [
 TWIN_PIPE_MAX_DN = 200
 
 
-# ── Insulation series presets ──────────────────────────────────────────────────
-# casing_to_pipe_ratio = outer casing diameter / pipe outer diameter.
-# Higher ratio = thicker insulation = lower heat loss, higher cost.
-# Generic approximation of typical Series 1/2/3 pre-insulated pipe — swap
-# in manufacturer-specific casing diameters for a procurement-grade design.
+# ── Insulation profile — single EN 253 standard, not three invented "series" ───
+#
+# EN 253 is a CONSTRUCTION STANDARD (steel service pipe + PUR foam +
+# HDPE casing), not a multi-grade classification — it defines one
+# insulation profile, not "series 1/2/3" tiers. "Series 1/2/3" is a
+# manufacturer (e.g. Logstor) PRODUCT-LINE naming convention, and no
+# independent series-specific dimension data exists in this project.
+# Carrying three fabricated "series" (one real + two scaled guesses) was
+# solving a problem this feasibility-stage model doesn't actually have.
+# So: ONE real, DN-dependent casing profile, taken directly from Table 7,
+# "District Heating Manual for London" (Recommended dimensions for
+# casing pipe outside diameter and wall thickness for bonded steel
+# service pipe system according to EN 253, p.39). No series, no scaling.
+#
+# If a genuine "what if we spec thicker insulation on this route"
+# sensitivity case is wanted later, that's a real, separate question —
+# reintroduce a scale factor deliberately for that purpose then, with
+# its own justification, rather than carrying unused machinery now.
 
+# (DN, steel_pipe_OD_mm, casing_pipe_OD_mm) — covers DN20 to DN500.
+# DN600 is NOT in this table (the manual's Table 7 stops at DN500); see
+# casing_to_pipe_ratio_at_dn() for how that's handled.
+_TABLE7_DN_CASING_DATA = [
+    (20,  26.9,  90.0),
+    (25,  33.7,  90.0),
+    (32,  42.4,  110.0),
+    (40,  48.3,  110.0),
+    (50,  60.3,  125.0),
+    (65,  76.1,  140.0),
+    (80,  88.9,  160.0),
+    (100, 114.3, 200.0),
+    (125, 139.7, 225.0),
+    (150, 168.3, 250.0),
+    (200, 219.1, 315.0),
+    (250, 273.0, 400.0),
+    (300, 323.9, 450.0),
+    (350, 355.6, 500.0),
+    (400, 406.4, 520.0),
+    (450, 457.0, 560.0),
+    (500, 508.0, 630.0),
+]
+_TABLE7_DN = np.array([r[0] for r in _TABLE7_DN_CASING_DATA], dtype=float)
+_TABLE7_RATIO = np.array(
+    [r[2] / r[1] for r in _TABLE7_DN_CASING_DATA], dtype=float
+)  # casing_OD / pipe_OD at each real DN — falls from 3.35 (DN20) to 1.24 (DN500)
+
+# Power-law fit to the real ratio data above, used ONLY to extrapolate
+# beyond DN500 (i.e. for DN600, which is in STANDARD_DN_SERIES but not in
+# Table 7). Within DN20-DN500, casing_to_pipe_ratio_at_dn() uses direct
+# interpolation against the real points instead (exact at every real DN,
+# not just close). Fit: ratio = a * DN^b, log-log least squares.
+#   a=6.32, b=-0.271, R^2=0.92 across all 17 real Table 7 points.
+# Worst single-point fit error is at DN20 (-16%) — small pipes have a
+# fixed minimum practical casing size (90mm, shared by DN20 and DN25
+# alike) that a smooth power law can't fully capture; the fit is
+# reliable from DN32 upward (typically within ~10%, often under 5%).
+_RATIO_FIT_A = 6.3191
+_RATIO_FIT_B = -0.2709
+
+
+def casing_to_pipe_ratio_at_dn(DN: int) -> float:
+    """
+    Real, DN-dependent casing-to-pipe ratio, from Table 7 of the District
+    Heating Manual for London (EN 253 basis).
+
+    For DN20-DN500 (covered by the real table): linear interpolation
+    between the actual measured points — exact at every standard DN that
+    has a real data point, not just close.
+
+    For DN600 (one row beyond the table's DN500 ceiling): extrapolated
+    via the power-law fit to the same real data (a*DN^b, R^2=0.92). This
+    is a genuine extrapolation, not a measured value — flagged here so
+    it isn't mistaken for Table 7 data it isn't.
+
+    Insulation gets proportionally THINNER relative to pipe size as DN
+    increases (3.35x at DN20 down to 1.24x at DN500) — a real effect, not
+    a modelling artifact.
+    """
+    if DN <= _TABLE7_DN.max():
+        return float(np.interp(DN, _TABLE7_DN, _TABLE7_RATIO))
+    else:
+        # Extrapolation beyond the real table (currently only DN600)
+        return float(_RATIO_FIT_A * DN ** _RATIO_FIT_B)
+
+
+# Single insulation profile — EN 253 only. Kept as a dict (rather than a
+# bare constant) purely so heat_loss_coefficient_W_per_mK()'s
+# insulation_series= parameter still has somewhere to look up
+# insulation_k_W_mK without changing its call signature.
+DEFAULT_INSULATION_SERIES = "en253"
 INSULATION_SERIES_PRESETS = {
-    "series1": {
-        "description":         "Standard insulation (thinnest, cheapest)",
-        "casing_to_pipe_ratio": 1.45,
-        "insulation_k_W_mK":    DEFAULT_INSULATION_K_W_MK,
-    },
-    "series2": {
-        "description":         "Reinforced insulation (typical UK DH default)",
-        "casing_to_pipe_ratio": 1.65,
-        "insulation_k_W_mK":    DEFAULT_INSULATION_K_W_MK,
-    },
-    "series3": {
-        "description":         "Thick insulation (long transmission mains, high-loss-sensitivity routes)",
-        "casing_to_pipe_ratio": 1.85,
-        "insulation_k_W_mK":    DEFAULT_INSULATION_K_W_MK,
+    "en253": {
+        "description":      "EN 253 standard pre-insulated pipe (PUR foam, HDPE casing) — "
+                             "Table 7, District Heating Manual for London",
+        "insulation_k_W_mK": DEFAULT_INSULATION_K_W_MK,
     },
 }
-
-DEFAULT_INSULATION_SERIES = "series2"
 
 # Twin-pipe (flow + return sharing one casing) loses meaningfully less heat
 # than two separate single pre-insulated pipes of the same series, at a
@@ -370,25 +442,41 @@ def heat_loss_coefficient_W_per_mK(
     Steel pipe wall and soil resistance are neglected (standard
     simplification, valid for well-insulated pipe — see module docstring).
 
+    Casing diameter is taken from the real, DN-dependent EN 253 Table 7
+    data (District Heating Manual for London) — see
+    casing_to_pipe_ratio_at_dn(). There is currently only one insulation
+    profile (EN 253); see module note above casing_to_pipe_ratio_at_dn()
+    for why "series 1/2/3" was removed rather than kept as guessed
+    variants of a standard that doesn't define them.
+
     Parameters
     ----------
     DN                 : nominal pipe size (must be in STANDARD_DN_SERIES)
     construction        : 'single' (two separate pre-insulated pipes) or
                           'twin' (shared casing — lower combined loss)
-    insulation_series   : one of INSULATION_SERIES_PRESETS
+    insulation_series   : currently only "en253" is valid (kept as a
+                          parameter for interface stability / future use,
+                          not because alternatives exist yet)
     """
     pipe = _lookup_dn(DN)
+    if insulation_series not in INSULATION_SERIES_PRESETS:
+        raise ValueError(
+            f"Unknown insulation_series '{insulation_series}'. Only "
+            f"{list(INSULATION_SERIES_PRESETS.keys())} is currently "
+            f"defined — EN 253 doesn't specify multiple insulation grades; "
+            f"see module note above casing_to_pipe_ratio_at_dn()."
+        )
     series = INSULATION_SERIES_PRESETS[insulation_series]
     _validate_construction(DN, construction)
 
     D_pipe_outer_m = pipe["outer_diameter_mm"] / 1000.0
-    D_casing_m = D_pipe_outer_m * series["casing_to_pipe_ratio"]
+    D_casing_m = D_pipe_outer_m * casing_to_pipe_ratio_at_dn(DN)
     if D_casing_m <= D_pipe_outer_m:
         raise ValueError(
-            f"casing_to_pipe_ratio for '{insulation_series}' gives a casing "
-            f"diameter <= the pipe outer diameter — check the preset; this "
-            f"would otherwise silently produce a nonsensical (negative or "
-            f"infinite) heat-loss coefficient."
+            f"Computed casing diameter <= pipe outer diameter for DN{DN} "
+            f"— check casing_to_pipe_ratio_at_dn(); this would otherwise "
+            f"silently produce a nonsensical (negative or infinite) "
+            f"heat-loss coefficient."
         )
     k_ins = series["insulation_k_W_mK"]
 
@@ -653,13 +741,47 @@ if __name__ == "__main__":
         f = darcy_friction_factor(re, relative_roughness=0.0001 / 0.1)
         print(f"    Re={re:>8}  f={f:.5f}")
 
-    # --- Heat loss coefficients: series + construction comparison ---
-    print("\n  Heat loss coefficient by series and construction (DN100, combined supply+return):")
-    for series_key in INSULATION_SERIES_PRESETS:
-        u_single = heat_loss_coefficient_W_per_mK(100, "single", series_key)
-        u_twin = heat_loss_coefficient_W_per_mK(100, "twin", series_key)
-        print(f"    {series_key:<10} single={u_single:.2f} W/m.K   twin={u_twin:.2f} W/m.K  "
-              f"(twin reduction: {(1 - u_twin/u_single)*100:.0f}%)")
+    # --- Heat loss coefficient: construction comparison (single profile now) ---
+    print("\n  Heat loss coefficient, EN 253 profile (DN100, combined supply+return):")
+    u_single = heat_loss_coefficient_W_per_mK(100, "single", "en253")
+    u_twin = heat_loss_coefficient_W_per_mK(100, "twin", "en253")
+    print(f"    single={u_single:.2f} W/m.K   twin={u_twin:.2f} W/m.K  "
+          f"(twin reduction: {(1 - u_twin/u_single)*100:.0f}%)")
+
+    # --- NEW: validate casing_to_pipe_ratio_at_dn() against real Table 7 data ---
+    print("\n  casing_to_pipe_ratio_at_dn() validated against real Table 7 data")
+    print("  (District Heating Manual for London, EN 253 basis):")
+    print(f"  {'DN':>5} {'real ratio':>11} {'modelled':>9} {'diff':>7}")
+    max_abs_pct_diff = 0.0
+    for dn, d_pipe, d_casing in _TABLE7_DN_CASING_DATA:
+        real_ratio = d_casing / d_pipe
+        modelled_ratio = casing_to_pipe_ratio_at_dn(dn)
+        pct_diff = (modelled_ratio - real_ratio) / real_ratio * 100
+        max_abs_pct_diff = max(max_abs_pct_diff, abs(pct_diff))
+        print(f"  {dn:>5} {real_ratio:>11.3f} {modelled_ratio:>9.3f} {pct_diff:>+6.1f}%")
+    print(f"  Max abs diff: {max_abs_pct_diff:.2f}% (expect ~0%, since DN20-DN500 use direct")
+    print(f"  interpolation against these exact points, not a smoothed fit)")
+
+    print("\n  DN600 extrapolation (beyond Table 7's real DN500 ceiling):")
+    dn600_ratio = casing_to_pipe_ratio_at_dn(600)
+    print(f"    Modelled ratio at DN600: {dn600_ratio:.3f} (power-law extrapolation, R^2=0.92")
+    print(f"    against the real DN20-DN500 data — NOT a measured Table 7 value)")
+
+    print("\n  Heat loss correctly varies with DN — real insulation is")
+    print("  proportionally thinner on big pipes than on small ones:")
+    u_dn20 = heat_loss_coefficient_W_per_mK(20, "single", "en253")
+    u_dn200 = heat_loss_coefficient_W_per_mK(200, "single", "en253")
+    u_dn500 = heat_loss_coefficient_W_per_mK(500, "single", "en253")
+    print(f"    DN20  single, EN 253: {u_dn20:.3f} W/m.K")
+    print(f"    DN200 single, EN 253: {u_dn200:.3f} W/m.K")
+    print(f"    DN500 single, EN 253: {u_dn500:.3f} W/m.K")
+
+    print("\n  Old 'series1'/'series3' names — should now fail loudly, not silently:")
+    try:
+        heat_loss_coefficient_W_per_mK(100, "single", "series1")
+        print("    ✗ FAIL: should have raised ValueError")
+    except ValueError as e:
+        print(f"    ✓ Correctly raised: {str(e)[:90]}...")
 
     # --- Cost curve sanity check ---
     print("\n  Cost curve — cost per metre rising sub-linearly with DN:")
@@ -735,9 +857,16 @@ if __name__ == "__main__":
         "viscosity effect shows up in friction factor and therefore pressure gradient, not velocity)"
     assert cold_network.DN >= hot_network.DN, \
         "Cold loop (6K delta-T) should need an equal or larger pipe than hot loop (30K delta-T) for the same kW"
-    u_s2_single = heat_loss_coefficient_W_per_mK(100, "single", "series2")
-    u_s2_twin = heat_loss_coefficient_W_per_mK(100, "twin", "series2")
-    assert u_s2_twin < u_s2_single, "Twin pipe should lose less heat than single construction"
+    u_en253_single = heat_loss_coefficient_W_per_mK(100, "single", "en253")
+    u_en253_twin = heat_loss_coefficient_W_per_mK(100, "twin", "en253")
+    assert u_en253_twin < u_en253_single, "Twin pipe should lose less heat than single construction"
+    assert max_abs_pct_diff < 0.01, \
+        "casing_to_pipe_ratio_at_dn() should reproduce Table 7 exactly at every real DN point"
+    assert casing_to_pipe_ratio_at_dn(20) > casing_to_pipe_ratio_at_dn(500), \
+        "Real casing ratio should fall as DN increases (thinner insulation, proportionally, on bigger pipes)"
+    assert u_dn500 > u_dn20, \
+        "DN500 should have HIGHER heat loss coefficient per metre than DN20 — bigger pipe, more surface area, " \
+        "and now correctly thinner relative insulation too"
     c_dn25 = estimate_pipe_cost_GBP_per_m(25)
     c_dn300 = estimate_pipe_cost_GBP_per_m(300)
     assert c_dn300 > c_dn25, "Larger DN should cost more per metre"
@@ -754,4 +883,8 @@ if __name__ == "__main__":
     print("  ✓ DN600 now available — the previously-failing 2050_high cooling peak sizes correctly")
     print("  ✓ Twin-pipe construction correctly rejected above DN200 (no real product exists)")
     print("  ✓ Oversized flow correctly raises an informative error")
+    print("  ✓ casing_to_pipe_ratio_at_dn() exactly reproduces real Table 7 data at every DN20-DN500 point")
+    print("  ✓ Insulation ratio correctly DN-dependent (3.35x at DN20 down to 1.24x at DN500),")
+    print("    from one real EN 253 profile (Table 7) — no invented series1/2/3 variants")
+    print("  ✓ Old series1/series3 names now correctly rejected with a clear error")
     print()

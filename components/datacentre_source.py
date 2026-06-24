@@ -62,11 +62,26 @@ Usage
     )
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
 from typing import Optional
 import warnings
+
+# Make sure the project root is on sys.path — same pattern as the other
+# source modules, lets `from components.peak_demand_option import ...`
+# resolve regardless of how/where this file is run from.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+# Reuse the SAME carbon intensity figures used by the other source
+# classes, rather than maintaining a second, possibly-drifting copy. See
+# peak_demand_option.py's CARBON_INTENSITY dict for sourcing notes.
+from components.peak_demand_option import CARBON_INTENSITY
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -347,6 +362,15 @@ class DataCentre:
         # Marginal cost at each hour (£/MWh)
         # Constant — DC waste heat price is typically a fixed negotiated rate
         self.marginal_cost = np.full(N_HOURS, waste_heat_cost_GBP_per_MWh)
+
+        # Carbon intensity per unit heat delivered (kgCO2e/kWh_heat).
+        # Genuinely zero, not "we don't have a number so we used 0" — see
+        # CARBON_INTENSITY["dc_waste_heat"] in peak_demand_option.py for
+        # the full mechanism note. Unlike EfW, capturing this heat doesn't
+        # reduce any other useful output: IT load (and therefore cooling/
+        # heat-rejection load) is fixed by computing demand regardless of
+        # whether district heating draws off the waste heat or not.
+        self.carbon_intensity_kgCO2_per_kWh = np.full(N_HOURS, CARBON_INTENSITY["dc_waste_heat"])
 
     @classmethod
     def from_preset(
