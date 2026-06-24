@@ -136,6 +136,8 @@ class DispatchResult:
     curtailed_surplus_MW:   np.ndarray      # spare capacity storage couldn't absorb (full/rate-limited)
     sources:                list
     has_storage:            bool
+    building_demand_MW:     Optional[np.ndarray] = None   # demand_MW BEFORE network heat loss was added (None if no network_topology was used)
+    network_heat_loss_MW:   Optional[np.ndarray] = None   # the hourly network loss that was added on top of building_demand_MW (None if no network_topology was used)
 
     def summary(self) -> dict:
         """Annual energy, cost, and utilisation breakdown — the headline numbers."""
@@ -204,6 +206,17 @@ class DispatchResult:
                 "storage_mean_soc_MWh":         round(float(self.storage_soc_MWh.mean()), 2),
             })
 
+        if self.network_heat_loss_MW is not None:
+            building_demand_total = float(self.building_demand_MW.sum())
+            network_loss_total = float(self.network_heat_loss_MW.sum())
+            result.update({
+                "annual_building_demand_MWh": round(building_demand_total, 0),
+                "annual_network_heat_loss_MWh": round(network_loss_total, 0),
+                "network_loss_pct_of_building_demand": round(
+                    network_loss_total / building_demand_total * 100, 2
+                ) if building_demand_total > 0 else 0.0,
+            })
+
         return result
 
     def check_carbon_compliance(self) -> dict:
@@ -258,6 +271,10 @@ def run_dispatch(
     sources: list,
     storage: Optional[ThermalStorage] = None,
     storage_initial_soc_fraction: float = 0.5,
+    network_topology=None,
+    network_flow_temp_C: float = 70.0,
+    network_return_temp_C: float = 40.0,
+    network_sized_segments: Optional[dict] = None,
 ) -> DispatchResult:
     """
     Run the full 8760-hour merit-order dispatch. See module docstring for
@@ -269,6 +286,11 @@ def run_dispatch(
                   network_result["total_heat_kW"] from demand_synthesis.py.
                   Converted to MW internally; everything else in this
                   module (and the rest of the codebase) works in MW.
+                  This is BUILDING demand only -- if network_topology is
+                  provided, real network heat loss is added ON TOP of
+                  this automatically (see network_topology below); don't
+                  pre-add a loss estimate to demand_kW yourself if you're
+                  also passing network_topology, or it will be double-counted.
     sources     : list of source objects (DataCentre, ASHPArray, EfWChp,
                   GasBoiler, ElectricBoiler, or anything sharing their
                   interface: .name, .source_type, .supply_MW, .capacity_MW,
@@ -284,16 +306,66 @@ def run_dispatch(
     storage_initial_soc_fraction : starting state of charge (0-1) the
                   storage is reset to before dispatch begins. Ignored if
                   storage is None.
+    network_topology : optional network.network_topology.NetworkTopology
+                  instance — if provided, REAL hourly network heat loss
+                  (see that module's network_heat_loss_kW_hourly(), which
+                  uses the real seasonal UK ground-temperature model, not
+                  a fixed annual placeholder) is computed and ADDED to
+                  demand_kW before dispatch runs, so sources are sized
+                  and dispatched against what they ACTUALLY need to
+                  supply (building demand + real transport losses), not
+                  just building demand alone. If None (default), dispatch
+                  runs exactly as before -- building demand only, no
+                  network loss feedback. This is the connection between
+                  the topology/heat-loss work and the dispatch optimiser;
+                  without it, that work stays a standalone, unconnected
+                  calculation (see this project's recent design discussion).
+    network_flow_temp_C, network_return_temp_C : the FIXED source flow/
+                  return temperatures (°C) used for network sizing and
+                  heat-loss calculation. Deliberately fixed (not weather-
+                  compensated) -- see network_topology's own
+                  network_heat_loss_kW_hourly() docstring for why: this
+                  is a feasibility-stage model, and operational
+                  efficiency levers like weather compensation were
+                  judged to obscure the core economic question, which
+                  should be assessed conservatively (fixed peak design
+                  temperature, not an optimistic lower average). Only
+                  used if network_topology is provided.
+    network_sized_segments : optional pre-computed result from
+                  network_topology.size_all_segments() — pass this if
+                  you've already sized the network (e.g. to also report
+                  CAPEX) to avoid sizing it twice. If None and
+                  network_topology is provided, sizing is done
+                  internally using network_flow_temp_C/network_return_temp_C.
 
     Returns
     -------
-    DispatchResult
+    DispatchResult. If network_topology was provided, also carries
+    .network_heat_loss_MW (the hourly array that was added to demand)
+    and .building_demand_MW (the ORIGINAL demand_kW, before loss was
+    added) so the loss contribution can be inspected/reported separately
+    from total demand.
     """
     demand_MW = np.asarray(demand_kW, dtype=float) / 1000.0
     if len(demand_MW) != N_HOURS:
         raise ValueError(f"demand_kW must have {N_HOURS} elements; got {len(demand_MW)}.")
     if not sources:
         raise ValueError("run_dispatch requires at least one source.")
+
+    building_demand_MW = demand_MW.copy()
+    network_heat_loss_MW = None
+
+    if network_topology is not None:
+        sized = network_sized_segments
+        if sized is None:
+            sized = network_topology.size_all_segments(
+                flow_temp_C=network_flow_temp_C, return_temp_C=network_return_temp_C,
+            )
+        loss_result = network_topology.network_heat_loss_kW_hourly(
+            sized_segments=sized, source_flow_temp_C=network_flow_temp_C,
+        )
+        network_heat_loss_MW = loss_result["total_kW_hourly"] / 1000.0
+        demand_MW = demand_MW + network_heat_loss_MW
 
     names = [s.name for s in sources]
     if len(set(names)) != len(names):
@@ -307,6 +379,7 @@ def run_dispatch(
 
     primary_sources = [s for s in sources if s.source_type not in BOILER_SOURCE_TYPES]
     boiler_sources   = [s for s in sources if s.source_type in BOILER_SOURCE_TYPES]
+
 
     dispatch_by_source = {s.name: np.zeros(N_HOURS) for s in sources}
     storage_charge      = np.zeros(N_HOURS)
@@ -382,6 +455,8 @@ def run_dispatch(
         curtailed_surplus_MW=curtailed,
         sources=sources,
         has_storage=(storage is not None),
+        building_demand_MW=building_demand_MW,
+        network_heat_loss_MW=network_heat_loss_MW,
     )
 
 
@@ -716,6 +791,35 @@ if __name__ == "__main__":
         print(f"      Without storage: {'✓ survives' if without_s['survives_without_unmet'] else '✗ unmet demand'} "
               f"({without_s['unmet_demand_MWh']} MWh unmet)")
 
+    # --- NEW: network_topology integration — the actual connection between
+    #     the topology/heat-loss work and dispatch, not just a standalone
+    #     calculation. Build a topology using the SAME 3x-scaled building
+    #     peaks as this self-test's demand profile (so it's self-consistent
+    #     with demand_kW above, not the 1x-scale figures used in
+    #     network_topology.py's own self-test). ---
+    print(f"\n  Network topology integration — real hourly heat loss added to demand")
+    print(f"  BEFORE dispatch runs, not as a disconnected side calculation:")
+    from network.network_topology import ealing_town_centre_topology
+
+    peak_by_building_3x = {n["name"]: n["peak_heat_kW"] for n in network["nodes"]}
+    ealing_topo = ealing_town_centre_topology(peak_kW_by_building=peak_by_building_3x)
+    print(f"    Topology: {ealing_topo.summary()['total_length_m']:.0f}m route, "
+          f"{ealing_topo.summary()['total_peak_kW']:.0f} kW building peak")
+
+    result_with_network = run_dispatch(
+        demand_kW, sources, storage=None, network_topology=ealing_topo,
+        network_flow_temp_C=70.0, network_return_temp_C=40.0,
+    )
+    s_network = result_with_network.summary()
+    print(f"    Annual building demand:    {s_network['annual_building_demand_MWh']:,.0f} MWh")
+    print(f"    Annual network heat loss:  {s_network['annual_network_heat_loss_MWh']:,.0f} MWh "
+          f"({s_network['network_loss_pct_of_building_demand']:.2f}% of building demand)")
+    print(f"    Total demand sources see:  {s_network['annual_demand_MWh']:,.0f} MWh")
+    print(f"    OPEX WITHOUT network loss: £{s1['total_annual_opex_GBP']:,.0f}")
+    print(f"    OPEX WITH network loss:    £{s_network['total_annual_opex_GBP']:,.0f}")
+    print(f"    -> sources have to do real extra work just transporting heat around the network --")
+    print(f"       this OPEX difference was previously invisible to the dispatch optimiser entirely.")
+
     # --- Sanity checks ---
     print("\n  Sanity checks:")
     for name, arr in result_storage.dispatch_by_source_MW.items():
@@ -807,6 +911,29 @@ if __name__ == "__main__":
     assert ashp.supply_MW.sum() > 0, \
         "Original ashp.supply_MW should be untouched after N-1 stress test (deepcopy isolation check)"
 
+    # New network_topology integration assertions
+    assert result_with_network.network_heat_loss_MW is not None, \
+        "When network_topology is provided, network_heat_loss_MW should be populated"
+    assert result_with_network.building_demand_MW is not None, \
+        "When network_topology is provided, building_demand_MW should be populated"
+    assert np.allclose(result_with_network.building_demand_MW, demand_kW / 1000.0), \
+        "building_demand_MW should exactly equal the original demand_kW (converted to MW), unmodified"
+    assert np.allclose(
+        result_with_network.demand_MW,
+        result_with_network.building_demand_MW + result_with_network.network_heat_loss_MW,
+    ), "Total demand_MW should exactly equal building demand plus network heat loss, no discrepancy"
+    assert result_no_storage.network_heat_loss_MW is None, \
+        "When network_topology is NOT provided, network_heat_loss_MW should remain None " \
+        "(confirms full backward compatibility for existing callers)"
+    assert s_network["annual_network_heat_loss_MWh"] > 0, \
+        "Network heat loss should be a real, positive addition to demand"
+    assert s_network["total_annual_opex_GBP"] > s1["total_annual_opex_GBP"], \
+        "OPEX with real network heat loss included should be HIGHER than without it -- " \
+        "sources are doing genuinely more work, which should cost genuinely more"
+    assert 0 < s_network["network_loss_pct_of_building_demand"] < 20, \
+        "Network loss should be a real but modest percentage of building demand " \
+        "(a value outside this range would suggest a units or sizing error)"
+
     print("  ✓ All dispatch arrays correct length (8760 hours)")
     print("  ✓ Energy balance identity holds exactly (sources = demand - unmet + charge - discharge)")
     print("  ✓ No source ever dispatched above its own hourly available supply")
@@ -821,4 +948,7 @@ if __name__ == "__main__":
     print("  ✓ N-1 stress test covers exactly the primary sources, with consistent unmet-demand bookkeeping")
     print("  ✓ A 1-week outage never shows worse unmet demand than a full-year outage of the same source")
     print("  ✓ Original source objects unmutated after stress testing (deepcopy isolation confirmed)")
+    print("  ✓ network_topology integration correctly adds real hourly heat loss on top of building")
+    print("    demand, with exact energy-balance consistency, and is fully backward-compatible")
+    print("    (omitting network_topology gives identical behaviour to before)")
     print()
