@@ -48,7 +48,7 @@ Usage
     heating_only = size_heating_network(
         peak_heat_kW=net["peak_heat_kW"],
         network_length_m=3000,
-        flow_temp_C=65.0, return_temp_C=35.0,
+        flow_temp_C=70.0, return_temp_C=40.0,
     )
     print(heating_only.summary())
 
@@ -56,7 +56,7 @@ Usage
     combined = size_4pipe_network(
         peak_heat_kW=net["peak_heat_kW"], peak_cool_kW=net["peak_cool_kW"],
         network_length_m=3000,
-        heat_flow_temp_C=65.0, heat_return_temp_C=35.0,
+        heat_flow_temp_C=70.0, heat_return_temp_C=40.0,
         cool_flow_temp_C=6.0,  cool_return_temp_C=12.0,
     )
     print(combined.summary())
@@ -115,9 +115,14 @@ N_HOURS_PER_YEAR = 8760
 
 # Typical UK undisturbed ground temperature at pipe-laying depth — used
 # for the heat-loss calculation (loss is driven by pipe-to-ground delta
-# T, not pipe-to-air). Reasonable default, not a precisely cited figure —
-# revisit if a specific site's ground survey data is available.
-DEFAULT_GROUND_TEMP_C = 10.0
+# T, not pipe-to-air). Set to 11.5°C, the real Thames Valley/London
+# annual average at ~1m depth (Busby 2015, 106 UK Met Office soil
+# stations — see network_topology.py's GROUND_TEMP_MEAN_C for the full
+# sourcing note and the real SEASONAL curve this module's single fixed
+# value is a simplification of). Matches network_topology.py's
+# DEFAULT_GROUND_TEMP_C exactly, so both modules agree on the same
+# real figure rather than two different placeholder numbers.
+DEFAULT_GROUND_TEMP_C = 11.5
 
 
 # ── Result types ─────────────────────────────────────────────────────────────────
@@ -236,8 +241,8 @@ def size_pipe_duty(
 def size_heating_network(
     peak_heat_kW: float,
     network_length_m: float,
-    flow_temp_C: float = 65.0,
-    return_temp_C: float = 35.0,
+    flow_temp_C: float = 70.0,
+    return_temp_C: float = 40.0,
     ground_temp_C: float = DEFAULT_GROUND_TEMP_C,
     name: str = "Heating-only (2-pipe)",
     **pipe_kwargs,
@@ -256,8 +261,8 @@ def size_4pipe_network(
     peak_heat_kW: float,
     peak_cool_kW: float,
     network_length_m: float,
-    heat_flow_temp_C: float = 65.0,
-    heat_return_temp_C: float = 35.0,
+    heat_flow_temp_C: float = 70.0,
+    heat_return_temp_C: float = 40.0,
     cool_flow_temp_C: float = 6.0,
     cool_return_temp_C: float = 12.0,
     ground_temp_C: float = DEFAULT_GROUND_TEMP_C,

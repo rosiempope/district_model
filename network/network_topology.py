@@ -127,10 +127,15 @@ from pipe_catalog import (
 # Typical UK undisturbed ground temperature at pipe-laying depth (~1m,
 # the standard burial depth for pre-insulated DH pipe) — kept as a
 # simple scalar default for callers that don't need the seasonal detail
-# below; same default as network.py's DEFAULT_GROUND_TEMP_C, duplicated
-# here (rather than imported) so this module stays independently usable
-# without requiring network.py.
-DEFAULT_GROUND_TEMP_C = 10.0
+# below (e.g. single-point spot-check methods like delivered_temperature_C()).
+# Set to 11.5°C to MATCH GROUND_TEMP_MEAN_C below (the real Thames Valley/
+# London annual average — see that constant's sourcing note), so the
+# single-point default and the seasonal model's mean always agree rather
+# than silently disagreeing by a degree and a half. Same value as
+# network.py's DEFAULT_GROUND_TEMP_C, duplicated here (rather than
+# imported) so this module stays independently usable without requiring
+# network.py.
+DEFAULT_GROUND_TEMP_C = 11.5
 
 # Seasonal ground temperature model — real data, not a fixed annual
 # average. A fixed ground temp UNDERSTATES winter heat loss (the coldest

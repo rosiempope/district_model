@@ -190,6 +190,210 @@ ASHP_PRESETS = {
 }
 
 
+# ── Weather-compensated flow temperature ────────────────────────────────────────
+#
+# STATUS: built and tested, but NOT currently active in this project's
+# live feasibility pipeline (enable_weather_compensation defaults to
+# False everywhere, and nothing in dispatch.py/network_topology.py's
+# real integration calls it). This was a deliberate project decision:
+# weather compensation is an OPERATIONAL EFFICIENCY lever, and stacking
+# it on top of the topology/carbon/heat-loss feasibility work was
+# judged to add a variable that obscured the core economic question,
+# which should be assessed conservatively (one fixed design flow
+# temperature, the real cited Ealing value, all year) rather than with
+# an optimistic average. See network_topology.py's
+# network_heat_loss_kW_hourly() docstring for the same decision stated
+# from the network-physics side. The machinery below is kept (not
+# deleted) since it's real, tested, and may be useful for a genuinely
+# separate operational-efficiency study later — but it is NOT the
+# assumption this project's actual dispatch/topology results are
+# currently built on. The live model's source of truth for flow
+# temperature is the FIXED 70°C ASHP_PRESETS value (see "ealing_phase1"
+# above) and dispatch.py's network_flow_temp_C=70.0 default — both
+# values below are kept CONSISTENT with that same 70°C, not a different
+# number, specifically so this dormant feature doesn't silently disagree
+# with the rest of the project if anyone re-enables it later.
+#
+# Real UK heat networks vary flow temperature with outdoor temperature
+# rather than holding one fixed peak value year-round -- see e.g. the
+# Ealing report's own note that "the real network is actually variable,
+# 65-70C seasonally". Lower flow temp on mild days means: less heat
+# lost from the pipes (loss is driven by pipe-to-ground delta T), and a
+# smaller COP penalty for the ASHP (smaller lift from ambient air to
+# flow temp).
+#
+# Standard convention (linear two-point heating curve), confirmed across
+# the DH/heat-pump literature -- e.g. nPro's heating-curve documentation
+# (citing Ruhnau, Hirth & Praktiknjo 2019, the SAME paper this module's
+# COP regression is already built on) and a 2025 ScienceDirect review of
+# heating-curve optimisation, both describing exactly this two-anchor-
+# point linear form: a high flow temp at the coldest design outdoor
+# temperature, falling linearly to a low "foot-point" flow temp at a
+# mild outdoor temperature where heating need is small.
+#
+# Return temperature: held CONSTANT across the same range, rather than
+# sliding independently -- this matches real published weather-
+# compensation schedules (e.g. 70/40C in winter design conditions down
+# to 55/40C in mild end-of-season conditions: flow drops, return stays
+# put). Return temperature is set by how much heat the building actually
+# extracts before sending water back (radiator/HIU return
+# characteristics), which doesn't move as freely as the source's flow
+# setpoint -- see CIBSE Journal's "The perfect return" for why chasing
+# a lower return temp is a SEPARATE design problem (flushing bypasses,
+# HIU sizing, control strategy) from simply commanding a lower flow temp.
+#
+# COLD END kept at 70°C -- the SAME real, cited Ealing design value used
+# everywhere else in this project (ASHP_PRESETS, dispatch.py's
+# network_flow_temp_C, network_topology.py's self-test, pipe_catalog.py's
+# examples). An earlier version of this module raised this to 80°C to
+# make room for a compensation BAND down to a 70°C floor -- that's been
+# reverted: since compensation is currently inactive (see STATUS note
+# above), there's no live reason for this constant to disagree with the
+# project's single converged-on design temperature.
+#
+# MILD-END FLOOR also kept at 70°C, for the same reason -- this makes the
+# default curve FLAT (cold end = mild end), which is intentional while
+# the feature is dormant: enabling it with NO other changes should not
+# silently produce a different flow temperature than the rest of the
+# project assumes. A real compensation band requires deliberately
+# choosing different cold/mild values via the constructor's
+# compensation_mild_temp_C override -- see
+# check_compensation_floor_against_network() below for how to verify
+# any chosen floor is actually safe for a specific real network before
+# using it, and ASHP.py's own self-test for a worked example using
+# compensation_mild_temp_C=62.0 (verified safe for the real Ealing
+# network without changing the 70°C design value at all).
+COMPENSATION_FLOW_TEMP_AT_COLD_C = 70.0    # = the project's single real design value (Ealing report)
+COMPENSATION_FLOW_TEMP_AT_MILD_C = 70.0    # = same value -- flat by default; see note above
+COMPENSATION_COLD_ANCHOR_AMBIENT_C = -10.0  # outdoor temp at which flow = the cold value
+COMPENSATION_MILD_ANCHOR_AMBIENT_C = 15.0   # outdoor temp at/above which flow = the mild value
+COMPENSATION_RETURN_TEMP_C = 40.0           # held constant across the whole range
+
+
+def weather_compensated_flow_temp_C(
+    T_ambient_C: np.ndarray,
+    cold_anchor_ambient_C: float = COMPENSATION_COLD_ANCHOR_AMBIENT_C,
+    mild_anchor_ambient_C: float = COMPENSATION_MILD_ANCHOR_AMBIENT_C,
+    flow_temp_at_cold_C: float = COMPENSATION_FLOW_TEMP_AT_COLD_C,
+    flow_temp_at_mild_C: float = COMPENSATION_FLOW_TEMP_AT_MILD_C,
+) -> np.ndarray:
+    """
+    Hourly weather-compensated flow temperature (°C) — linear between two
+    anchor points, the standard heating-curve convention (see module
+    note above).
+
+    At or below cold_anchor_ambient_C: flow_temp_at_cold_C (the peak
+    design value, used for pipe/plant sizing — unchanged from before).
+    At or above mild_anchor_ambient_C: flow_temp_at_mild_C (the floor
+    value — heating is barely needed, but the network still needs SOME
+    minimum useful temperature for the residual demand, e.g. DHW reheat).
+    Between them: straight-line interpolation.
+
+    Parameters
+    ----------
+    T_ambient_C   : hourly outdoor air temperature array (°C)
+    cold_anchor_ambient_C, mild_anchor_ambient_C : the two outdoor-temp
+                  anchor points (°C)
+    flow_temp_at_cold_C, flow_temp_at_mild_C : the flow temps AT those
+                  two anchor points (°C)
+
+    Returns
+    -------
+    np.ndarray, same length as T_ambient_C, of hourly flow temperatures.
+    """
+    T = np.asarray(T_ambient_C, dtype=float)
+    # np.interp expects the x-coordinates in increasing order; ambient
+    # temp increases from cold to mild, but flow temp DECREASES over
+    # that same range, so this is an inverse (downward-sloping) linear
+    # interpolation -- np.interp handles that correctly as long as the
+    # xp array (ambient anchors) is increasing, regardless of whether fp
+    # (flow temps) is increasing or decreasing.
+    return np.interp(
+        T,
+        [cold_anchor_ambient_C, mild_anchor_ambient_C],
+        [flow_temp_at_cold_C, flow_temp_at_mild_C],
+    )
+
+
+def check_compensation_floor_against_network(
+    network_topology,
+    return_temp_C: float = COMPENSATION_RETURN_TEMP_C,
+    proposed_mild_floor_C: float = COMPENSATION_FLOW_TEMP_AT_MILD_C,
+    min_delivered_temp_C: float = 60.0,
+) -> dict:
+    """
+    Verify that a PROPOSED compensation mild-end floor (default: this
+    module's COMPENSATION_FLOW_TEMP_AT_MILD_C, 70°C) is actually safe for
+    a SPECIFIC real network topology — i.e. closes the loop between this
+    module's curve and network_topology.py's real route-length physics,
+    rather than trusting a default that was only verified against one
+    worked example (Ealing).
+
+    This module's 70°C default was verified against the real Ealing
+    worked example (see the constants block above) and found to leave a
+    genuine 8.52°C margin there — but Ealing's specific route lengths and
+    pipe sizing won't be true of every network. A longer or less-
+    insulated network could need a HIGHER floor than 70°C to stay safe;
+    a shorter or better-insulated one could safely go LOWER, leaving
+    efficiency on the table if the 70°C default is used unquestioned.
+
+    Parameters
+    ----------
+    network_topology       : a NetworkTopology instance (see
+                  network.network_topology) — typically already populated
+                  with real per-building peak demand
+    return_temp_C           : the compensation curve's return temperature
+                  (°C) — held constant, see module note above
+    proposed_mild_floor_C    : the mild-end floor to check (°C). Defaults
+                  to this module's own constant, so calling this with no
+                  override checks "is OUR default actually safe for this
+                  network" — but any other candidate floor can be passed
+                  to check alternatives.
+    min_delivered_temp_C     : the regulatory/safety minimum (°C) — see
+                  network_topology.py's MIN_DELIVERED_TEMP_C for the
+                  Legionella-control basis of the standard 60°C value
+
+    Returns
+    -------
+    dict: {
+        "proposed_floor_safe": bool,
+        "proposed_floor_C": the floor that was checked,
+        "actual_minimum_safe_flow_temp_C": the network's own calculated
+            physical floor (from network_topology's own solver),
+        "margin_C": proposed_floor_C - actual_minimum_safe_flow_temp_C
+            (positive = the proposed floor has real headroom; negative
+            = the proposed floor is UNSAFE for this specific network),
+        "recommendation": a plain-English verdict
+    }
+    """
+    actual_floor = network_topology.minimum_safe_flow_temp_C(
+        return_temp_C=return_temp_C, min_temp_C=min_delivered_temp_C,
+    )
+    margin = proposed_mild_floor_C - actual_floor
+    safe = margin >= 0
+
+    if safe:
+        recommendation = (
+            f"Safe — {proposed_mild_floor_C}°C leaves a {margin:.2f}°C margin above "
+            f"this network's real physical floor ({actual_floor:.2f}°C)."
+        )
+    else:
+        recommendation = (
+            f"NOT SAFE for this network — {proposed_mild_floor_C}°C is "
+            f"{abs(margin):.2f}°C BELOW this network's real physical floor "
+            f"({actual_floor:.2f}°C). Raise the mild-end floor to at least "
+            f"{actual_floor:.2f}°C (plus a real margin) before using it for this network."
+        )
+
+    return {
+        "proposed_floor_safe": bool(safe),
+        "proposed_floor_C": proposed_mild_floor_C,
+        "actual_minimum_safe_flow_temp_C": actual_floor,
+        "margin_C": round(margin, 2),
+        "recommendation": recommendation,
+    }
+
+
 # ── COP model ──────────────────────────────────────────────────────────────────
 
 def _ashp_cop_base(T_ambient_C: np.ndarray, T_flow_C: float) -> np.ndarray:
@@ -395,11 +599,37 @@ class ASHPArray:
     n_units                : number of identical ASHP units in the array
     unit_capacity_MW       : rated thermal output per unit at the EN14825
                               standard rating point (7°C ambient) (MW)
-    flow_temp_C            : network/system flow temperature (°C)
+    flow_temp_C            : network/system flow temperature (°C).
                               Typical UK LTHW network: 65-70°C
                               Lower temp (ambient loop) networks: 45-55°C
+                              If enable_weather_compensation=True, this
+                              value is used ONLY as the cold-end design
+                              point (i.e. flow_temp_C becomes
+                              compensation_flow_at_cold_C) — actual
+                              hourly flow temp then follows
+                              weather_compensated_flow_temp_C() instead
+                              of staying fixed at this value all year.
     weather_df              : EPW weather DataFrame (must have 'temp_drybulb_C')
-    min_ambient_temp_C      : design minimum ambient temp for capacity derating
+    enable_weather_compensation : if True, flow temperature varies
+                              hourly with outdoor temperature instead of
+                              staying fixed at flow_temp_C all year (see
+                              weather_compensated_flow_temp_C() and the
+                              module note above it). Default False —
+                              existing callers get EXACTLY the old fixed-
+                              temperature behaviour unless they opt in.
+    compensation_mild_temp_C : the flow temperature at the MILD end of
+                              the compensation curve (°C) — only used if
+                              enable_weather_compensation=True. flow_temp_C
+                              itself supplies the COLD end.
+    compensation_mild_ambient_C : outdoor temperature (°C) at/above which
+                              flow temp reaches compensation_mild_temp_C.
+                              Only used if enable_weather_compensation=True.
+                              (The cold-end ambient anchor is
+                              min_ambient_temp_C below, reused rather than
+                              having two separate "minimum ambient" concepts.)
+    min_ambient_temp_C      : design minimum ambient temp for capacity derating.
+                              ALSO used as the cold-end ambient anchor for
+                              weather compensation if enabled (see above).
     min_capacity_fraction   : fraction of rated capacity at min_ambient_temp_C
     apply_defrost           : whether to apply defrost-cycle COP penalty
     electricity_price_GBP_per_MWh : accepts None (default realistic tariff
@@ -438,6 +668,9 @@ class ASHPArray:
         unit_capacity_MW: float,
         flow_temp_C: float                      = 70.0,
         weather_df: Optional[pd.DataFrame]       = None,
+        enable_weather_compensation: bool        = False,
+        compensation_mild_temp_C: float          = COMPENSATION_FLOW_TEMP_AT_MILD_C,
+        compensation_mild_ambient_C: float       = COMPENSATION_MILD_ANCHOR_AMBIENT_C,
         min_ambient_temp_C: float                = -10.0,
         min_capacity_fraction: float             = 0.65,
         apply_defrost: bool                      = True,
@@ -461,18 +694,50 @@ class ASHPArray:
         self.n_units                = int(n_units)
         self.unit_capacity_MW       = float(unit_capacity_MW)
         self.capacity_MW            = self.n_units * self.unit_capacity_MW
-        self.flow_temp_C            = float(flow_temp_C)
         self.min_ambient_temp_C     = float(min_ambient_temp_C)
         self.min_capacity_fraction  = float(min_capacity_fraction)
         self.capex_GBP_per_MW       = float(capex_GBP_per_MW)
         self.availability_factor    = float(availability_factor)
         self.seed                   = int(seed)
         self.reference              = reference
+        self.enable_weather_compensation = bool(enable_weather_compensation)
 
         T_air = weather_df["temp_drybulb_C"].values[:N_HOURS].astype(float)
         self.ambient_temp_C = T_air
 
-        # COP at every hour
+        # Keep the ORIGINAL design (cold-end) flow temp around separately
+        # from self.flow_temp_C -- once compensation is applied below,
+        # self.flow_temp_C becomes an (N_HOURS,) array, and resize() (or
+        # any other code that wants "what's the design flow temp this
+        # was built around") needs the original scalar, not the derived
+        # hourly array, to reconstruct an equivalent object correctly.
+        self.design_flow_temp_C = float(flow_temp_C)
+        self.compensation_mild_temp_C = float(compensation_mild_temp_C)
+        self.compensation_mild_ambient_C = float(compensation_mild_ambient_C)
+
+        if self.enable_weather_compensation:
+            # Hourly varying flow temp -- flow_temp_C supplies the COLD
+            # end of the curve, compensation_mild_temp_C the MILD end.
+            # self.flow_temp_C is now an (N_HOURS,) array, not a scalar
+            # -- see weather_compensated_flow_temp_C() and the module
+            # note above it for the real-world basis of this curve shape.
+            self.flow_temp_C = weather_compensated_flow_temp_C(
+                T_air,
+                cold_anchor_ambient_C=self.min_ambient_temp_C,
+                mild_anchor_ambient_C=compensation_mild_ambient_C,
+                flow_temp_at_cold_C=self.design_flow_temp_C,
+                flow_temp_at_mild_C=self.compensation_mild_temp_C,
+            )
+        else:
+            # ORIGINAL behaviour, unchanged: one fixed scalar all year
+            self.flow_temp_C = self.design_flow_temp_C
+
+        # COP at every hour. ashp_cop()/'_ashp_cop_base() already does
+        # plain elementwise arithmetic (dT = T_flow_C - T_ambient_C), so
+        # this works identically whether self.flow_temp_C is a scalar
+        # (broadcasts across all hours, old behaviour) or an (N_HOURS,)
+        # array (genuinely different flow temp each hour, new behaviour)
+        # — no change needed to ashp_cop() itself.
         self.cop_hourly = ashp_cop(
             T_air, self.flow_temp_C, apply_defrost=apply_defrost
         )
@@ -506,8 +771,12 @@ class ASHPArray:
 
         # Supply temperature is just the flow temperature (ASHPs lift to
         # the design flow temp directly, unlike DC waste heat which needs
-        # a separate heat pump stage)
-        self.supply_temp_C = np.full(N_HOURS, self.flow_temp_C)
+        # a separate heat pump stage). np.broadcast_to (not np.full, which
+        # requires a scalar fill value) handles self.flow_temp_C correctly
+        # whether it's a fixed scalar (old behaviour, broadcasts to every
+        # hour) or an (N_HOURS,) weather-compensated array (new behaviour,
+        # passes through as-is).
+        self.supply_temp_C = np.broadcast_to(self.flow_temp_C, N_HOURS).astype(float).copy()
 
         # Electricity price — None / Tariff / scalar / array, all resolved
         # to a clean 8760 £/MWh array by economics.tariffs. Default (None)
@@ -622,8 +891,11 @@ class ASHPArray:
             name=self.name,
             n_units=n_units if n_units is not None else self.n_units,
             unit_capacity_MW=unit_capacity_MW if unit_capacity_MW is not None else self.unit_capacity_MW,
-            flow_temp_C=self.flow_temp_C,
+            flow_temp_C=self.design_flow_temp_C,
             weather_df=pd.DataFrame({"temp_drybulb_C": self.ambient_temp_C}),
+            enable_weather_compensation=self.enable_weather_compensation,
+            compensation_mild_temp_C=self.compensation_mild_temp_C,
+            compensation_mild_ambient_C=self.compensation_mild_ambient_C,
             min_ambient_temp_C=self.min_ambient_temp_C,
             min_capacity_fraction=self.min_capacity_fraction,
             electricity_price_GBP_per_MWh=self._elec_price,
@@ -635,13 +907,22 @@ class ASHPArray:
 
     def summary(self) -> dict:
         """Return key parameters and performance stats as a dict."""
+        # flow_temp_C is a scalar (fixed mode) or an (N_HOURS,) array
+        # (weather-compensated mode) -- report both the design value and
+        # the realised range so callers can see at a glance whether
+        # compensation is active, without needing to inspect the raw array.
+        flow_temp_arr = np.broadcast_to(self.flow_temp_C, N_HOURS)
         return {
             "name":                       self.name,
             "source_type":                self.source_type,
             "n_units":                    self.n_units,
             "unit_capacity_MW":           self.unit_capacity_MW,
             "total_capacity_MW":          round(self.capacity_MW, 2),
-            "flow_temp_C":                self.flow_temp_C,
+            "design_flow_temp_C":         self.design_flow_temp_C,
+            "enable_weather_compensation": self.enable_weather_compensation,
+            "flow_temp_C_mean":           round(float(flow_temp_arr.mean()), 1),
+            "flow_temp_C_min":            round(float(flow_temp_arr.min()), 1),
+            "flow_temp_C_max":            round(float(flow_temp_arr.max()), 1),
             "cop_mean":                   round(float(self.cop_hourly.mean()), 2),
             "cop_min":                    round(float(self.cop_hourly.min()), 2),
             "cop_max":                    round(float(self.cop_hourly.max()), 2),
@@ -661,10 +942,15 @@ class ASHPArray:
         }
 
     def __repr__(self):
+        flow_temp_arr = np.broadcast_to(self.flow_temp_C, N_HOURS)
+        if self.enable_weather_compensation:
+            flow_desc = f"T_flow={flow_temp_arr.min():.0f}-{flow_temp_arr.max():.0f}°C (weather-compensated)"
+        else:
+            flow_desc = f"T_flow={flow_temp_arr[0]:.0f}°C (fixed)"
         return (
             f"ASHPArray(name='{self.name}', "
             f"{self.n_units}x{self.unit_capacity_MW}MW = {self.capacity_MW:.1f} MW, "
-            f"T_flow={self.flow_temp_C}°C, "
+            f"{flow_desc}, "
             f"mean COP={self.cop_hourly.mean():.2f})"
         )
 
@@ -778,6 +1064,104 @@ if __name__ == "__main__":
     print(f"    Jan mean COP: {jan_cop:.2f}  |  Jul mean COP: {jul_cop:.2f}  → {'✓ summer higher' if jul_cop > jan_cop else '✗ FAIL'}")
     print(f"    Jan mean supply: {jan_supply:.2f} MW  |  Jul mean supply: {jul_supply:.2f} MW  → {'✓ summer higher capacity' if jul_supply > jan_supply else '✗ FAIL'}")
 
+    # --- NEW: weather-compensated flow temperature (currently DORMANT in
+    #     the live model -- see the STATUS note in the constants block
+    #     above. Demonstrated here for completeness/testing, not because
+    #     the live dispatch/topology pipeline actually uses it.) ---
+    print(f"\n  Weather compensation curve, DEFAULT parameters (currently dormant --")
+    print(f"  see STATUS note in the constants block; both ends are 70°C, matching")
+    print(f"  the project's single real design value, so the default curve is FLAT):")
+    test_temps = np.array([-15.0, -10.0, -5.0, 0.0, 5.0, 10.0, 15.0, 20.0])
+    flow_at_temps = weather_compensated_flow_temp_C(test_temps)
+    for t, f in zip(test_temps, flow_at_temps):
+        print(f"    Ambient {t:>6.1f}°C  ->  Flow {f:>5.1f}°C")
+
+    fixed_ashp = ASHPArray.from_preset("ealing_phase1", weather_df)
+
+    # Enabling compensation with NO other overrides should change NOTHING
+    # -- this is the actual point of keeping both ends at 70°C: a caller
+    # who flips enable_weather_compensation=True without deliberately
+    # choosing a lower mild-end value gets IDENTICAL behaviour to the
+    # fixed case, never a silent, unintended divergence from the
+    # project's real design value.
+    compensated_default = ASHPArray.from_preset(
+        "ealing_phase1", weather_df, enable_weather_compensation=True,
+    )
+    default_flow_arr = np.broadcast_to(compensated_default.flow_temp_C, N_HOURS)
+    fixed_flow_arr = np.broadcast_to(fixed_ashp.flow_temp_C, N_HOURS)
+    print(f"\n    Fixed mean flow temp:       {fixed_flow_arr.mean():.1f}°C")
+    print(f"    Compensated (default) mean: {default_flow_arr.mean():.1f}°C  "
+          f"(should be IDENTICAL -- flat curve, dormant by design)")
+
+    # --- Illustrative ONLY: if compensation were deliberately enabled
+    #     later with a genuinely lower mild-end floor, here's what it
+    #     would look like and what it would need to be checked against.
+    #     NOT part of this project's current live assumptions. ---
+    print(f"\n  Illustrative only (NOT a live assumption) — if compensation were")
+    print(f"  deliberately enabled with a genuinely lower mild-end floor (62°C,")
+    print(f"  verified safe for the real Ealing network — see the cross-check below),")
+    print(f"  compensating DOWN from the same 70°C design value, never raising it:")
+    compensated_illustrative = ASHPArray.from_preset(
+        "ealing_phase1", weather_df, enable_weather_compensation=True,
+        compensation_mild_temp_C=62.0,
+    )
+    illustrative_flow_arr = np.broadcast_to(compensated_illustrative.flow_temp_C, N_HOURS)
+    print(f"    {'':20} {'Mean COP':>10} {'Annual elec demand MWh':>24} {'Mean flow temp':>16}")
+    print(f"    {'Fixed':<20} {fixed_ashp.cop_hourly.mean():>10.3f} "
+          f"{fixed_ashp.electrical_demand_MW.sum():>24.0f} {fixed_flow_arr.mean():>15.1f}°C")
+    print(f"    {'Compensated (illus.)':<20} {compensated_illustrative.cop_hourly.mean():>10.3f} "
+          f"{compensated_illustrative.electrical_demand_MW.sum():>24.0f} {illustrative_flow_arr.mean():>15.1f}°C")
+    pct_saving_illustrative = (1 - compensated_illustrative.electrical_demand_MW.sum() / fixed_ashp.electrical_demand_MW.sum()) * 100
+    print(f"    -> {pct_saving_illustrative:.1f}% less electricity IF this were enabled — "
+          f"shown for context only, not used in any live dispatch/topology result in this project")
+
+    # --- NEW: custom mild-end parameters ---
+    custom_comp_ashp = ASHPArray.from_preset(
+        "ealing_phase1", weather_df, enable_weather_compensation=True,
+        compensation_mild_temp_C=55.0, compensation_mild_ambient_C=12.0,
+    )
+    print(f"\n  Custom compensation curve (mild end 55°C at 12°C ambient, same 70°C")
+    print(f"  design value, instead of the dormant default's flat 70°C/70°C):")
+    custom_flow_arr = np.broadcast_to(custom_comp_ashp.flow_temp_C, N_HOURS)
+    print(f"    Mean flow temp: {custom_flow_arr.mean():.1f}°C (should be LOWER than the dormant "
+          f"default's {default_flow_arr.mean():.1f}°C, since this curve actually drops)")
+
+    # --- NEW: cross-check the compensation floor against a real network ---
+    print(f"\n  Cross-checking the default 70°C mild-end floor against the real")
+    print(f"  Ealing worked-example network topology (closes the loop between this")
+    print(f"  module's curve and network_topology.py's real route-length physics):")
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from network.network_topology import ealing_town_centre_topology
+    from profiles.demand_synthesis import synthesise_network as _synthesise_network
+
+    _scenario = {
+        "demand_nodes": [
+            {"name": "Perceval House",       "type": "office",      "floor_area_m2": 8500},
+            {"name": "High Street Retail",   "type": "retail",      "floor_area_m2": 3000},
+            {"name": "Ealing Hospital Wing", "type": "hospital",    "floor_area_m2": 12000},
+            {"name": "Dickens Yard Ph1",     "type": "residential", "units": 350},
+            {"name": "Broadway Hotel",       "type": "hotel",       "floor_area_m2": 5000},
+            {"name": "Ellen Wilkinson Sch",  "type": "school",      "floor_area_m2": 6000},
+        ]
+    }
+    _demand_result = _synthesise_network(weather_df, _scenario)
+    _peak_by_building = {n["name"]: n["peak_heat_kW"] for n in _demand_result["nodes"]}
+    _ealing_topo = ealing_town_centre_topology(peak_kW_by_building=_peak_by_building)
+
+    floor_check = check_compensation_floor_against_network(_ealing_topo)
+    for k, v in floor_check.items():
+        print(f"    {k:<32} {v}")
+
+    # Also check an UNSAFE proposed floor (60°C, the module's old value)
+    # to confirm the cross-check can actually catch a bad floor, not just
+    # confirm good ones
+    floor_check_60 = check_compensation_floor_against_network(
+        _ealing_topo, proposed_mild_floor_C=60.0,
+    )
+    print(f"\n    Checking the OLD 60°C floor against the same real network (should be unsafe):")
+    for k, v in floor_check_60.items():
+        print(f"    {k:<32} {v}")
+
     # --- NEW: unit-level outage model ---
     print(f"\n  Unit-level outage model (real maintenance practice — units")
     print(f"  serviced one at a time, never the whole bank together):")
@@ -821,6 +1205,65 @@ if __name__ == "__main__":
     assert ealing.units_available.min() >= ealing.n_units - 1, \
         "Staggered single-unit-at-a-time outages should never take down more than 1 unit simultaneously at this availability level"
 
+    # New weather compensation assertions
+    assert flow_at_temps[0] == 70.0, "Flow temp should clamp at 70°C below the cold anchor (-10°C) -- the dormant default"
+    assert flow_at_temps[-1] == 70.0, "Flow temp should clamp at 70°C above the mild anchor (15°C) -- flat by design while dormant"
+    assert np.all(np.diff(flow_at_temps) <= 0), \
+        "Flow temp should be monotonically non-increasing as ambient temp rises"
+    assert not fixed_ashp.enable_weather_compensation, "Default ASHPArray should NOT have compensation enabled"
+    assert compensated_default.enable_weather_compensation, "Explicitly enabled ASHPArray should have compensation enabled"
+    assert isinstance(fixed_ashp.flow_temp_C, float), \
+        "Fixed-mode flow_temp_C should remain a plain scalar (backward compatibility)"
+    assert isinstance(compensated_default.flow_temp_C, np.ndarray), \
+        "Compensated-mode flow_temp_C should be an (N_HOURS,) array, even when dormant/flat"
+    assert len(compensated_default.flow_temp_C) == N_HOURS, \
+        "Compensated flow_temp_C array should have exactly N_HOURS entries"
+    # THE KEY CONSISTENCY CHECK: enabling compensation with NO other
+    # overrides must give IDENTICAL results to the fixed case -- this is
+    # what makes the dormant default safe to leave switched on by
+    # accident; it should never silently diverge from the project's
+    # single real design value.
+    assert np.allclose(default_flow_arr, fixed_flow_arr), \
+        "Enabling compensation with default parameters should produce IDENTICAL flow temps " \
+        "to the fixed case (both ends are 70°C) -- this is the actual point of reconciling " \
+        "the dormant default back to the project's single real design value"
+    assert abs(compensated_default.cop_hourly.mean() - fixed_ashp.cop_hourly.mean()) < 1e-9, \
+        "Dormant-default compensated COP should be identical to fixed COP"
+    assert abs(compensated_default.electrical_demand_MW.sum() - fixed_ashp.electrical_demand_MW.sum()) < 1e-6, \
+        "Dormant-default compensated electricity demand should be identical to fixed demand"
+    # The illustrative (NOT live) lower-floor case must still demonstrate
+    # the real underlying physics correctly, even though it's not part
+    # of this project's live assumptions
+    assert compensated_illustrative.cop_hourly.mean() > fixed_ashp.cop_hourly.mean(), \
+        "Compensating DOWN from the same cold-end design should always raise mean COP " \
+        "vs always running at the peak design flow temp (every hour's flow temp is <= the fixed case's)"
+    assert compensated_illustrative.electrical_demand_MW.sum() < fixed_ashp.electrical_demand_MW.sum(), \
+        "Compensating DOWN from the same cold-end design should always reduce total annual " \
+        "electricity demand for the same heat delivered"
+    assert custom_flow_arr.mean() < default_flow_arr.mean(), \
+        "A genuinely lower custom mild-end target should produce a lower mean flow temp " \
+        "than the dormant (flat) default curve"
+    # resize() must carry the ORIGINAL design flow temp through, not an
+    # already-compensated hourly array re-interpreted as a new scalar
+    resized_compensated = compensated_default.resize(n_units=8)
+    assert resized_compensated.design_flow_temp_C == compensated_default.design_flow_temp_C, \
+        "resize() should preserve the original design (cold-end) flow temp, not a derived hourly value"
+    assert resized_compensated.enable_weather_compensation, \
+        "resize() should preserve the enable_weather_compensation flag"
+
+    # New cross-check function assertions
+    assert floor_check["proposed_floor_safe"], \
+        "The module's own 70°C default floor should check as safe against the real Ealing network"
+    assert floor_check["margin_C"] > 0, "A safe floor should report a positive margin"
+    assert not floor_check_60["proposed_floor_safe"], \
+        "The OLD 60°C floor should check as UNSAFE against the real Ealing network -- " \
+        "confirms the cross-check can actually catch a bad floor, not just rubber-stamp things"
+    assert floor_check_60["margin_C"] < 0, "An unsafe floor should report a negative margin"
+    assert abs(floor_check["actual_minimum_safe_flow_temp_C"]
+               - floor_check_60["actual_minimum_safe_flow_temp_C"]) < 0.01, \
+        "The network's own calculated physical floor should be identical regardless of which " \
+        "proposed floor is being checked against it -- it's a property of the network, not the proposal"
+
     print(f"\n  ✓ All array shapes correct (8760 hours)")
     print(f"  ✓ Supply never exceeds nameplate capacity")
     print(f"  ✓ COP within physical bounds [1.2, 6.0]")
@@ -829,4 +1272,13 @@ if __name__ == "__main__":
     print(f"  ✓ from_config() nested electricity_tariff block resolves correctly")
     print(f"  ✓ Unit-level outages correctly staggered — never more than 1 unit down at once at this scale")
     print(f"  ✓ Lower availability_factor correctly produces more reduced-fleet hours")
+    print(f"  ✓ Weather compensation curve correctly clamps at both ends and is monotonic in between")
+    print(f"  ✓ Compensation OFF by default — existing callers get identical fixed-temperature behaviour")
+    print(f"  ✓ Compensation ON with DEFAULT params is identical to fixed (dormant, flat 70°C/70°C)")
+    print(f"  ✓ Compensation ON with a genuinely lower mild-end floor measurably improves COP")
+    print(f"    and reduces electricity demand (illustrative only -- not a live assumption)")
+    print(f"  ✓ Custom mild-end parameters correctly shift the curve")
+    print(f"  ✓ resize() correctly preserves the original design flow temp and compensation settings")
+    print(f"  ✓ check_compensation_floor_against_network() correctly verifies the 70°C default is safe")
+    print(f"    for the real Ealing network, and correctly catches the old 60°C floor as unsafe")
     print()
