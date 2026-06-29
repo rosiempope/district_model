@@ -4,6 +4,23 @@ dispatch.py
 Hour-by-hour merit-order dispatch across the heat source stack (plus
 optional thermal storage), for the district energy system.
 
+Heating AND cooling, one engine
+---------------------------------
+This module handles BOTH duties via run_dispatch(...,duty="heat") /
+run_dispatch(...,duty="cool") (and the same parameter on
+run_n1_stress_test()) — the merit-order algorithm itself doesn't care
+which commodity it's moving, only supply_MW/marginal_cost/
+carbon_intensity_kgCO2_per_kWh, which every source type exposes
+identically regardless of duty (ASHPArray/EfWChp/DataCentre/
+BoosterHeatPump for heating; AirCooledChiller for cooling). duty only
+controls (a) which network_topology methods get called (heat loss vs.
+heat GAIN have the same Shukhov-formula physics, opposite sign — see
+network_topology.py), and (b) gates check_carbon_compliance() to
+heating only, since the London Heat Network Manual's 0.216 kgCO2e/kWh
+threshold has no cited cooling equivalent in this project's sources.
+The rest of this docstring uses "heat sources" as the generic term
+throughout, applying equally to cooling unless stated otherwise.
+
 What this answers
 ------------------
 Given a demand profile and a stack of heat sources (+ optional thermal
@@ -138,6 +155,7 @@ class DispatchResult:
     has_storage:            bool
     building_demand_MW:     Optional[np.ndarray] = None   # demand_MW BEFORE network heat loss was added (None if no network_topology was used)
     network_heat_loss_MW:   Optional[np.ndarray] = None   # the hourly network loss that was added on top of building_demand_MW (None if no network_topology was used)
+    duty:                   str = "heat"   # "heat" or "cool" — what this result was actually dispatched for; see run_dispatch()'s duty parameter
 
     def summary(self) -> dict:
         """Annual energy, cost, and utilisation breakdown — the headline numbers."""
@@ -228,6 +246,17 @@ class DispatchResult:
         when carbon compliance is the specific question being asked,
         rather than scrolling to find it inside the full summary dict.
 
+        HEATING-ONLY: raises if self.duty != "heat". The 0.216
+        kgCO2e/kWh threshold is a specific HEATING regulatory figure
+        (London Heat Network Manual Table 8, "Carbon intensity of heat
+        supply") — there is no cited cooling-carbon-intensity equivalent
+        in this project's source documents, so calling this on a
+        cooling-duty result would silently produce a meaningless
+        compliance verdict against the wrong regulation. If a real
+        cooling carbon threshold is identified later, this gating can be
+        relaxed with a genuinely sourced cooling-specific limit — not by
+        reusing the heating figure.
+
         Returns
         -------
         dict with: blended_carbon_intensity_kgCO2_per_kWh, threshold,
@@ -237,6 +266,13 @@ class DispatchResult:
         boiler reliance, ASHP volume, or something else pushing the
         blended figure toward (or over) the line.
         """
+        if self.duty != "heat":
+            raise ValueError(
+                f"check_carbon_compliance() is heating-only (London Heat Network Manual's "
+                f"0.216 kgCO2e/kWh threshold has no cited cooling equivalent in this "
+                f"project's source documents) — this result was dispatched for "
+                f"duty='{self.duty}'. See this method's docstring."
+            )
         s = self.summary()
         margin = LONDON_MAX_CARBON_INTENSITY_KGCO2_PER_KWH - s["blended_carbon_intensity_kgCO2_per_kWh"]
         return {
@@ -275,30 +311,62 @@ def run_dispatch(
     network_flow_temp_C: float = 70.0,
     network_return_temp_C: float = 40.0,
     network_sized_segments: Optional[dict] = None,
+    duty: str = "heat",
 ) -> DispatchResult:
     """
     Run the full 8760-hour merit-order dispatch. See module docstring for
     the tiering logic (primary sources -> storage -> boilers -> unmet).
 
+    The merit-order ALGORITHM itself is duty-agnostic — sort sources
+    cheapest-first, fill demand, spill surplus to storage, fall back to
+    boilers, track unmet demand. Nothing about that logic cares whether
+    the commodity is heat or cooling; it only ever looks at
+    supply_MW/marginal_cost/carbon_intensity_kgCO2_per_kWh, all of which
+    every source type (heating or cooling) already exposes identically.
+    duty exists ONLY to (a) select the right network_topology methods
+    (size_all_segments/network_heat_loss_kW_hourly both take their own
+    duty parameter — see network_topology.py) when network_topology is
+    provided, and (b) gate check_carbon_compliance() to heating only,
+    since the London Heat Network Manual's 0.216 kgCO2e/kWh threshold
+    is a HEATING-specific regulatory figure with no cited cooling
+    equivalent — see that method's own docstring.
+
+    This is a deliberate design choice over building a separate
+    cooling_dispatch.py file: duplicating the merit-order algorithm
+    across two files would mean keeping two copies in sync forever (the
+    same maintenance risk this project already hit once with duplicated
+    constants drifting apart — see the project's file-restructuring
+    work). One parameterised engine avoids that.
+
     Parameters
     ----------
-    demand_kW   : 8760-length hourly heat demand (kW) — e.g.
-                  network_result["total_heat_kW"] from demand_synthesis.py.
-                  Converted to MW internally; everything else in this
-                  module (and the rest of the codebase) works in MW.
+    demand_kW   : 8760-length hourly demand (kW) for THIS duty — e.g.
+                  network_result["total_heat_kW"] for duty="heat", or
+                  network_result["total_cooling_kW"] for duty="cool"
+                  (both from demand_synthesis.py). Converted to MW
+                  internally; everything else in this module (and the
+                  rest of the codebase) works in MW.
                   This is BUILDING demand only -- if network_topology is
-                  provided, real network heat loss is added ON TOP of
-                  this automatically (see network_topology below); don't
-                  pre-add a loss estimate to demand_kW yourself if you're
-                  also passing network_topology, or it will be double-counted.
-    sources     : list of source objects (DataCentre, ASHPArray, EfWChp,
-                  GasBoiler, ElectricBoiler, or anything sharing their
-                  interface: .name, .source_type, .supply_MW, .capacity_MW,
-                  .marginal_cost, all length-8760 except capacity_MW).
-                  Names should be unique — they're used as dict keys for
-                  reporting. Plain list is fine; you don't need to run
-                  this through build_source_stack() first — this function
-                  does its own true hourly cost sort internally.
+                  provided, real network heat loss/gain is added ON TOP
+                  of this automatically (see network_topology below);
+                  don't pre-add a loss estimate to demand_kW yourself if
+                  you're also passing network_topology, or it will be
+                  double-counted.
+    sources     : list of source objects for THIS duty. For duty="heat":
+                  DataCentre, ASHPArray, EfWChp, BoosterHeatPump,
+                  GasBoiler, ElectricBoiler. For duty="cool":
+                  AirCooledChiller, or anything else sharing the same
+                  interface (.name, .source_type, .supply_MW,
+                  .capacity_MW, .marginal_cost, all length-8760 except
+                  capacity_MW). This function does NOT check that every
+                  source in the list actually matches the requested
+                  duty — passing a heating source into a duty="cool" run
+                  (or vice versa) will not raise an error, since the
+                  merit-order algorithm itself doesn't need to know;
+                  it's the CALLER's responsibility to pass the right
+                  source list for the duty being dispatched. Names
+                  should be unique — they're used as dict keys for
+                  reporting.
     storage     : an optional ThermalStorage instance. Reset to a fresh
                   state at the start of this call (see
                   storage_initial_soc_fraction) so re-running dispatch on
@@ -308,35 +376,35 @@ def run_dispatch(
                   storage is None.
     network_topology : optional network.network_topology.NetworkTopology
                   instance — if provided, REAL hourly network heat loss
-                  (see that module's network_heat_loss_kW_hourly(), which
-                  uses the real seasonal UK ground-temperature model, not
-                  a fixed annual placeholder) is computed and ADDED to
-                  demand_kW before dispatch runs, so sources are sized
-                  and dispatched against what they ACTUALLY need to
-                  supply (building demand + real transport losses), not
-                  just building demand alone. If None (default), dispatch
-                  runs exactly as before -- building demand only, no
-                  network loss feedback. This is the connection between
-                  the topology/heat-loss work and the dispatch optimiser;
-                  without it, that work stays a standalone, unconnected
-                  calculation (see this project's recent design discussion).
+                  (or, for duty="cool", heat GAIN — see
+                  network_heat_loss_kW_hourly()'s own note on this, the
+                  same Shukhov formula handles both correctly by sign)
+                  is computed for THIS duty and ADDED to demand_kW
+                  before dispatch runs, so sources are sized and
+                  dispatched against what they ACTUALLY need to supply
+                  (building demand + real transport losses/gains), not
+                  just building demand alone. If None (default),
+                  dispatch runs exactly as before -- building demand
+                  only, no network loss feedback.
     network_flow_temp_C, network_return_temp_C : the FIXED source flow/
                   return temperatures (°C) used for network sizing and
-                  heat-loss calculation. Deliberately fixed (not weather-
-                  compensated) -- see network_topology's own
-                  network_heat_loss_kW_hourly() docstring for why: this
-                  is a feasibility-stage model, and operational
-                  efficiency levers like weather compensation were
-                  judged to obscure the core economic question, which
-                  should be assessed conservatively (fixed peak design
-                  temperature, not an optimistic lower average). Only
-                  used if network_topology is provided.
+                  heat-loss calculation for THIS duty. For duty="heat",
+                  defaults match this project's real Ealing design value
+                  (70/40°C). For duty="cool", pass the chiller's actual
+                  design temperatures (e.g. 6/12°C) explicitly — the
+                  70/40°C defaults are NOT appropriate for cooling and
+                  are not auto-switched based on duty, to avoid a
+                  surprising silent default; always pass these
+                  explicitly for duty="cool".
     network_sized_segments : optional pre-computed result from
-                  network_topology.size_all_segments() — pass this if
-                  you've already sized the network (e.g. to also report
-                  CAPEX) to avoid sizing it twice. If None and
-                  network_topology is provided, sizing is done
-                  internally using network_flow_temp_C/network_return_temp_C.
+                  network_topology.size_all_segments(duty=duty) — pass
+                  this if you've already sized the network (e.g. to
+                  also report CAPEX) to avoid sizing it twice. If None
+                  and network_topology is provided, sizing is done
+                  internally using network_flow_temp_C/
+                  network_return_temp_C AND duty.
+    duty        : "heat" (default) or "cool" — see the module-level
+                  note above on what this actually controls.
 
     Returns
     -------
@@ -351,6 +419,8 @@ def run_dispatch(
         raise ValueError(f"demand_kW must have {N_HOURS} elements; got {len(demand_MW)}.")
     if not sources:
         raise ValueError("run_dispatch requires at least one source.")
+    if duty not in ("heat", "cool"):
+        raise ValueError(f"duty must be 'heat' or 'cool'; got '{duty}'.")
 
     building_demand_MW = demand_MW.copy()
     network_heat_loss_MW = None
@@ -359,7 +429,7 @@ def run_dispatch(
         sized = network_sized_segments
         if sized is None:
             sized = network_topology.size_all_segments(
-                flow_temp_C=network_flow_temp_C, return_temp_C=network_return_temp_C,
+                flow_temp_C=network_flow_temp_C, return_temp_C=network_return_temp_C, duty=duty,
             )
         loss_result = network_topology.network_heat_loss_kW_hourly(
             sized_segments=sized, source_flow_temp_C=network_flow_temp_C,
@@ -457,6 +527,7 @@ def run_dispatch(
         has_storage=(storage is not None),
         building_demand_MW=building_demand_MW,
         network_heat_loss_MW=network_heat_loss_MW,
+        duty=duty,
     )
 
 
@@ -468,6 +539,7 @@ def run_n1_stress_test(
     storage: Optional[ThermalStorage] = None,
     storage_initial_soc_fraction: float = 0.5,
     outage_window_hours: Optional[tuple] = None,
+    duty: str = "heat",
 ) -> dict:
     """
     Worst-case single-source-loss ("N-1") stress test: for EACH primary
@@ -513,6 +585,11 @@ def run_n1_stress_test(
                             scenario; use the window form for a more
                             targeted "what if this fails during the cold
                             snap" question.
+    duty                   : "heat" (default) or "cool" — passed straight
+                            through to the internal run_dispatch() calls;
+                            no other behaviour in this function depends
+                            on it (BOILER_SOURCE_TYPES filtering already
+                            works correctly for any duty's source types).
 
     Returns
     -------
@@ -574,7 +651,7 @@ def run_n1_stress_test(
 
         result = run_dispatch(
             demand_kW, sources_for_this_test, storage=stress_storage,
-            storage_initial_soc_fraction=storage_initial_soc_fraction,
+            storage_initial_soc_fraction=storage_initial_soc_fraction, duty=duty,
         )
 
         unmet_total = float(result.unmet_demand_MW.sum())
@@ -591,364 +668,9 @@ def run_n1_stress_test(
     return results
 
 
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print("  dispatch.py — self-test")
-    print("=" * 70)
-
-    from components.datacentre_source import DataCentre
-    from components.ASHP import ASHPArray
-    from components.EfW import EfWChp
-    from components.peak_demand_option import GasBoiler, ElectricBoiler
-    from profiles.demand_synthesis import synthesise_network
-
-    # --- Build a representative demand profile (same building mix as
-    #     demand_synthesis.py's own self-test, for cross-reference) ---
-    np.random.seed(42)
-    hours = np.arange(N_HOURS)
-    T = (
-        11.5
-        + 8.0 * np.cos(2 * np.pi * (hours - 4200) / N_HOURS)
-        + 3.0 * np.cos(2 * np.pi * (hours % 24 - 15) / 24)
-        + np.random.normal(0, 1.5, N_HOURS)
+    print(
+        "\nThis file's self-test has moved to tests/test_dispatch.py "
+        "(see this project's file-restructuring decision) -- run:\n"
+        "    python3 tests/test_dispatch.py\n"
     )
-    dates = pd.date_range("2023-01-01", periods=N_HOURS, freq="h")
-    weather_df = pd.DataFrame({"temp_drybulb_C": T}, index=dates)
-
-    scenario = {
-        "demand_nodes": [
-            # Scaled 3x vs the building mix used elsewhere in the codebase's
-            # self-tests — at 1x scale, peak demand (4.7 MW) never exceeds
-            # primary source capacity (DC+EfW+ASHP, ~9 MW), so boilers and
-            # storage never get exercised at all. At 3x, peak demand
-            # (~14.2 MW) comfortably exceeds primary capacity but stays
-            # within total capacity (16.6 MW) — the regime where backup
-            # plant and storage actually do something, which is the point
-            # of this self-test.
-            {"name": "Perceval House",       "type": "office",      "floor_area_m2": 8500 * 3},
-            {"name": "High Street Retail",   "type": "retail",      "floor_area_m2": 3000 * 3},
-            {"name": "Ealing Hospital Wing", "type": "hospital",    "floor_area_m2": 12000 * 3},
-            {"name": "Dickens Yard Ph1",     "type": "residential", "units": 350 * 3},
-            {"name": "Broadway Hotel",       "type": "hotel",       "floor_area_m2": 5000 * 3},
-            {"name": "Ellen Wilkinson Sch",  "type": "school",      "floor_area_m2": 6000 * 3},
-        ]
-    }
-    network = synthesise_network(weather_df, scenario)
-    demand_kW = network["total_heat_kW"]
-    print(f"\n  Demand profile: annual {demand_kW.sum()/1000:,.0f} MWh, "
-          f"peak {demand_kW.max()/1000:.2f} MW")
-
-    # --- Build the source stack (same presets used throughout the rest
-    #     of the codebase's self-tests) ---
-    dc   = DataCentre.from_preset("redwire_ealing", weather_df)
-    efw  = EfWChp.from_preset("newlincs_style")
-    ashp = ASHPArray.from_preset("ealing_phase1", weather_df)
-    gas  = GasBoiler.from_preset("ealing_phase1")
-    elec = ElectricBoiler.from_preset("ealing_backup")
-    sources = [dc, efw, ashp, gas, elec]
-
-    print(f"\n  Source stack: {', '.join(s.name for s in sources)}")
-    print(f"  Total primary+backup capacity: "
-          f"{sum(s.capacity_MW for s in sources):.1f} MW vs peak demand "
-          f"{demand_kW.max()/1000:.2f} MW")
-
-    # --- Run WITHOUT storage first ---
-    print("\n  Run 1 — no storage:")
-    result_no_storage = run_dispatch(demand_kW, sources, storage=None)
-    s1 = result_no_storage.summary()
-    for k, v in s1.items():
-        print(f"    {k:<28} {v}")
-
-    # --- Run WITH storage — same sources, fresh copies so Run 1's
-    #     boiler load-profile correction doesn't bleed into Run 2 ---
-    # Sized to match the REAL Ealing Town Centre Network's Phase 1 thermal
-    # store: "50,000 litres of thermal storage" (Ealing Town Centre Heat
-    # Network Feasibility Report, Table 15 "Energy centre capacity
-    # summary"). Converted to MWh at the network's own quoted design
-    # temperatures (70C peak flow / 40C typical return = 30K usable
-    # delta-T, per the report's section on network operating conditions),
-    # using thermal_storage.py's m3_to_mwh(): 50 m3 at 30K -> 1.74 MWh.
-    # This is a genuinely small OPERATIONAL buffer (the report's own
-    # category 1, not a strategic diurnal store) -- note it's actually
-    # BELOW the 25-50 litres/kW rule of thumb in this module's own
-    # docstring (50,000L / 2,800kW ASHP = ~18 L/kW), so don't be surprised
-    # it does less peak-shaving than the larger illustrative store used
-    # in earlier versions of this self-test.
-    # Charge/discharge rate isn't given in the report -- assumed equal to
-    # ASHP capacity (2.8 MW), since the report describes the store as
-    # "connected in parallel with the heat pump" and charged directly
-    # from its output. Flagged as an assumption, not a cited figure.
-    print("\n  Run 2 — with the real Ealing Phase 1 thermal store (50,000L, ~1.74 MWh):")
-    gas2  = GasBoiler.from_preset("ealing_phase1")
-    elec2 = ElectricBoiler.from_preset("ealing_backup")
-    sources2 = [dc, efw, ashp, gas2, elec2]
-    store = ThermalStorage(
-        name="Ealing Phase 1 thermal store (50,000L)",
-        capacity_MWh=1.74,
-        max_charge_MW=2.8,
-        max_discharge_MW=2.8,
-        delta_T_K=30.0,
-    )
-    result_storage = run_dispatch(demand_kW, sources2, storage=store)
-    
-    s2 = result_storage.summary()
-    for k, v in s2.items():
-        print(f"    {k:<28} {v}")
-
-    # --- The actual point of storage: smaller peak boiler requirement ---
-    boiler_names = [s.name for s in sources if s.source_type in BOILER_SOURCE_TYPES]
-    peak_boiler_no_storage = max(
-        result_no_storage.dispatch_by_source_MW[n].max() for n in boiler_names
-    )
-    peak_boiler_with_storage = max(
-        result_storage.dispatch_by_source_MW[n].max() for n in boiler_names
-    )
-    print(f"\n  Peak SINGLE-HOUR boiler output — no storage:   {peak_boiler_no_storage:.2f} MW")
-    print(f"  Peak SINGLE-HOUR boiler output — with storage: {peak_boiler_with_storage:.2f} MW")
-    print(f"  -> with the REAL Ealing-sized buffer (1.74 MWh), this barely moves -- it's an")
-    print(f"     operational buffer (prevents ASHP short-cycling), not a strategic peak-shaver.")
-    print(f"     A genuinely larger strategic store COULD reduce backup boiler capacity (see")
-    print(f"     thermal_storage.py's docstring on the two storage categories) -- that's a")
-    print(f"     separate sensitivity case to run deliberately, not what this real-world figure shows.")
-    print(f"     Either way, the network MAIN still has to carry the full {demand_kW.max()/1000:.2f} MW")
-    print(f"     demand peak regardless of storage size -- that's a plant-sizing question, not a pipe one.")
-    
-    opex_no_storage = s1["total_annual_opex_GBP"]
-    opex_with_storage = s2["total_annual_opex_GBP"]
-    print(f"\n  Annual OPEX — no storage:   £{opex_no_storage:,.0f}")
-    print(f"  Annual OPEX — with storage: £{opex_with_storage:,.0f}")
-    if opex_with_storage > opex_no_storage:
-        print(f"  -> OPEX is actually £{opex_with_storage - opex_no_storage:,.0f} HIGHER with storage in "
-              f"this scenario. This is NOT a dispatch bug -- charging always correctly uses the "
-              f"cheapest source with genuine spare capacity that hour (verified across all 8760 "
-              f"hours). It's a real economic outcome: DC and EfW (the genuinely cheap sources) are "
-              f"baseload-constrained and rarely have spare room, so most charging hours fall to "
-              f"ASHP -- which is ~20x pricier per MWh. The boiler use that storage avoids doesn't "
-              f"quite repay that premium in this scenario. A real CAPEX-vs-OPEX trade-off for a "
-              f"small, source-coupled operational buffer -- exactly what the economics stage needs "
-              f"to weigh, not something a smarter merit-order algorithm would fix.")
-
-    print(f"\n  Carbon compliance check (London Heat Network Manual Table 8, "
-          f"max {LONDON_MAX_CARBON_INTENSITY_KGCO2_PER_KWH} kgCO2e/kWh):")
-    compliance_with_storage = result_storage.check_carbon_compliance()
-    for k, v in compliance_with_storage.items():
-        print(f"    {k:<35} {v}")
-
-    # --- Demonstrate the check actually CATCHES a non-compliant scenario,
-    #     not just confirms the well-mixed Ealing case passes. A gas-only
-    #     or modern-electric-only network actually stays JUST under 0.216
-    #     even alone (0.199 and 0.209 kgCO2e/kWh respectively, at this
-    #     model's efficiency/grid-factor assumptions) -- a genuinely
-    #     useful finding in its own right. To demonstrate a real FAIL,
-    #     use a degraded/older electric boiler (85% efficiency, vs the
-    #     99% modern default) -- an honest scenario (ageing equipment, not
-    #     an artificial one) that pushes carbon-per-kWh-heat over the line. ---
-    print(f"\n  Compliance check sanity test — degraded electric-only network")
-    print(f"  (older/poorly-maintained unit, 85% efficiency vs the 99% modern default,")
-    print(f"  no low-carbon sources at all — confirms the check CAN fail, not just pass):")
-    elec_degraded = ElectricBoiler.from_preset(
-        "ealing_backup", capacity_MW=20.0, efficiency=0.85
-    )
-    result_degraded = run_dispatch(demand_kW, [elec_degraded], storage=None)
-    compliance_degraded = result_degraded.check_carbon_compliance()
-    for k, v in compliance_degraded.items():
-        print(f"    {k:<35} {v}")
-
-    # --- N-1 outage stress test: storage's REAL maintenance/outage backup
-    #     role, as distinct from cost arbitrage. Two variants: the
-    #     maximum-severity case (lose a source for the WHOLE year — an
-    #     upper bound, not a realistic single scenario) and a more
-    #     realistic targeted case (lose it for one winter week, the
-    #     worst TIMING for it to happen). ---
-    print(f"\n  N-1 stress test — lose each primary source ENTIRELY, full year")
-    print(f"  (maximum-severity upper bound, not a realistic single scenario):")
-    store_n1 = ThermalStorage(
-        name="Ealing Phase 1 thermal store (50,000L)",
-        capacity_MWh=1.74, max_charge_MW=2.8, max_discharge_MW=2.8, delta_T_K=30.0,
-    )
-    n1_full_year = run_n1_stress_test(demand_kW, sources2, storage=store_n1)
-    for name, r in n1_full_year.items():
-        status = "✓ SURVIVES" if r["survives_without_unmet"] else "✗ UNMET DEMAND"
-        print(f"    {name:<45} {status}  ({r['unmet_demand_MWh']} MWh unmet, "
-              f"{r['pct_demand_unmet']}% of annual demand, peak gap {r['peak_unmet_MW']} MW)")
-
-    print(f"\n  N-1 stress test — same sources, lose each for ONE WINTER WEEK only")
-    print(f"  (hours 0-168, i.e. worst-timing realistic outage, WITH vs WITHOUT storage):")
-    n1_week_with_storage = run_n1_stress_test(
-        demand_kW, sources2, storage=store_n1, outage_window_hours=(0, 168)
-    )
-    n1_week_no_storage = run_n1_stress_test(
-        demand_kW, sources2, storage=None, outage_window_hours=(0, 168)
-    )
-    for name in n1_week_with_storage:
-        with_s = n1_week_with_storage[name]
-        without_s = n1_week_no_storage[name]
-        print(f"    {name}:")
-        print(f"      With storage:    {'✓ survives' if with_s['survives_without_unmet'] else '✗ unmet demand'} "
-              f"({with_s['unmet_demand_MWh']} MWh unmet)")
-        print(f"      Without storage: {'✓ survives' if without_s['survives_without_unmet'] else '✗ unmet demand'} "
-              f"({without_s['unmet_demand_MWh']} MWh unmet)")
-
-    # --- NEW: network_topology integration — the actual connection between
-    #     the topology/heat-loss work and dispatch, not just a standalone
-    #     calculation. Build a topology using the SAME 3x-scaled building
-    #     peaks as this self-test's demand profile (so it's self-consistent
-    #     with demand_kW above, not the 1x-scale figures used in
-    #     network_topology.py's own self-test). ---
-    print(f"\n  Network topology integration — real hourly heat loss added to demand")
-    print(f"  BEFORE dispatch runs, not as a disconnected side calculation:")
-    from network.network_topology import ealing_town_centre_topology
-
-    peak_by_building_3x = {n["name"]: n["peak_heat_kW"] for n in network["nodes"]}
-    ealing_topo = ealing_town_centre_topology(peak_kW_by_building=peak_by_building_3x)
-    print(f"    Topology: {ealing_topo.summary()['total_length_m']:.0f}m route, "
-          f"{ealing_topo.summary()['total_peak_kW']:.0f} kW building peak")
-
-    result_with_network = run_dispatch(
-        demand_kW, sources, storage=None, network_topology=ealing_topo,
-        network_flow_temp_C=70.0, network_return_temp_C=40.0,
-    )
-    s_network = result_with_network.summary()
-    print(f"    Annual building demand:    {s_network['annual_building_demand_MWh']:,.0f} MWh")
-    print(f"    Annual network heat loss:  {s_network['annual_network_heat_loss_MWh']:,.0f} MWh "
-          f"({s_network['network_loss_pct_of_building_demand']:.2f}% of building demand)")
-    print(f"    Total demand sources see:  {s_network['annual_demand_MWh']:,.0f} MWh")
-    print(f"    OPEX WITHOUT network loss: £{s1['total_annual_opex_GBP']:,.0f}")
-    print(f"    OPEX WITH network loss:    £{s_network['total_annual_opex_GBP']:,.0f}")
-    print(f"    -> sources have to do real extra work just transporting heat around the network --")
-    print(f"       this OPEX difference was previously invisible to the dispatch optimiser entirely.")
-
-    # --- Sanity checks ---
-    print("\n  Sanity checks:")
-    for name, arr in result_storage.dispatch_by_source_MW.items():
-        assert len(arr) == N_HOURS, f"{name} dispatch array wrong length"
-    assert len(result_storage.unmet_demand_MW) == N_HOURS
-
-    # Energy balance identity (exact bookkeeping, not an approximation):
-    #   total source output = demand - unmet + storage_charge - storage_discharge
-    total_source_output = sum(arr.sum() for arr in result_storage.dispatch_by_source_MW.values())
-    demand_total = result_storage.demand_MW.sum()
-    balance_rhs = (
-        demand_total
-        - result_storage.unmet_demand_MW.sum()
-        + result_storage.storage_charge_MW.sum()
-        - result_storage.storage_discharge_MW.sum()
-    )
-    assert abs(total_source_output - balance_rhs) < 1.0, (
-        f"Energy balance identity failed: sources produced {total_source_output:.2f} MWh, "
-        f"expected {balance_rhs:.2f} MWh"
-    )
-
-    # No source ever dispatched above its own hourly available supply
-    for s in sources2:
-        over = result_storage.dispatch_by_source_MW[s.name] - s.supply_MW
-        assert (over <= 1e-6).all(), f"{s.name} dispatched above available supply in some hour"
-
-    # Storage SoC always within bounds
-    assert store.soc_MWh >= -1e-6 and store.soc_MWh <= store.capacity_MWh + 1e-6
-
-    # Storage should NOT make peak boiler requirement WORSE. At this small,
-    # real (Ealing-sized) operational-buffer scale, it's not expected to make
-    # it meaningfully BETTER either — see the printed explanation above. A
-    # strict "<" assertion here was left over from an earlier, larger
-    # illustrative storage size; with the real 1.74 MWh figure, requiring
-    # strict improvement is testing for something this size of buffer was
-    # never going to deliver. "<=" keeps the assertion honest: storage must
-    # never backfire on peak duty, which is the one guarantee that's
-    # actually true regardless of how small the buffer is.
-    assert peak_boiler_with_storage <= peak_boiler_no_storage + 1e-6, \
-        "Storage should never INCREASE peak single-hour boiler output vs no storage"
-
-    # Boilers should be doing backup duty, not baseload — small share of annual energy
-    boiler_share_pct = sum(s2["pct_demand_by_source"].get(n, 0.0) for n in boiler_names)
-    assert boiler_share_pct < 20.0, \
-        f"Boilers supplying {boiler_share_pct:.1f}% of annual demand — too high for 'backup' duty"
-
-    # Unmet demand should be negligible with adequately-sized backup plant
-    assert s2["pct_demand_unmet"] < 1.0, \
-        f"Unmet demand {s2['pct_demand_unmet']}% — check backup plant sizing"
-
-    # Carbon compliance: the real, well-mixed Ealing scenario (DC+EfW+ASHP
-    # dominant, boilers genuine backup) should be comfortably compliant
-    assert compliance_with_storage["compliant"], \
-        f"Ealing scenario should be carbon-compliant; got " \
-        f"{compliance_with_storage['blended_carbon_intensity_kgCO2_per_kWh']} kgCO2e/kWh"
-    assert compliance_with_storage["margin_kgCO2_per_kWh"] > 0, \
-        "Compliant scenario should show a positive margin under the threshold"
-
-    # The deliberately degraded electric-only scenario should FAIL —
-    # proves the check isn't just always returning True regardless of input
-    assert not compliance_degraded["compliant"], \
-        f"Degraded electric-only network should breach the London carbon threshold; got " \
-        f"{compliance_degraded['blended_carbon_intensity_kgCO2_per_kWh']} kgCO2e/kWh " \
-        f"(threshold {LONDON_MAX_CARBON_INTENSITY_KGCO2_PER_KWH})"
-    assert compliance_degraded["margin_kgCO2_per_kWh"] < 0, \
-        "Non-compliant scenario should show a negative margin over the threshold"
-
-    # N-1 stress test assertions
-    assert set(n1_full_year.keys()) == {dc.name, efw.name, ashp.name}, \
-        "N-1 stress test should cover exactly the primary (non-boiler) sources"
-    for name, r in n1_full_year.items():
-        assert r["peak_unmet_MW"] >= 0, f"{name}: peak_unmet_MW should never be negative"
-        assert r["unmet_demand_MWh"] >= 0, f"{name}: unmet_demand_MWh should never be negative"
-        # Consistency: survives_without_unmet should exactly match unmet_demand_MWh ~ 0
-        assert r["survives_without_unmet"] == (r["unmet_demand_MWh"] <= 1e-6), \
-            f"{name}: survives_without_unmet flag inconsistent with unmet_demand_MWh"
-    # The 1-week winter test should be a strictly EASIER (or equal) test
-    # than losing the source for the whole year -- less unmet demand, not more
-    for name in n1_week_with_storage:
-        assert n1_week_with_storage[name]["unmet_demand_MWh"] <= n1_full_year[name]["unmet_demand_MWh"] + 1e-6, \
-            f"{name}: a 1-week outage should never show MORE unmet demand than a full-year outage of the same source"
-    # Confirm the deepcopy isolation actually worked: the shared dc/efw/ashp
-    # objects' supply_MW should be UNCHANGED after running the stress test
-    # (each test should have operated on copies, not the originals)
-    assert dc.supply_MW.sum() > 0, \
-        "Original dc.supply_MW should be untouched after N-1 stress test (deepcopy isolation check)"
-    assert efw.supply_MW.sum() > 0, \
-        "Original efw.supply_MW should be untouched after N-1 stress test (deepcopy isolation check)"
-    assert ashp.supply_MW.sum() > 0, \
-        "Original ashp.supply_MW should be untouched after N-1 stress test (deepcopy isolation check)"
-
-    # New network_topology integration assertions
-    assert result_with_network.network_heat_loss_MW is not None, \
-        "When network_topology is provided, network_heat_loss_MW should be populated"
-    assert result_with_network.building_demand_MW is not None, \
-        "When network_topology is provided, building_demand_MW should be populated"
-    assert np.allclose(result_with_network.building_demand_MW, demand_kW / 1000.0), \
-        "building_demand_MW should exactly equal the original demand_kW (converted to MW), unmodified"
-    assert np.allclose(
-        result_with_network.demand_MW,
-        result_with_network.building_demand_MW + result_with_network.network_heat_loss_MW,
-    ), "Total demand_MW should exactly equal building demand plus network heat loss, no discrepancy"
-    assert result_no_storage.network_heat_loss_MW is None, \
-        "When network_topology is NOT provided, network_heat_loss_MW should remain None " \
-        "(confirms full backward compatibility for existing callers)"
-    assert s_network["annual_network_heat_loss_MWh"] > 0, \
-        "Network heat loss should be a real, positive addition to demand"
-    assert s_network["total_annual_opex_GBP"] > s1["total_annual_opex_GBP"], \
-        "OPEX with real network heat loss included should be HIGHER than without it -- " \
-        "sources are doing genuinely more work, which should cost genuinely more"
-    assert 0 < s_network["network_loss_pct_of_building_demand"] < 20, \
-        "Network loss should be a real but modest percentage of building demand " \
-        "(a value outside this range would suggest a units or sizing error)"
-
-    print("  ✓ All dispatch arrays correct length (8760 hours)")
-    print("  ✓ Energy balance identity holds exactly (sources = demand - unmet + charge - discharge)")
-    print("  ✓ No source ever dispatched above its own hourly available supply")
-    print("  ✓ Storage SoC stayed within [0, capacity] bounds")
-    print("  ✓ Storage never made peak single-hour boiler output worse (its one guaranteed value at this scale)")
-    print(f"  ✓ Boilers supplied only {boiler_share_pct:.1f}% of annual demand (genuine backup duty)")
-    print(f"  ✓ Unmet demand negligible ({s2['pct_demand_unmet']}%) — backup plant adequately sized")
-    print(f"  ✓ Real Ealing source mix is carbon-compliant ({compliance_with_storage['blended_carbon_intensity_kgCO2_per_kWh']} "
-          f"kgCO2e/kWh, vs {LONDON_MAX_CARBON_INTENSITY_KGCO2_PER_KWH} threshold)")
-    print(f"  ✓ Degraded electric-only network correctly FAILS compliance ({compliance_degraded['blended_carbon_intensity_kgCO2_per_kWh']} "
-          f"kgCO2e/kWh) — confirms the check can actually catch a non-compliant scenario")
-    print("  ✓ N-1 stress test covers exactly the primary sources, with consistent unmet-demand bookkeeping")
-    print("  ✓ A 1-week outage never shows worse unmet demand than a full-year outage of the same source")
-    print("  ✓ Original source objects unmutated after stress testing (deepcopy isolation confirmed)")
-    print("  ✓ network_topology integration correctly adds real hourly heat loss on top of building")
-    print("    demand, with exact energy-balance consistency, and is fully backward-compatible")
-    print("    (omitting network_topology gives identical behaviour to before)")
-    print()

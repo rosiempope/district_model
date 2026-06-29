@@ -464,52 +464,9 @@ class DataCentre:
         )
 
 
-
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
-    print("\n" + "="*65)
-    print("  source.py — self-test")
-    print("="*65)
-
-    # Test all presets
-    print("\n  All DC presets:")
-    print(f"  {'Preset':<35} {'Capacity MW':>12} {'Annual MWh':>12} {'T supply °C':>12}")
-    print("  " + "-"*72)
-    for key in DC_PRESETS:
-        dc = DataCentre.from_preset(key)
-        s  = dc.summary()
-        print(f"  {key:<35} {s['capacity_MW']:>12.1f} {s['annual_heat_available_MWh']:>12.0f} {s['supply_temp_nominal_C']:>11.1f}°C")
-
-    # Detailed test for Redwire (primary Ealing scenario)
-    print("\n  Redwire DC (Ealing town centre):")
-    redwire = DataCentre.from_preset("redwire_ealing")
-    for k, v in redwire.summary().items():
-        print(f"    {k:<36} {v}")
-
-    # Test custom DC
-    print("\n  Custom DC (user-defined 17 MW at 28°C, OPDC-style):")
-    custom = DataCentre(
-        name="OPDC data centre cluster",
-        it_load_MW=68.0,
-        heat_offtake_fraction=0.25,
-        supply_temp_C=28.0,
-        availability_factor=0.95,
+    print(
+        "\nThis file's self-test has moved to tests/test_datacentre_source.py "
+        "(see this project's file-restructuring decision) -- run:\n"
+        "    python3 tests/test_datacentre_source.py\n"
     )
-    print(f"    {custom}")
-    print(f"    Annual heat available: {custom.supply_MW.sum():,.0f} MWh")
-
-
-    # Sanity checks
-    print("\n  Sanity checks:")
-    dc = DataCentre.from_preset("redwire_ealing")
-    assert len(dc.supply_MW)     == 8760, "supply_MW wrong length"
-    assert len(dc.supply_temp_C) == 8760, "supply_temp_C wrong length"
-    assert len(dc.marginal_cost) == 8760, "marginal_cost wrong length"
-    assert dc.supply_MW.max() <= dc.capacity_MW + 0.001, "supply exceeds capacity"
-    assert dc.supply_MW.min() >= 0, "negative supply"
-    assert abs(dc._avail.mean() - dc.availability_factor) < 0.01, "availability mismatch"
-    print("  ✓ All array shapes correct")
-    print("  ✓ Supply never exceeds capacity")
-    print("  ✓ Availability factor within tolerance")
-    print()

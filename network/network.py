@@ -378,84 +378,9 @@ def network_length_sweep(
     return pd.DataFrame(rows)
 
 
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print("  network.py — self-test")
-    print("=" * 70)
-
-    # Realistic Ealing-scale peaks, consistent with the rest of this project
-    PEAK_HEAT_KW = 6740.0    # baseline real-weather peak from demand_synthesis.py
-    PEAK_COOL_KW = 7679.0    # baseline real-weather peak from demand_synthesis.py
-    ANNUAL_HEAT_MWH = 10159.0
-    NETWORK_LENGTH_M = 3000.0   # assumed town-centre-scale route length
-
-    # --- Stage 1: 2-pipe heating-only ---
-    print(f"\n  Stage 1 — 2-pipe heating-only ({PEAK_HEAT_KW/1000:.2f} MW peak, {NETWORK_LENGTH_M:.0f}m route):")
-    heating_only = size_heating_network(PEAK_HEAT_KW, NETWORK_LENGTH_M)
-    for k, v in heating_only.summary().items():
-        print(f"    {k}: {v}")
-
-    # --- Stage 2: 4-pipe heating + cooling, same route ---
-    print(f"\n  Stage 2 — 4-pipe heating+cooling ({PEAK_HEAT_KW/1000:.2f} MW heat + "
-          f"{PEAK_COOL_KW/1000:.2f} MW cool, same {NETWORK_LENGTH_M:.0f}m route):")
-    combined = size_4pipe_network(PEAK_HEAT_KW, PEAK_COOL_KW, NETWORK_LENGTH_M)
-    for k, v in combined.summary().items():
-        print(f"    {k}: {v}")
-
-    capex_delta = combined.total_capex_GBP - heating_only.total_capex_GBP
-    print(f"\n  -> Adding cooling adds £{capex_delta:,.0f} to network CAPEX "
-          f"({capex_delta/heating_only.total_capex_GBP*100:.0f}% more than heating-only)")
-
-    # --- 4-pipe with twin heating main + single cooling main ---
-    print("\n  4-pipe with twin heating main (smaller DN) + single cooling main (larger DN):")
-    combined_twin_heat = size_4pipe_network(
-        PEAK_HEAT_KW, PEAK_COOL_KW, NETWORK_LENGTH_M,
-        heat_pipe_kwargs={"construction": "twin"},
+    print(
+        "\nThis file's self-test has moved to tests/test_network.py "
+        "(see this project's file-restructuring decision) -- run:\n"
+        "    python3 tests/test_network.py\n"
     )
-    print(f"    {combined_twin_heat}")
-
-    # --- Stage 3: ambient loop placeholder ---
-    print("\n  Stage 3 — ambient loop (should raise NotImplementedError):")
-    try:
-        ambient_loop_NOT_IMPLEMENTED()
-        print("    ✗ FAIL: should have raised")
-    except NotImplementedError as e:
-        print(f"    ✓ Correctly raised: {str(e)[:80]}...")
-
-    # --- Network length / linear heat density sweep ---
-    print(f"\n  Network length sweep (fixed {PEAK_HEAT_KW/1000:.2f} MW peak, "
-          f"{ANNUAL_HEAT_MWH:.0f} MWh/yr annual demand):")
-    sweep_df = network_length_sweep(
-        PEAK_HEAT_KW, ANNUAL_HEAT_MWH,
-        length_values_m=[500, 1000, 2000, 3000, 5000, 8000],
-    )
-    print(sweep_df.to_string(index=False))
-
-    # --- Sanity checks ---
-    print("\n  Sanity checks:")
-    assert combined.total_capex_GBP > heating_only.total_capex_GBP, \
-        "4-pipe should cost more than heating-only (same route, extra duty)"
-    assert combined_twin_heat.total_capex_GBP != combined.total_capex_GBP, \
-        "Twin heating main should give a different (higher) cost than single"
-    # CAPEX should rise monotonically with length, holding demand fixed
-    capex_vals = sweep_df["network_capex_GBP"].values
-    assert (capex_vals[1:] >= capex_vals[:-1]).all(), \
-        "Network CAPEX should rise monotonically with length (peak duty held fixed)"
-    # CAPEX-per-MWh should also rise monotonically (worse economics as length grows, demand fixed)
-    capex_per_mwh_vals = sweep_df["network_capex_GBP_per_MWh_annual"].values
-    assert (capex_per_mwh_vals[1:] >= capex_per_mwh_vals[:-1]).all(), \
-        "CAPEX per MWh should rise monotonically with length (heat density falling)"
-    # Heat density should FALL as length grows (same annual demand spread over more pipe)
-    density_vals = sweep_df["linear_heat_density_MWh_per_m"].values
-    assert (density_vals[1:] <= density_vals[:-1]).all(), \
-        "Linear heat density should fall monotonically as network length grows"
-
-    print("  ✓ 4-pipe network costs more than heating-only, same route length")
-    print("  ✓ Twin vs single construction changes the cost as expected")
-    print("  ✓ Network CAPEX rises monotonically with length (peak demand held fixed)")
-    print("  ✓ CAPEX per MWh delivered rises monotonically as heat density falls")
-    print("  ✓ Linear heat density falls monotonically as network length grows")
-    print("  ✓ Ambient loop correctly raises NotImplementedError rather than a wrong answer")
-    print()

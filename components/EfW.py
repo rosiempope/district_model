@@ -413,70 +413,10 @@ class EfWChp:
             f"availability={self.availability_factor:.0%})"
         )
  
- 
-# ── Self-test ──────────────────────────────────────────────────────────────────
- 
+
 if __name__ == "__main__":
-    print("\n" + "="*70)
-    print("  efw_chp_source.py — self-test")
-    print("="*70)
- 
-    # Test all presets
-    print("\n  All EfW CHP presets:")
-    print(f"  {'Preset':<22} {'Heat MW':>9} {'Elec MW':>9} {'H:P ratio':>10} {'Annual heat MWh':>16}")
-    print("  " + "-"*70)
-    for key in EFW_PRESETS:
-        efw = EfWChp.from_preset(key)
-        s = efw.summary()
-        print(f"  {key:<22} {s['heat_capacity_MW']:>9.1f} {s['electrical_capacity_MW']:>9.1f} "
-              f"{s['heat_to_power_ratio']:>10.2f} {s['annual_heat_available_MWh']:>16.0f}")
- 
-    # Detailed test: Sheffield-style (primary reference plant)
-    print("\n  Sheffield ERF-style plant (detailed):")
-    sheffield = EfWChp.from_preset("sheffield_erf_style")
-    for k, v in sheffield.summary().items():
-        print(f"    {k:<38} {v}")
- 
-    # Test inference: only waste throughput given
-    print("\n  Inference test — only waste throughput specified (100,000 t/yr):")
-    inferred = EfWChp(
-        name="Inferred-size EfW plant",
-        waste_throughput_tonnes_per_year=100_000,
-        availability_factor=0.89,
+    print(
+        "\nThis file's self-test has moved to tests/test_efw.py "
+        "(see this project's file-restructuring decision) -- run:\n"
+        "    python3 tests/test_efw.py\n"
     )
-    for k, v in inferred.summary().items():
-        print(f"    {k:<38} {v}")
- 
-    # Test custom — fully specified, no inference needed
-    print("\n  Custom plant (fully specified, no inference):")
-    custom = EfWChp(
-        name="Custom EfW CHP",
-        heat_capacity_MW=20.0,
-        electrical_capacity_MW=10.0,
-        supply_temp_C=95.0,
-        availability_factor=0.92,
-    )
-    print(f"    {custom}")
- 
-    # Compare against other source types' typical costs (for context)
-    print(f"\n  Cost context — EfW heat at £{sheffield.heat_export_cost_GBP_per_MWh:.2f}/MWh is "
-          f"very low (by-product revenue), similar order of magnitude to DC waste heat (£5/MWh) "
-          f"and far below gas boiler (£45-50/MWh) or ASHP electricity-driven cost.")
- 
-    # Sanity checks
-    print("\n  Sanity checks:")
-    assert len(sheffield.supply_MW)     == N_HOURS, "supply_MW wrong length"
-    assert len(sheffield.supply_temp_C) == N_HOURS, "supply_temp_C wrong length"
-    assert len(sheffield.marginal_cost) == N_HOURS, "marginal_cost wrong length"
-    assert sheffield.supply_MW.max() <= sheffield.capacity_MW + 0.001, "supply exceeds capacity"
-    assert sheffield.supply_MW.min() >= 0, "negative supply"
-    assert abs(sheffield._avail.mean() - sheffield.availability_factor) < 0.01, "availability mismatch"
-    # Check the outage is a single contiguous block (unlike DataCentre's dispersed outages)
-    avail = sheffield._avail
-    transitions = np.sum(np.abs(np.diff(avail)))
-    assert transitions <= 2, f"Expected a single contiguous outage block, found {transitions/2:.0f} blocks"
-    print("  ✓ All array shapes correct")
-    print("  ✓ Supply never exceeds capacity")
-    print("  ✓ Availability factor within tolerance")
-    print("  ✓ Single contiguous annual outage (matches real EfW maintenance pattern)")
-    print()
