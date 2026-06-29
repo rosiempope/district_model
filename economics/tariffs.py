@@ -149,6 +149,31 @@ GAS_PRICE_SCENARIOS = {
 # Default gas scenario used when resolve_gas_price() is given None
 DEFAULT_GAS_SCENARIO = "desnz_central"
 
+# ── Ofgem energy price cap — the CUSTOMER-FACING retail tariff ─────────────────
+#
+# Genuinely DIFFERENT from GAS_PRICE_SCENARIOS above: those are WHOLESALE
+# gas prices (what THIS SCHEME pays to buy fuel) — this is the REGULATED
+# RETAIL rate a real household customer pays for gas on a standard
+# variable tariff, already inclusive of network costs, policy costs,
+# supplier operating margin, and VAT (Ofgem's own definition: "the
+# maximum amount your supplier can charge for a unit of energy and
+# standing charge together"). This is the right basis for this project's
+# revenue mechanism: a district heating scheme's customer should
+# reasonably be charged what they'd otherwise pay a retail gas supplier
+# for the equivalent heat, NOT what the scheme itself pays for wholesale
+# fuel input (which is a cost figure, not a price a real customer ever sees).
+#
+# Real sourcing: Ofgem's official price cap announcement for 1 July to
+# 30 September 2026 (ofgem.gov.uk/news/changes-energy-price-cap-between-
+# 1-july-and-30-september-2026, published 27 May 2026) — the live cap as
+# of this project's current date. Reviewed and reset by Ofgem every 3
+# months; OFGEM_GAS_CAP_REVIEW_DATE records which period these figures
+# apply to, so a future update is a clear, dated, intentional change,
+# not silent drift.
+OFGEM_GAS_CAP_P_PER_KWH = 7.33
+OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY = 29.04
+OFGEM_GAS_CAP_REVIEW_PERIOD = "1 July 2026 - 30 September 2026"
+
 
 # ── Default escalation rates ────────────────────────────────────────────────────
 # Simple real-terms annual escalation — a sensitivity input, NOT a forecast.
@@ -496,6 +521,61 @@ def resolve_gas_price(
             f"elements; got {len(arr)}."
         )
     return arr
+
+
+def customer_heat_revenue_GBP(
+    annual_heat_delivered_kWh: float,
+    n_connected_buildings: int,
+    unit_rate_p_per_kWh: float = OFGEM_GAS_CAP_P_PER_KWH,
+    standing_charge_p_per_day: float = OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY,
+) -> dict:
+    """
+    Real customer-facing revenue for heat delivered, using the Ofgem
+    price cap as the basis — "charge what a household would otherwise
+    be charged for the equivalent gas heating" (see OFGEM_GAS_CAP_*
+    constants above for the real, dated sourcing). This is NOT a
+    proxy or an invented number — it's the actual regulated rate a
+    real customer pays today, used directly as this project's revenue
+    mechanism, per this project's own explicit design decision.
+
+    Two real components of a household energy bill, both included:
+      1. Unit rate x energy delivered (the variable component)
+      2. Standing charge x days x number of CONNECTED BUILDINGS (the
+         fixed component — every real customer pays a standing charge
+         regardless of how much they use, and a district scheme bills
+         EACH connected building separately, so this scales with
+         n_connected_buildings, not just total energy)
+
+    Parameters
+    ----------
+    annual_heat_delivered_kWh : total heat delivered to customers over
+                  the year (kWh) — e.g. dispatch_result.summary()'s
+                  "annual_demand_MWh" * 1000, or the building-level
+                  total_heat_kW.sum() for a per-building view
+    n_connected_buildings        : number of buildings billed (each pays
+                  its own standing charge — a real district scheme
+                  bills per connection, not once for the whole network)
+    unit_rate_p_per_kWh           : default OFGEM_GAS_CAP_P_PER_KWH (the
+                  live cap as of this project's current date — see that
+                  constant's docstring note for the review period this
+                  applies to)
+    standing_charge_p_per_day      : default OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY
+
+    Returns
+    -------
+    dict: {
+        "unit_rate_revenue_GBP", "standing_charge_revenue_GBP", "total_revenue_GBP"
+    }
+    """
+    unit_rate_revenue_GBP = annual_heat_delivered_kWh * unit_rate_p_per_kWh / 100.0
+    standing_charge_revenue_GBP = (
+        standing_charge_p_per_day * 365.0 * n_connected_buildings / 100.0
+    )
+    return {
+        "unit_rate_revenue_GBP": round(unit_rate_revenue_GBP, 0),
+        "standing_charge_revenue_GBP": round(standing_charge_revenue_GBP, 0),
+        "total_revenue_GBP": round(unit_rate_revenue_GBP + standing_charge_revenue_GBP, 0),
+    }
 
 
 if __name__ == "__main__":

@@ -86,6 +86,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from economics.CAPEX import INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW, individual_system_capex_GBP
 from economics.OPEX import annual_om_cost_GBP, DEFAULT_OM_RATE
+from economics.tariffs import customer_heat_revenue_GBP, OFGEM_GAS_CAP_P_PER_KWH, OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY
 from optimisation.dispatch import run_dispatch
 from components.peak_demand_option import GasBoiler
 from components.ASHP import ASHPArray
@@ -216,6 +217,31 @@ def counterfactual_individual_ac_dispatch(node: dict, weather_df) -> dict:
         "dispatch_result": result,
         "annual_opex_GBP": result.summary()["total_annual_opex_GBP"],
     }
+
+
+def annual_revenue_GBP(annual_heat_delivered_MWh: float, n_connected_buildings: int) -> dict:
+    """
+    Real annual revenue for a district scheme, using the Ofgem price
+    cap as the customer-facing tariff — see this project's design
+    decision and economics.tariffs.customer_heat_revenue_GBP() for the
+    full real sourcing. Thin wrapper converting MWh (this project's
+    standard convention for scheme-level totals) to the kWh
+    customer_heat_revenue_GBP() itself works in.
+
+    Parameters
+    ----------
+    annual_heat_delivered_MWh : total heat delivered to customers (MWh)
+                — e.g. dispatch_result.summary()["annual_demand_MWh"]
+    n_connected_buildings        : number of buildings billed
+
+    Returns
+    -------
+    dict: {"unit_rate_revenue_GBP", "standing_charge_revenue_GBP", "total_revenue_GBP"}
+    """
+    return customer_heat_revenue_GBP(
+        annual_heat_delivered_kWh=annual_heat_delivered_MWh * 1000.0,
+        n_connected_buildings=n_connected_buildings,
+    )
 
 
 def aggregate_counterfactual(
@@ -352,6 +378,76 @@ def npv(
         annual_avoided_cost_GBP, project_lifetime_years, discount_rate,
     )
     return -capex_GBP + float(cash_flows.sum())
+
+
+def irr(
+    capex_GBP: float,
+    annual_avoided_cost_GBP: float,
+    project_lifetime_years: int = DEFAULT_PROJECT_LIFETIME_YEARS,
+    search_low: float = -0.5,
+    search_high: float = 2.0,
+    tolerance: float = 1e-6,
+) -> Optional[float]:
+    """
+    Internal Rate of Return — the discount rate at which NPV = 0. The
+    "break-even" return: at exactly this rate, the project's discounted
+    cash flows exactly equal its CAPEX. A project is worth doing
+    (relative to a benchmark cost of capital) if IRR > that benchmark
+    rate — directly comparable against the same real BEIS-cited 9-12%
+    UK heat network cost-of-capital range npv()/DISCOUNT_RATE_RANGE use.
+
+    Solved by BISECTION on this module's OWN npv() function, rather
+    than adding a new dependency (numpy_financial) for one calculation
+    — npv() is monotonically DECREASING in discount_rate for a normal
+    cash flow shape (one upfront CAPEX outflow, followed by positive
+    inflows every year), so there's exactly one root to find, the same
+    well-tested binary-search pattern this project already uses
+    elsewhere (see network_topology.py's minimum_safe_flow_temp_C()).
+
+    Parameters
+    ----------
+    capex_GBP                  : whole-scheme (or comparison-delta) CAPEX (£)
+    annual_avoided_cost_GBP      : the flat annual cash flow (£/year) —
+                  same basis as npv()
+    project_lifetime_years        : default 25 (CHDU/DECC's cited figure)
+    search_low, search_high        : bracket for the bisection search.
+                  -50% to +200% comfortably covers any real-world
+                  result; widen if a genuinely extreme scenario needs it.
+    tolerance                      : stop once the bracket is narrower
+                  than this (a fraction, e.g. 1e-6 = 0.0001 percentage
+                  points of precision — far tighter than this estimate's
+                  real-world precision warrants, but cheap to compute)
+
+    Returns
+    -------
+    IRR as a fraction (e.g. 0.15 = 15%), or None if:
+      - annual_avoided_cost_GBP <= 0 (the project NEVER pays back,
+        regardless of discount rate — there is no real root, IRR is
+        undefined/negative-infinity in the conventional sense)
+      - no root exists within [search_low, search_high] (widen the bracket)
+    """
+    if annual_avoided_cost_GBP <= 0:
+        return None
+
+    def npv_at_rate(r: float) -> float:
+        return npv(capex_GBP, annual_avoided_cost_GBP, project_lifetime_years, discount_rate=r)
+
+    npv_low = npv_at_rate(search_low)
+    npv_high = npv_at_rate(search_high)
+    # npv() is decreasing in r -> npv_low should be positive (or zero) and
+    # npv_high should be negative (or zero) for a root to exist in this bracket
+    if npv_low < 0 or npv_high > 0:
+        return None
+
+    lo, hi = search_low, search_high
+    while hi - lo > tolerance:
+        mid = (lo + hi) / 2.0
+        if npv_at_rate(mid) >= 0:
+            lo = mid
+        else:
+            hi = mid
+
+    return round((lo + hi) / 2.0, 6)
 
 
 def discounted_payback_years(
