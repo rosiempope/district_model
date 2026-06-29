@@ -1,5 +1,5 @@
 """
-topology.py
+network_topology.py
 ======================
 A GENERIC, parameterised tree topology for a district heating (or
 cooling) network — nodes connected by real pipe segments with real
