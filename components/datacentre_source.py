@@ -308,11 +308,34 @@ class DataCentre:
     supply_temp_low_C          : lower bound on supply temp (for sensitivity)
     availability_factor        : fraction of hours the source is available (0–1)
                                  0.95 = 95% uptime = ~438 hours downtime/year
-    waste_heat_cost_GBP_per_MWh: negotiated charge for waste heat offtake (£/MWh)
+    waste_heat_cost_GBP_per_MWh: float for negotiated charge for waste heat offtake (£/MWh)
                                  Very low — DC benefits from reduced cooling load
     weather_df                 : EPW weather DataFrame (for temp sensitivity)
     temp_sensitivity           : how much supply temp varies with ambient (°C/°C)
     seed                       : random seed for availability profile
+    capex_GBP_per_MW           : capital cost per MW of heat OFFTAKE capacity
+                                 (this.capacity_MW) — the DC-side heat
+                                 recovery equipment ONLY (heat exchangers,
+                                 piping, controls, metering), NOT the data
+                                 centre itself (which exists regardless of
+                                 district heating) and NOT the booster heat
+                                 pump that lifts this heat to network
+                                 temperature (see components/
+                                 booster_heat_pump.py, costed separately).
+                                 Default £462,000/MW — real sourcing: a
+                                 2026 industry cost review
+                                 (moduledge.com/blog/data-center-waste-
+                                 heat-recovery) gives EUR400,000-700,000/MW
+                                 for "data center side" heat recovery
+                                 infrastructure (heat exchangers, piping,
+                                 controls, metering) — midpoint
+                                 EUR550,000/MW, converted at ~0.84 EUR/GBP.
+                                 Deliberately a DIFFERENT figure from
+                                 ASHPArray's £600,000/MW or
+                                 BoosterHeatPump's £600,000/MW — this is
+                                 genuinely cheaper, lower-grade equipment
+                                 (a heat exchanger tapping an existing
+                                 water loop, not a full compression cycle).
     """
 
     source_type = "data_centre"
@@ -331,6 +354,7 @@ class DataCentre:
         weather_df: Optional[pd.DataFrame]    = None,
         temp_sensitivity: float               = 0.0,
         seed: int                             = 42,
+        capex_GBP_per_MW: float                = 462_000.0,
         reference: str                        = "",
     ):
         self.name                       = name
@@ -341,6 +365,7 @@ class DataCentre:
         self.supply_temp_low_C          = supply_temp_low_C  or supply_temp_C - 5.0
         self.availability_factor        = float(availability_factor)
         self.waste_heat_cost_GBP_per_MWh = float(waste_heat_cost_GBP_per_MWh)
+        self.capex_GBP_per_MW            = float(capex_GBP_per_MW)
         self.reference                  = reference
 
         # Resolve rated capacity
@@ -453,6 +478,8 @@ class DataCentre:
             "available_hours_per_year":  avail_hours,
             "annual_heat_available_MWh": round(self.supply_MW.sum(), 0),
             "marginal_cost_GBP_per_MWh": self.waste_heat_cost_GBP_per_MWh,
+            "capex_GBP_per_MW":          self.capex_GBP_per_MW,
+            "estimated_capex_GBP":       round(self.capacity_MW * self.capex_GBP_per_MW, 0),
             "reference":                 self.reference,
         }
 

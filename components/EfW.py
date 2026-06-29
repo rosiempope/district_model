@@ -254,6 +254,30 @@ class EfWChp:
                                          waste gate fee is the primary
                                          revenue driver, not heat price.
     seed                               : random seed for the outage schedule
+    capex_GBP_per_MW                   : capital cost per MW of heat
+                                         EXPORT capacity (heat_capacity_MW)
+                                         -- the "inside the gate" RETROFIT
+                                         equipment needed to extract heat
+                                         from an EXISTING EfW plant (NOT
+                                         the cost of building the plant
+                                         itself, which exists regardless
+                                         of district heating, driven by
+                                         waste disposal need not heat
+                                         demand). Default GBP775,000/MW --
+                                         real sourcing: turbine retrofitting
+                                         (GBP400k-700k/MWth) plus heat
+                                         exchangers and pumps (GBP150k-300k/MWth)
+                                         to move heat from the steam cycle
+                                         to the DH water loop -- midpoint
+                                         of the combined GBP550k-1,000k/MWth
+                                         range. Deliberately EXCLUDES flue
+                                         gas condensation (an optional
+                                         capacity-boosting enhancement, not
+                                         required for basic heat export) and
+                                         excludes outside-the-gate costs
+                                         (pipework, energy centre, consumer
+                                         substations), already modelled
+                                         elsewhere in this project.
     """
  
     source_type = "efw_chp"
@@ -269,6 +293,7 @@ class EfWChp:
         availability_factor: float                        = 0.89,
         heat_export_cost_GBP_per_MWh: float               = 8.0,
         seed: int                                          = 10,
+        capex_GBP_per_MW: float                            = 775_000.0,
         reference: str                                     = "",
     ):
         self.name                 = name
@@ -276,6 +301,7 @@ class EfWChp:
         self.supply_temp_nominal_C = float(supply_temp_C)
         self.availability_factor  = float(availability_factor)
         self.heat_export_cost_GBP_per_MWh = float(heat_export_cost_GBP_per_MWh)
+        self.capex_GBP_per_MW      = float(capex_GBP_per_MW)
         self.reference            = reference
  
         # --- Resolve capacities, filling in gaps from whatever IS known ---
@@ -402,6 +428,8 @@ class EfWChp:
             "annual_heat_available_MWh":   round(float(self.supply_MW.sum()), 0),
             "annual_electricity_MWh":      round(float(self.electrical_output_MW.sum()), 0),
             "marginal_cost_GBP_per_MWh":   self.heat_export_cost_GBP_per_MWh,
+            "capex_GBP_per_MW":            self.capex_GBP_per_MW,
+            "estimated_capex_GBP":         round(self.capacity_MW * self.capex_GBP_per_MW, 0),
             "reference":                   self.reference,
         }
  

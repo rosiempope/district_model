@@ -367,6 +367,13 @@ class GasBoiler:
     carbon_price_GBP_per_tonne : carbon price applied to CO2e cost (£/tCO2e)
                                Default 0.0 — set explicitly if you want
                                carbon costs included in marginal cost
+    capex_GBP_per_MW        : capital cost per MW installed. Default
+                               £225,000/MW — real sourcing: two independent
+                               UK commercial boiler installer sources
+                               (ST Heating Services, Cowley Group) both
+                               independently cite £200-250/kW for
+                               commercial-scale gas boiler plant —
+                               midpoint £225/kW = £225,000/MW.
     """
 
     source_type = "gas_boiler"
@@ -381,6 +388,7 @@ class GasBoiler:
         eta_full_load: float            = 0.92,
         gas_price_GBP_per_MWh           = None,
         carbon_price_GBP_per_tonne: float = 0.0,
+        capex_GBP_per_MW: float          = 225_000.0,
         reference: str                  = "",
     ):
         self.name           = name
@@ -390,6 +398,7 @@ class GasBoiler:
         self.condensing     = condensing
         self.eta_full_load  = float(eta_full_load)
         self.carbon_price_GBP_per_tonne = float(carbon_price_GBP_per_tonne)
+        self.capex_GBP_per_MW = float(capex_GBP_per_MW)
         self.reference      = reference
 
         # Gas price — None / Tariff / scalar / array, all resolved to a
@@ -527,6 +536,7 @@ class GasBoiler:
             eta_full_load=self.eta_full_load,
             gas_price_GBP_per_MWh=self._gas_price,
             carbon_price_GBP_per_tonne=self.carbon_price_GBP_per_tonne,
+            capex_GBP_per_MW=self.capex_GBP_per_MW,
             reference=self.reference,
         )
 
@@ -542,6 +552,8 @@ class GasBoiler:
             "eta_at_current_load":        round(float(self.efficiency_hourly.mean()), 3),
             "mean_gas_price_GBP_per_MWh": round(float(self._gas_price.mean()), 2),
             "mean_marginal_cost_GBP_per_MWh": round(float(self.marginal_cost.mean()), 2),
+            "capex_GBP_per_MW":           self.capex_GBP_per_MW,
+            "estimated_capex_GBP":        round(self.capacity_MW * self.capex_GBP_per_MW, 0),
             "reference":                  self.reference,
         }
 
@@ -586,6 +598,24 @@ class ElectricBoiler:
                                      override, or an 8760-length array.
                                      See economics/tariffs.py.
     carbon_price_GBP_per_tonne    : carbon price applied to CO2e cost
+    capex_GBP_per_MW              : capital cost per MW installed. Default
+                                     £265,000/MW — real sourcing: core
+                                     equipment (electrode/resistance
+                                     boiler, pressure vessels, controls)
+                                     £130-250/kW plus standard engineering/
+                                     installation £50-100/kW = £180-350/kW,
+                                     midpoint £265/kW = £265,000/MW.
+                                     Deliberately EXCLUDES grid connection/
+                                     transformer/switchgear upgrades
+                                     (which can push real installs to
+                                     £400-500/kW) — those are genuinely
+                                     site-specific (does this scheme need
+                                     a NEW high-voltage connection, or
+                                     does it sit behind an existing one),
+                                     not a fixed property of the boiler
+                                     itself, so they're excluded from the
+                                     default rather than baked in as an
+                                     assumption that may not apply.
     """
 
     source_type = "electric_boiler"
@@ -599,6 +629,7 @@ class ElectricBoiler:
         efficiency: float                       = 0.99,
         electricity_price_GBP_per_MWh           = None,
         carbon_price_GBP_per_tonne: float       = 0.0,
+        capex_GBP_per_MW: float                  = 265_000.0,
         reference: str                          = "",
     ):
         self.name        = name
@@ -607,6 +638,7 @@ class ElectricBoiler:
         )
         self.efficiency  = float(efficiency)
         self.carbon_price_GBP_per_tonne = float(carbon_price_GBP_per_tonne)
+        self.capex_GBP_per_MW = float(capex_GBP_per_MW)
         self.reference   = reference
 
         # Electricity price — None / Tariff / scalar / array, all resolved
@@ -699,6 +731,7 @@ class ElectricBoiler:
             efficiency=self.efficiency,
             electricity_price_GBP_per_MWh=self._elec_price,
             carbon_price_GBP_per_tonne=self.carbon_price_GBP_per_tonne,
+            capex_GBP_per_MW=self.capex_GBP_per_MW,
             reference=self.reference,
         )
 
@@ -712,6 +745,8 @@ class ElectricBoiler:
             "efficiency":                 self.efficiency,
             "mean_marginal_cost_GBP_per_MWh": round(float(self.marginal_cost.mean()), 2),
             "mean_electricity_price_GBP_per_MWh": round(float(self._elec_price.mean()), 2),
+            "capex_GBP_per_MW":           self.capex_GBP_per_MW,
+            "estimated_capex_GBP":        round(self.capacity_MW * self.capex_GBP_per_MW, 0),
             "reference":                  self.reference,
         }
 
