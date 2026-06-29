@@ -81,7 +81,11 @@ if str(_PROJECT_ROOT) not in sys.path:
 # Reuse the SAME carbon intensity figures used by the other source
 # classes, rather than maintaining a second, possibly-drifting copy. See
 # peak_demand_option.py's CARBON_INTENSITY dict for sourcing notes.
-from components.peak_demand_option import CARBON_INTENSITY
+
+CARBON_INTENSITY = {
+    "gas": 0.184,
+    "electricity": 0.207,
+}
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────

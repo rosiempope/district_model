@@ -1,66 +1,44 @@
-"""Five illustrative, editable scenario dictionaries for the UI/API layer.
-They deliberately use plain JSON-compatible values only."""
-from copy import deepcopy
+# District energy screening UI
 
-BASE_BUILDINGS=[
-    {"name":"Civic offices","type":"office","floor_area_m2":18000},
-    {"name":"Residential block A","type":"residential_existing","floor_area_m2":24000},
-    {"name":"Residential block B","type":"residential_existing","floor_area_m2":18000},
-    {"name":"Retail centre","type":"retail","floor_area_m2":9000},
-    {"name":"Hotel","type":"hotel","floor_area_m2":8500},
-    {"name":"Health centre","type":"hospital","floor_area_m2":6000},
-]
+Run from the repository root:
 
-def base_scenario(name: str) -> dict:
-    return {
-        "name":name,
-        "climate_scenario":"baseline",
-        "demand":{"buildings":deepcopy(BASE_BUILDINGS)},
-        "network":{"mode":"generic_length","length_m":3000.0,"include_cooling":False,
-                   "heat_flow_temp_C":70.0,"heat_return_temp_C":40.0},
-        "economics":{"project_lifetime_years":25,"discount_rate":0.105,"om_rate":0.01,
-                     "counterfactual":"individual_gas"},
-    }
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-GAS_ONLY=base_scenario("Gas-only district baseline")
-GAS_ONLY["sources"]=[{"type":"gas_boiler","preset":"ealing_phase2","name":"Gas boiler","capacity_MW":10.0}]
+The browser will open the local application. The default URL is normally
+`http://localhost:8501`.
 
-ASHP_ONLY=base_scenario("ASHP-only district heat")
-ASHP_ONLY["sources"]=[{"type":"ashp","preset":"ealing_phase2","name":"ASHP bank","capacity_MW":6.5,"flow_temp_C":70.0}]
+## What the UI controls
 
-ASHP_PLUS_GAS_PEAK=base_scenario("ASHP plus gas peak boiler")
-ASHP_PLUS_GAS_PEAK["sources"]=[
-    {"type":"ashp","preset":"ealing_phase1","name":"ASHP bank","capacity_MW":2.8,"flow_temp_C":70.0},
-    {"type":"gas_boiler","preset":"ealing_phase1","name":"Peak gas boiler","capacity_MW":6.5},
-]
+- Building archetype, floor area and dwelling count
+- Climate scenario
+- Network length and 2-pipe / 4-pipe selection
+- Heating and cooling flow/return temperatures
+- Heating and cooling technology, preset, capacity and unit count
+- Project life, discount rate, O&M rate and counterfactual
 
-DATACENTRE_PLUS_BOOSTER=base_scenario("Data-centre waste heat plus booster and gas peak")
-DATACENTRE_PLUS_BOOSTER["sources"]=[
-    {"type":"data_centre","preset":"redwire_ealing","name":"Data-centre waste heat","capacity_MW":3.6, "dispatch_direct":False},
-    {"type":"booster_heat_pump","preset":"generic_2MW","name":"Booster heat pump","capacity_MW":3.0,"depends_on":0},
-    {"type":"gas_boiler","preset":"ealing_phase1","name":"Peak gas boiler","capacity_MW":7.5},
-]
+## Workflow
 
-EFW_PLUS_ASHP=base_scenario("EfW heat export plus ASHP and gas peak")
-EFW_PLUS_ASHP["sources"]=[
-    {"type":"efw_chp","preset":"newlincs_style","name":"EfW heat export","capacity_MW":3.0},
-    {"type":"ashp","preset":"ealing_phase1","name":"ASHP bank","capacity_MW":2.8,"flow_temp_C":70.0},
-    {"type":"gas_boiler","preset":"ealing_phase1","name":"Peak gas boiler","capacity_MW":5.5},
-]
+1. Load a worked scenario or start with a blank example.
+2. Modify the inputs in **Build scenario**.
+3. Select **Validate and run scenario**.
+4. Inspect hourly-model outputs in **Results**.
+5. Select **Add result to comparison**.
+6. Repeat for alternative cases, then use **Compare scenarios** to choose the
+   metric to graph and download the comparison table.
 
-FOUR_PIPE_ASHP_GAS = base_scenario("4-pipe ASHP, gas peak and central cooling")
-FOUR_PIPE_ASHP_GAS["network"].update({"include_cooling": True, "cool_flow_temp_C": 6.0, "cool_return_temp_C": 12.0})
-FOUR_PIPE_ASHP_GAS["economics"]["counterfactual"] = "individual_gas_and_ac"
-FOUR_PIPE_ASHP_GAS["sources"] = [
-    {"type":"ashp", "preset":"ealing_phase1", "name":"ASHP bank", "capacity_MW":2.8, "flow_temp_C":70.0},
-    {"type":"gas_boiler", "preset":"ealing_phase1", "name":"Peak gas boiler", "capacity_MW":6.5},
-]
-FOUR_PIPE_ASHP_GAS["cooling_sources"] = [
-    {"type":"air_cooled_chiller", "preset":"generic_2MW_bank", "name":"Central chiller bank", "capacity_MW":7.0, "n_units":4, "unit_capacity_MW":1.75, "chilled_water_temp_C":6.0},
-]
+## JSON interface
 
-WORKED_SCENARIOS=[GAS_ONLY,ASHP_ONLY,ASHP_PLUS_GAS_PEAK,DATACENTRE_PLUS_BOOSTER,EFW_PLUS_ASHP,FOUR_PIPE_ASHP_GAS]
+The UI downloads and uploads a plain scenario JSON file. It is the same input
+contract used by `scenarios.scenario_runner.run_scenario()`, so this UI is a
+prototype client for a future FastAPI + React implementation rather than a
+second model.
 
-if __name__ == "__main__":
-    from scenarios.scenario_runner import run_scenario, comparison_table
-    print(comparison_table([run_scenario(s) for s in WORKED_SCENARIOS]).to_string(index=False))
+For a four-pipe scenario, `network.include_cooling` must be `true`, at least one
+cooling source must be added, and the counterfactual is automatically set to
+`individual_gas_and_ac`.
