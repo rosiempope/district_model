@@ -49,25 +49,62 @@ def _overrides(cfg):
     return result
 
 def build_heat_sources(configs, weather, sink_temp_C):
-    sources, data_centres, dc_cfgs, booster_cfgs = [], [], [], []
-    for cfg in configs:
+    """
+    Build every heating source, including the BoosterHeatPump special
+    case (it needs another already-built data_centre source's output
+    temperature as its own input, not just a preset/override dict).
+
+    depends_on FIX: this used to index into a separate, DC-only filtered
+    list ("data_centres"), while the UI's own tooltip described it as
+    "Data-centre source index (0 = first heat source)" -- i.e. a
+    position in the FULL list of sources shown on screen ("Heating
+    source 1", "Heating source 2", ...). Following the UI's own
+    instructions (e.g. ASHP at position 0, data_centre at position 1,
+    booster with depends_on=1) crashed with an unhandled IndexError,
+    since position 1 doesn't exist in a list containing only ONE data
+    centre. Fixed here: depends_on now genuinely indexes into the SAME
+    full `configs` list the UI displays, with a clear ValueError (not a
+    raw IndexError) if it points at something that isn't a real
+    data_centre source.
+    """
+    sources = []
+    dc_by_position = {}     # position in `configs` -> (DataCentre object, its config dict)
+    booster_cfgs = []       # (position in `configs`, config dict)
+
+    for i, cfg in enumerate(configs):
         if cfg["type"] == "booster_heat_pump":
-            booster_cfgs.append(cfg)
+            booster_cfgs.append((i, cfg))
             continue
         cls = HEAT_CLASSES[cfg["type"]]
         obj = (cls.from_preset(cfg["preset"], weather_df=weather, **_overrides(cfg))
                if cfg["type"] in {"ashp", "data_centre", "efw_chp"}
                else cls.from_preset(cfg["preset"], **_overrides(cfg)))
         if cfg["type"] == "data_centre":
-            data_centres.append(obj); dc_cfgs.append(cfg)
+            dc_by_position[i] = (obj, cfg)
         else:
             sources.append(obj)
-    used_dc = {int(cfg.get("depends_on", 0)) for cfg in booster_cfgs}
-    for i, dc in enumerate(data_centres):
-        if dc_cfgs[i].get("dispatch_direct", False) or i not in used_dc:
+
+    used_dc_positions = set()
+    for i, cfg in booster_cfgs:
+        depends_on = int(cfg.get("depends_on", 0))
+        if depends_on not in dc_by_position:
+            raise ValueError(
+                f"Heating source {i} (booster_heat_pump) has depends_on={depends_on}, "
+                f"which must be the position of a 'data_centre' source in THIS "
+                f"scenario's heating source list (counting all heating sources, "
+                f"0-based — the same numbering shown on screen as 'Heating source "
+                f"1', 'Heating source 2', etc., minus 1). No data_centre source "
+                f"was found at position {depends_on}."
+            )
+        used_dc_positions.add(depends_on)
+
+    for pos, (dc, dc_cfg) in dc_by_position.items():
+        if dc_cfg.get("dispatch_direct", False) or pos not in used_dc_positions:
             sources.append(dc)
-    for cfg in booster_cfgs:
-        dc = data_centres[int(cfg.get("depends_on", 0))]
+
+    for i, cfg in booster_cfgs:
+        depends_on = int(cfg.get("depends_on", 0))
+        dc, _ = dc_by_position[depends_on]
         sources.append(BoosterHeatPump.from_preset(
             cfg["preset"], source_temp_C_hourly=dc.supply_temp_C,
             sink_temp_C=sink_temp_C, **_overrides(cfg)))

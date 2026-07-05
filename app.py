@@ -142,9 +142,9 @@ def _source_editor(prefix: str, source: dict[str, Any], allowed: dict[str, dict]
         if source_type == "data_centre":
             edited["dispatch_direct"] = st.checkbox("Dispatch direct heat as well as using a booster", value=bool(source.get("dispatch_direct", False)), key=f"{prefix}_direct")
         if source_type == "booster_heat_pump":
-            edited["depends_on"] = int(st.number_input("Data-centre source index (0 = first heat source)", min_value=0,
-                                                         value=int(source.get("depends_on", 0)), step=1,
-                                                         key=f"{prefix}_depends"))
+            edited["depends_on"] = int(st.number_input(
+                "Data-centre source position (counting ALL heating sources above, starting at 0 — must point at a 'Data-centre waste heat' source)",
+                min_value=0, value=int(source.get("depends_on", 0)), step=1, key=f"{prefix}_depends"))
         if cooling:
             edited["chilled_water_temp_C"] = st.number_input("Chilled-water flow temperature (°C)", min_value=2.0, max_value=15.0,
                                                                value=number(source.get("chilled_water_temp_C"), 6.0), step=0.5,

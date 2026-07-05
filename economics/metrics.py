@@ -118,6 +118,23 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
     profile. No network, no backup redundancy — see module docstring
     for the full "deliberately minimal" rationale.
 
+    PRICING BASIS — this is a CUSTOMER counterfactual, not the scheme's
+    own fuel purchasing: a real household with its own gas boiler pays
+    the REGULATED RETAIL rate (the Ofgem price cap), not the wholesale
+    fuel price a large scheme might negotiate. Earlier versions of this
+    function left gas_price_GBP_per_MWh at its default, which resolves
+    to GAS_PRICE_SCENARIOS["desnz_central"] (a WHOLESALE projection,
+    ~£24.6/MWh) — roughly a third of the real Ofgem retail cap
+    (OFGEM_GAS_CAP_P_PER_KWH = 7.33p/kWh = £73.30/MWh). That mismatch
+    made every district-heating option being compared against this
+    counterfactual look financially worse than it really would for an
+    actual customer, since the "what would I have paid otherwise"
+    baseline was priced about 3x too cheaply. Fixed here by passing the
+    real retail unit rate explicitly, and by adding the real Ofgem
+    standing charge (a genuine, separate component of what a household
+    actually pays, not captured by a per-MWh dispatch cost at all) on
+    top of the dispatch-based fuel cost.
+
     Parameters
     ----------
     node : one building's node dict from demand_synthesis.py's
@@ -126,20 +143,26 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
 
     Returns
     -------
-    dict: {"capex_GBP", "dispatch_result", "annual_opex_GBP"}
+    dict: {"capex_GBP", "dispatch_result", "annual_opex_GBP"} — where
+    annual_opex_GBP now correctly includes BOTH the real retail-priced
+    unit-rate fuel cost AND the real standing charge for one connection.
     """
     peak_MW = node["peak_heat_kW"] / 1000.0
+    retail_gas_price_GBP_per_MWh = OFGEM_GAS_CAP_P_PER_KWH * 10.0   # p/kWh -> £/MWh
     boiler = GasBoiler(
         name=f"{node['name']} individual gas boiler",
         capacity_MW=peak_MW,
         capex_GBP_per_MW=INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW["gas_boiler"] * 1000.0,
+        gas_price_GBP_per_MWh=retail_gas_price_GBP_per_MWh,
     )
     result = run_dispatch(node["total_heat_kW"], [boiler], storage=None, duty="heat")
     capex_GBP = individual_system_capex_GBP(node["peak_heat_kW"], "gas_boiler")
+    standing_charge_GBP = OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY * 365.0 / 100.0
+    fuel_opex_GBP = result.summary()["total_annual_opex_GBP"]
     return {
         "capex_GBP": capex_GBP,
         "dispatch_result": result,
-        "annual_opex_GBP": result.summary()["total_annual_opex_GBP"],
+        "annual_opex_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
     }
 
 

@@ -78,10 +78,21 @@ def validate_scenario(scenario: dict) -> list[str]:
     if network.get("mode") == "generic_length" and (not isinstance(network.get("length_m"), (int, float)) or network["length_m"] <= 0):
         errors.append("network.length_m: must be positive for generic_length")
     _validate_sources(cfg.get("sources"), HEAT_SOURCE_TYPES, "sources", errors, required=True)
-    has_dc = any(isinstance(s, dict) and s.get("type") == "data_centre" for s in cfg.get("sources", []))
-    for i, s in enumerate(cfg.get("sources", [])):
-        if isinstance(s, dict) and s.get("type") == "booster_heat_pump" and not has_dc:
-            errors.append(f"sources[{i}]: requires a data_centre source")
+    src_list = cfg.get("sources", [])
+    dc_positions = {i for i, s in enumerate(src_list) if isinstance(s, dict) and s.get("type") == "data_centre"}
+    has_dc = bool(dc_positions)
+    for i, s in enumerate(src_list):
+        if isinstance(s, dict) and s.get("type") == "booster_heat_pump":
+            if not has_dc:
+                errors.append(f"sources[{i}]: requires a data_centre source")
+                continue
+            depends_on = s.get("depends_on", 0)
+            if not isinstance(depends_on, int) or depends_on not in dc_positions:
+                errors.append(
+                    f"sources[{i}].depends_on: must be the position (0-based, counting "
+                    f"ALL sources in this list) of a data_centre source; valid positions "
+                    f"here are {sorted(dc_positions)}, got {depends_on!r}"
+                )
     cooling = bool(network.get("include_cooling"))
     _validate_sources(cfg.get("cooling_sources"), COOLING_SOURCE_TYPES, "cooling_sources", errors, required=cooling)
     econ = cfg.get("economics", {})
