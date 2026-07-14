@@ -279,6 +279,8 @@ class BoosterHeatPump:
         unit_capacity_MW: float,
         source_temp_C_hourly: np.ndarray,
         sink_temp_C,
+        source_heat_available_MW: Optional[np.ndarray] = None,
+        source_heat_cost_GBP_per_MWh: float = 0.0,
         carnot_efficiency_fraction: float = CARNOT_EFFICIENCY_FRACTION,
         electricity_price_GBP_per_MWh = None,
         capex_GBP_per_MW: float = 600_000.0,
@@ -298,6 +300,19 @@ class BoosterHeatPump:
         self.unit_capacity_MW = float(unit_capacity_MW)
         self.capacity_MW = self.n_units * self.unit_capacity_MW
         self.source_temp_C = source_temp_C_hourly
+        if source_heat_available_MW is None:
+            self.source_heat_available_MW = np.full(N_HOURS, np.inf)
+        else:
+            source_available = np.asarray(source_heat_available_MW, dtype=float)
+            if len(source_available) != N_HOURS:
+                raise ValueError(
+                    f"source_heat_available_MW must have {N_HOURS} entries; got "
+                    f"{len(source_available)}."
+                )
+            if np.any(source_available < 0):
+                raise ValueError("source_heat_available_MW cannot contain negative values.")
+            self.source_heat_available_MW = source_available
+        self.source_heat_cost_GBP_per_MWh = float(source_heat_cost_GBP_per_MWh)
         self.sink_temp_C = np.broadcast_to(sink_temp_C, N_HOURS).astype(float).copy()
         self.carnot_efficiency_fraction = float(carnot_efficiency_fraction)
         self.capex_GBP_per_MW = float(capex_GBP_per_MW)
@@ -324,9 +339,12 @@ class BoosterHeatPump:
             self.units_available / self.n_units if self.n_units > 0 else np.ones(N_HOURS)
         )
 
-        # Available heat OUTPUT at each hour (MW) — sink-side, what the
-        # network actually receives
-        self.supply_MW = self.capacity_MW * self._unit_availability_fraction
+        # Sink-side output is constrained by both booster availability and
+        # recoverable source heat. Q_source = Q_sink * (1 - 1/COP).
+        plant_available_MW = self.capacity_MW * self._unit_availability_fraction
+        source_fraction = np.maximum(1.0 - 1.0 / self.cop_hourly, 1e-9)
+        source_limited_sink_MW = self.source_heat_available_MW / source_fraction
+        self.supply_MW = np.minimum(plant_available_MW, source_limited_sink_MW)
 
         # Supply temperature delivered to the network
         self.supply_temp_C = self.sink_temp_C.copy()
@@ -334,8 +352,11 @@ class BoosterHeatPump:
         # Electricity price — identical contract to ASHPArray/AirCooledChiller
         self._elec_price = resolve_electricity_price(electricity_price_GBP_per_MWh)
 
-        # Marginal cost of heat delivered (£/MWh_heat) = elec_price / COP
-        self.marginal_cost = self._elec_price / self.cop_hourly
+        # Compressor electricity plus contracted low-grade source heat.
+        self.marginal_cost = (
+            self._elec_price / self.cop_hourly
+            + self.source_heat_cost_GBP_per_MWh * source_fraction
+        )
 
         # Carbon intensity per unit heat delivered (kgCO2e/kWh_heat) =
         # grid carbon intensity / COP — identical formula/sourcing to
@@ -385,6 +406,8 @@ class BoosterHeatPump:
             unit_capacity_MW=unit_capacity_MW if unit_capacity_MW is not None else self.unit_capacity_MW,
             source_temp_C_hourly=self.source_temp_C,
             sink_temp_C=self.sink_temp_C,
+            source_heat_available_MW=self.source_heat_available_MW,
+            source_heat_cost_GBP_per_MWh=self.source_heat_cost_GBP_per_MWh,
             carnot_efficiency_fraction=self.carnot_efficiency_fraction,
             electricity_price_GBP_per_MWh=self._elec_price,
             capex_GBP_per_MW=self.capex_GBP_per_MW,
@@ -413,6 +436,10 @@ class BoosterHeatPump:
             ),
             "mean_electricity_price_GBP_per_MWh": round(float(self._elec_price.mean()), 2),
             "mean_marginal_cost_GBP_per_MWh": round(float(self.marginal_cost.mean()), 2),
+            "source_heat_cost_GBP_per_MWh": self.source_heat_cost_GBP_per_MWh,
+            "annual_source_heat_used_at_full_output_MWh": round(
+                float((self.supply_MW * (1.0 - 1.0 / self.cop_hourly)).sum()), 0
+            ),
             "estimated_capex_GBP":        round(self.capacity_MW * self.capex_GBP_per_MW, 0),
             "availability_factor":        self.availability_factor,
             "reference":                  self.reference,

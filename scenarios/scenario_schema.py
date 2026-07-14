@@ -16,8 +16,49 @@ DEFAULTS = {
                 "cool_flow_temp_C":6.0, "cool_return_temp_C":12.0,
                 "segments":[]},
     "cooling_sources": [],
-    "economics": {"project_lifetime_years":25, "discount_rate":0.105,
-                  "om_rate":0.01, "counterfactual":"individual_gas"},
+    "economics": {
+        "project_lifetime_years": 40,
+        "discount_rate": 0.105,
+        "social_discount_rate": 0.035,
+        "financial_basis": "real",
+        "base_year": 2026,
+        "price_year": 2026,
+        "om_rate": 0.01,
+        "counterfactual": "individual_gas",
+        "price_changes": {
+            "electricity_real_rate": 0.0,
+            "gas_real_rate": 0.0,
+            "third_party_heat_real_rate": 0.0,
+            "heat_tariff_real_rate": 0.0,
+            "cooling_tariff_real_rate": 0.0,
+            "other_opex_real_rate": 0.0,
+        },
+        "tariffs": {
+            "heat_unit_rate_p_per_kWh": 7.33,
+            "cooling_unit_rate_p_per_kWh": 0.0,
+            "standing_charge_GBP_per_connection_year": 106.0,
+        },
+        "capex_items": {
+            "energy_centre_building_GBP": 0.0,
+            "land_and_enabling_GBP": 0.0,
+            "electricity_connection_GBP": 0.0,
+            "gas_connection_GBP": 0.0,
+            "controls_and_scada_GBP": 0.0,
+            "customer_connection_GBP_per_connection": 0.0,
+            "metering_GBP_per_connection": 0.0,
+            "development_and_design_pct": 0.0,
+            "commissioning_pct": 0.0,
+            "contingency_pct": 0.0,
+        },
+        "annual_opex_items": {
+            "billing_and_customer_service_GBP": 0.0,
+            "insurance_and_rates_GBP": 0.0,
+            "land_lease_GBP": 0.0,
+            "water_treatment_GBP": 0.0,
+            "operator_overhead_GBP": 0.0,
+        },
+        "replacement_overrides": {},
+    },
 }
 
 def apply_defaults(scenario: dict) -> dict:
@@ -42,6 +83,7 @@ def _validate_sources(items, allowed, path, errors, required=False):
     if not isinstance(items, list):
         errors.append(f"{path}: must be a list")
         return
+    names = set()
     for i, source in enumerate(items):
         p = f"{path}[{i}]"
         if not isinstance(source, dict):
@@ -51,8 +93,20 @@ def _validate_sources(items, allowed, path, errors, required=False):
             errors.append(f"{p}.type: choose one of {sorted(allowed)}")
         if not isinstance(source.get("preset"), str) or not source["preset"]:
             errors.append(f"{p}.preset: required text")
+        name = source.get("name")
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"{p}.name: required text")
+        elif name in names:
+            errors.append(f"{p}.name: '{name}' is duplicated; source names must be unique")
+        else:
+            names.add(name)
         if "capacity_MW" in source and (not isinstance(source["capacity_MW"], (int, float)) or source["capacity_MW"] <= 0):
             errors.append(f"{p}.capacity_MW: must be positive")
+        if "n_units" in source and (
+            not isinstance(source["n_units"], int) or isinstance(source["n_units"], bool)
+            or source["n_units"] <= 0
+        ):
+            errors.append(f"{p}.n_units: must be a positive whole number")
 
 def _validate_tree_segments(segments, buildings, errors) -> None:
     """
@@ -135,6 +189,18 @@ def validate_scenario(scenario: dict) -> list[str]:
                 errors.append(f"{p}.name: required text")
             if not any(isinstance(b.get(k), (int, float)) and b[k] > 0 for k in ("floor_area_m2", "units")):
                 errors.append(f"{p}: provide positive floor_area_m2 or units")
+            if "connections" in b and (
+                not isinstance(b["connections"], int) or isinstance(b["connections"], bool)
+                or b["connections"] < 0
+            ):
+                errors.append(f"{p}.connections: must be a non-negative whole number")
+            if "connection_year" in b and (
+                not isinstance(b["connection_year"], int) or b["connection_year"] < 1
+            ):
+                errors.append(f"{p}.connection_year: must be a positive whole-number year")
+            probability = b.get("connection_probability", 1.0)
+            if not isinstance(probability, (int, float)) or not 0 <= probability <= 1:
+                errors.append(f"{p}.connection_probability: must be between 0 and 1")
     network = cfg["network"]
     if network.get("mode") not in NETWORK_MODES:
         errors.append(f"network.mode: choose one of {sorted(NETWORK_MODES)}")
@@ -174,6 +240,11 @@ def validate_scenario(scenario: dict) -> list[str]:
                     f"here are {sorted(dc_positions)}, got {depends_on!r}"
                 )
             else:
+                if depends_on in boosted_dc_positions:
+                    errors.append(
+                        f"sources[{i}].depends_on: data-centre source {depends_on} is already allocated "
+                        "to another booster; add an explicit source split instead of double-counting heat"
+                    )
                 boosted_dc_positions.add(depends_on)
 
     # PHYSICS CHECK: data-centre waste heat is recovered at ~28-35°C —
@@ -212,12 +283,32 @@ def validate_scenario(scenario: dict) -> list[str]:
     cooling = bool(network.get("include_cooling"))
     _validate_sources(cfg.get("cooling_sources"), COOLING_SOURCE_TYPES, "cooling_sources", errors, required=cooling)
     econ = cfg.get("economics", {})
-    if not isinstance(econ.get("project_lifetime_years"), (int, float)) or econ["project_lifetime_years"] <= 0:
-        errors.append("economics.project_lifetime_years: must be positive")
+    if (not isinstance(econ.get("project_lifetime_years"), int)
+            or isinstance(econ.get("project_lifetime_years"), bool)
+            or econ["project_lifetime_years"] <= 0):
+        errors.append("economics.project_lifetime_years: must be a positive whole number")
     if not isinstance(econ.get("discount_rate"), (int, float)) or econ["discount_rate"] < 0:
         errors.append("economics.discount_rate: must be zero or positive")
+    if not isinstance(econ.get("social_discount_rate"), (int, float)) or econ["social_discount_rate"] < 0:
+        errors.append("economics.social_discount_rate: must be zero or positive")
+    for year_name in ("base_year", "price_year"):
+        if not isinstance(econ.get(year_name), int) or isinstance(econ.get(year_name), bool):
+            errors.append(f"economics.{year_name}: must be a whole-number year")
     if econ.get("counterfactual") not in COUNTERFACTUALS:
         errors.append(f"economics.counterfactual: choose one of {sorted(COUNTERFACTUALS)}")
+    if econ.get("financial_basis") not in {"real", "nominal"}:
+        errors.append("economics.financial_basis: choose 'real' or 'nominal'")
+    if econ.get("financial_basis") == "nominal":
+        errors.append("economics.financial_basis: nominal cash flows are not yet supported; use 'real'")
+    for name, value in econ.get("price_changes", {}).items():
+        if not isinstance(value, (int, float)) or value <= -1:
+            errors.append(f"economics.price_changes.{name}: must be numeric and greater than -1")
+    grant = econ.get("ghnf_grant", {})
+    if grant.get("enabled") and (
+        not isinstance(grant.get("rate", 0.40), (int, float))
+        or not 0 <= grant.get("rate", 0.40) < 0.50
+    ):
+        errors.append("economics.ghnf_grant.rate: must be at least 0 and strictly below 0.50")
     if cooling and econ.get("counterfactual") == "individual_gas":
         errors.append("economics.counterfactual: use 'individual_gas_and_ac' for a 4-pipe comparison")
     return errors

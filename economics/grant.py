@@ -45,7 +45,9 @@ Usage
 # on the commercialisation gap assessment. 40% is a sensible screening
 # assumption.
 DEFAULT_GHNF_RATE = 0.40
-MAX_GHNF_RATE = 0.50
+MAX_GHNF_RATE = 0.499999
+GHNF_HEAT_OUTPUT_CAP_GBP_PER_KWH = 0.045
+GHNF_HEAT_OUTPUT_CAP_YEARS = 15
 
 # Eligible CAPEX: network pipework + energy centre sources are eligible.
 # Land acquisition, internal building distribution, and planning/legal
@@ -60,6 +62,8 @@ def apply_ghnf_grant(
     source_capex_GBP=0.0,
     grant_rate=DEFAULT_GHNF_RATE,
     cap_GBP=None,
+    eligible_capex_GBP=None,
+    annual_thermal_delivered_kWh=None,
 ):
     """
     Apply a GHNF-style capital grant to the project CAPEX.
@@ -69,8 +73,11 @@ def apply_ghnf_grant(
     total_capex_GBP   : total project CAPEX (£)
     network_capex_GBP : network (pipework) CAPEX component (£)
     source_capex_GBP  : energy centre sources CAPEX component (£)
-    grant_rate        : grant as fraction of eligible CAPEX (0-0.5)
+    grant_rate        : grant as fraction of eligible CAPEX (strictly below 0.5)
     cap_GBP           : optional absolute cap on the grant (£)
+    eligible_capex_GBP: optional user-assessed eligible expenditure base
+    annual_thermal_delivered_kWh: annual heat/cooling delivered; when given,
+                         applies the GHNF 4.5p/kWh over 15 years cap
 
     Returns
     -------
@@ -84,11 +91,20 @@ def apply_ghnf_grant(
     grant_rate = min(float(grant_rate), MAX_GHNF_RATE)
     grant_rate = max(grant_rate, 0.0)
 
-    eligible = network_capex_GBP + source_capex_GBP
+    eligible = (float(eligible_capex_GBP) if eligible_capex_GBP is not None
+                else network_capex_GBP + source_capex_GBP)
     if eligible <= 0:
         eligible = total_capex_GBP   # fallback if breakdown not available
 
     grant_GBP = eligible * grant_rate
+    output_cap_GBP = None
+    if annual_thermal_delivered_kWh is not None:
+        output_cap_GBP = (
+            float(annual_thermal_delivered_kWh)
+            * GHNF_HEAT_OUTPUT_CAP_GBP_PER_KWH
+            * GHNF_HEAT_OUTPUT_CAP_YEARS
+        )
+        grant_GBP = min(grant_GBP, output_cap_GBP)
     if cap_GBP is not None and grant_GBP > cap_GBP:
         grant_GBP = float(cap_GBP)
 
@@ -97,4 +113,6 @@ def apply_ghnf_grant(
         "grant_rate": grant_rate,
         "grant_GBP": round(grant_GBP, 0),
         "net_capex_GBP": round(total_capex_GBP - grant_GBP, 0),
+        "output_based_cap_GBP": None if output_cap_GBP is None else round(output_cap_GBP, 0),
+        "output_cap_basis": "4.5p/kWh of thermal energy delivered over 15 years",
     }

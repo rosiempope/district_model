@@ -15,21 +15,25 @@ The browser will open the local application. The default URL is normally
 
 ## What the UI controls
 
-- Building archetype, floor area and dwelling count
+- Building archetype, floor area, dwellings, billed connections, connection
+  year and connection probability
 - Climate scenario
-- Network length and 2-pipe / 4-pipe selection
+- Equivalent-trunk length or an editable energy-centre/junction/customer tree
 - Heating and cooling flow/return temperatures
 - Heating and cooling technology, preset, capacity and unit count
-- Project life, discount rate, O&M rate and counterfactual
+- Separate heat/cooling tariffs, project CAPEX, annual OPEX, real price paths,
+  project/social discount rates, grant and counterfactual
 
 ## Workflow
 
 1. Load a worked scenario or start with a blank example.
 2. Modify the inputs in **Build scenario**.
 3. Select **Validate and run scenario**.
-4. Inspect hourly-model outputs in **Results**.
-5. Select **Add result to comparison**.
-6. Repeat for alternative cases, then use **Compare scenarios** to choose the
+4. Resolve the visible assumptions/default warnings and any failed service or
+   carbon gate.
+5. Inspect the investor and whole-system cash-flow audits in **Results**.
+6. Select **Add result to comparison**.
+7. Repeat for alternative cases, then use **Compare scenarios** to choose the
    metric to graph and download the comparison table.
 
 ## JSON interface
@@ -42,3 +46,6 @@ second model.
 For a four-pipe scenario, `network.include_cooling` must be `true`, at least one
 cooling source must be added, and the counterfactual is automatically set to
 `individual_gas_and_ac`.
+
+`capacity_MW` always means total installed capacity. The model derives per-unit
+capacity from total capacity and unit count; do not pre-divide the value.

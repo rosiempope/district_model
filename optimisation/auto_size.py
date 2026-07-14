@@ -119,6 +119,8 @@ def recommend_sizing(
     peak_cooling_kW=0.0,
     n_buildings=1,
     building_types=None,
+    peak_is_coincident=True,
+    network_loss_margin=0.05,
 ):
     """
     Recommend MW capacities for each requested technology type.
@@ -155,7 +157,11 @@ def recommend_sizing(
     if diversity_factor is None:
         diversity_factor = _auto_diversity(building_types, n_buildings)
 
-    diversified_peak_kW = peak_demand_kW * diversity_factor
+    # An hourly aggregate profile already contains the coincidence/diversity
+    # between buildings. Applying a second diversity factor undersized plant.
+    # Keep the option only for callers supplying an arithmetic sum of peaks.
+    diversity_applied = 1.0 if peak_is_coincident else diversity_factor
+    diversified_peak_kW = peak_demand_kW * diversity_applied * (1.0 + network_loss_margin)
     diversified_peak_MW = diversified_peak_kW / 1000.0
 
     baseload_types, peak_types, other_types = _classify_sources(technology_types)
@@ -164,8 +170,10 @@ def recommend_sizing(
 
     notes.append(
         f"Arithmetic peak: {peak_demand_kW/1000:.2f} MW. "
-        f"Diversity factor: {diversity_factor:.2f} → "
-        f"diversified design peak: {diversified_peak_MW:.2f} MW."
+        + ("Hourly aggregate is already coincident; no second diversity factor. "
+           if peak_is_coincident else f"Diversity factor: {diversity_factor:.2f}. ")
+        + f"Network-loss margin: {network_loss_margin*100:.0f}% → design peak: "
+        f"{diversified_peak_MW:.2f} MW."
     )
 
     # --- Baseload sizing ---
@@ -304,7 +312,7 @@ def recommend_sizing(
     # --- Cooling sizing ---
     cooling_sources = []
     if include_cooling and peak_cooling_kW > 0:
-        cool_peak_MW = peak_cooling_kW * diversity_factor / 1000.0
+        cool_peak_MW = peak_cooling_kW * diversity_applied * (1.0 + network_loss_margin) / 1000.0
         # Round up to sensible chiller bank
         unit_size = 0.5 if cool_peak_MW < 3 else 1.0 if cool_peak_MW < 8 else 2.0
         n_units = max(1, int(np.ceil(cool_peak_MW / unit_size)))
@@ -322,7 +330,7 @@ def recommend_sizing(
         })
 
     return {
-        "diversity_factor": diversity_factor,
+        "diversity_factor": diversity_applied,
         "diversified_peak_kW": round(diversified_peak_kW, 1),
         "diversified_peak_MW": round(diversified_peak_MW, 3),
         "sources": sources,

@@ -104,6 +104,8 @@ def result_summary_row(result: dict[str, Any]) -> dict[str, Any]:
         "Carbon (gCO₂e/kWh)": h["carbon_intensity_kgCO2_per_kWh_service"] * 1000,
         "Unmet heat (MWh)": h["annual_unmet_demand_MWh"],
         "Unmet cooling (MWh)": h["annual_unmet_cooling_MWh"],
+        "Service gate": "PASS" if h.get("service_compliant") else "FAIL",
+        "Carbon gate": "PASS" if h.get("carbon_compliant") else "FAIL",
         "NPV vs counterfactual (£m)": (f.get("npv_vs_counterfactual_GBP") or 0) / 1e6,
         "Discounted payback (yrs)": f.get("discounted_payback_years"),
     }
@@ -167,6 +169,8 @@ def edit_scenario() -> dict[str, Any]:
     st.subheader("1. Scenario, climate and economics")
     c1, c2, c3, c4 = st.columns(4)
     scenario["name"] = c1.text_input("Scenario name", value=scenario["name"])
+    if scenario.get("description"):
+        st.caption(scenario["description"])
     climate_options = ["baseline", "2050_central", "2050_high"]
     scenario["climate_scenario"] = c2.selectbox("Climate scenario", climate_options,
                                                   index=climate_options.index(scenario["climate_scenario"]))
@@ -176,32 +180,108 @@ def edit_scenario() -> dict[str, Any]:
     econ["discount_rate"] = c4.number_input("Discount rate", min_value=0.0, max_value=0.5,
                                               value=number(econ["discount_rate"], 0.105), step=0.005,
                                               format="%.3f")
+    basis1, basis2, basis3 = st.columns(3)
+    econ["financial_basis"] = basis1.selectbox(
+        "Cash-flow basis", ["real"], index=0,
+        help="Version 2.0 supports a consistent real basis; nominal mode is blocked until inflation is modelled on every line.",
+    )
+    econ["base_year"] = int(basis2.number_input(
+        "Base year", min_value=2000, max_value=2100, value=int(econ.get("base_year", 2026)), step=1
+    ))
+    econ["price_year"] = int(basis3.number_input(
+        "Price year", min_value=2000, max_value=2100, value=int(econ.get("price_year", 2026)), step=1
+    ))
     c5, c6 = st.columns(2)
     econ["om_rate"] = c5.number_input("O&M rate (legacy flat)", min_value=0.0, max_value=0.2,
                                         value=number(econ["om_rate"], 0.01), step=0.001, format="%.3f",
                                         help="Flat rate used for counterfactual only; the scheme itself uses per-technology rates automatically")
+    econ["social_discount_rate"] = c6.number_input(
+        "Social discount rate", min_value=0.0, max_value=0.20,
+        value=number(econ.get("social_discount_rate"), 0.035), step=0.005, format="%.3f",
+    )
     c7, c8, c9 = st.columns(3)
     grant_cfg = econ.setdefault("ghnf_grant", {"enabled": False, "rate": 0.40})
     grant_cfg["enabled"] = c7.toggle("GHNF grant", value=bool(grant_cfg.get("enabled", False)),
-                                      help="Green Heat Network Fund — reduces effective CAPEX by up to 50%")
+                                      help="Green Heat Network Fund — subject to grant-intensity and heat-output caps")
     if grant_cfg["enabled"]:
-        grant_cfg["rate"] = c8.number_input("Grant rate", min_value=0.0, max_value=0.50,
+        grant_cfg["rate"] = c8.number_input("Grant rate", min_value=0.0, max_value=0.49,
                                              value=number(grant_cfg.get("rate"), 0.40), step=0.05, format="%.2f",
-                                             help="GHNF awards typically 30-50% of eligible CAPEX")
+                                             help="Must be strictly below 50% of eligible CAPEX; the model also applies 4.5p/kWh over 15 years")
     c9_esc1, c9_esc2 = st.columns(2)
-    econ["electricity_escalation_pct"] = c9_esc1.number_input("Electricity escalation (%/yr)", min_value=0.0, max_value=5.0,
-                                                              value=number(econ.get("electricity_escalation_pct"), 1.5), step=0.5,
-                                                              help="Real-terms annual price escalation for energy costs in the NPV cash-flow series")
-    econ["gas_escalation_pct"] = c9_esc2.number_input("Gas escalation (%/yr)", min_value=0.0, max_value=5.0,
-                                                       value=number(econ.get("gas_escalation_pct"), 1.0), step=0.5)
+    changes = econ.setdefault("price_changes", {})
+    changes["electricity_real_rate"] = c9_esc1.number_input(
+        "Electricity real change (%/yr)", min_value=-10.0, max_value=10.0,
+        value=number(changes.get("electricity_real_rate"), 0.0) * 100, step=0.5,
+        help="Applied only to electricity expenditure; enter 0 when using a real flat-price case",
+    ) / 100
+    changes["gas_real_rate"] = c9_esc2.number_input(
+        "Gas real change (%/yr)", min_value=-10.0, max_value=10.0,
+        value=number(changes.get("gas_real_rate"), 0.0) * 100, step=0.5,
+        help="Applied only to gas expenditure",
+    ) / 100
+
+    with st.expander("Commercial assumptions (tariffs, CAPEX and OPEX)", expanded=False):
+        tariffs = econ.setdefault("tariffs", {})
+        t1, t2, t3 = st.columns(3)
+        tariffs["heat_unit_rate_p_per_kWh"] = t1.number_input(
+            "Heat tariff (p/kWh)", min_value=0.0,
+            value=number(tariffs.get("heat_unit_rate_p_per_kWh"), 7.33), step=0.1,
+        )
+        tariffs["cooling_unit_rate_p_per_kWh"] = t2.number_input(
+            "Cooling tariff (p/kWh)", min_value=0.0,
+            value=number(tariffs.get("cooling_unit_rate_p_per_kWh"), 0.0), step=0.1,
+        )
+        tariffs["standing_charge_GBP_per_connection_year"] = t3.number_input(
+            "Standing charge (£/connection/yr)", min_value=0.0,
+            value=number(tariffs.get("standing_charge_GBP_per_connection_year"), 106.0), step=10.0,
+        )
+        capex_items = econ.setdefault("capex_items", {})
+        capex_labels = {
+            "energy_centre_building_GBP": "Energy-centre building (£)",
+            "land_and_enabling_GBP": "Land and enabling (£)",
+            "electricity_connection_GBP": "Electricity connection (£)",
+            "gas_connection_GBP": "Gas connection (£)",
+            "controls_and_scada_GBP": "Controls / SCADA (£)",
+            "customer_connection_GBP_per_connection": "Customer connection (£/connection)",
+            "metering_GBP_per_connection": "Metering (£/connection)",
+        }
+        for i, (key, label) in enumerate(capex_labels.items()):
+            capex_items[key] = st.number_input(
+                label, min_value=0.0, value=number(capex_items.get(key), 0.0),
+                step=10000.0, key=f"econ_capex_{i}",
+            )
+        p1, p2, p3 = st.columns(3)
+        for column, key, label in zip(
+            (p1, p2, p3),
+            ("development_and_design_pct", "commissioning_pct", "contingency_pct"),
+            ("Development/design (%)", "Commissioning (%)", "Contingency (%)"),
+        ):
+            capex_items[key] = column.number_input(
+                label, min_value=0.0, max_value=1.0,
+                value=number(capex_items.get(key), 0.0), step=0.01, format="%.2f",
+                help="Enter as a decimal fraction: 0.10 means 10%",
+            )
+        annual_items = econ.setdefault("annual_opex_items", {})
+        opex_labels = {
+            "billing_and_customer_service_GBP": "Billing/customer service (£/yr)",
+            "insurance_and_rates_GBP": "Insurance and rates (£/yr)",
+            "land_lease_GBP": "Land lease (£/yr)",
+            "water_treatment_GBP": "Water treatment (£/yr)",
+            "operator_overhead_GBP": "Operator overhead (£/yr)",
+        }
+        for i, (key, label) in enumerate(opex_labels.items()):
+            annual_items[key] = st.number_input(
+                label, min_value=0.0, value=number(annual_items.get(key), 0.0),
+                step=1000.0, key=f"econ_opex_{i}",
+            )
 
     st.subheader("2. Buildings and demand")
     st.caption("Enter a positive floor area for commercial buildings. For residential archetypes, you may use either floor area or unit count.")
     buildings = pd.DataFrame(scenario["demand"]["buildings"])
-    for col in ["name", "type", "floor_area_m2", "units"]:
+    for col in ["name", "type", "floor_area_m2", "units", "connections", "connection_year", "connection_probability"]:
         if col not in buildings:
             buildings[col] = None
-    buildings = buildings[["name", "type", "floor_area_m2", "units"]]
+    buildings = buildings[["name", "type", "floor_area_m2", "units", "connections", "connection_year", "connection_probability"]]
     edited_buildings = st.data_editor(
         buildings,
         num_rows="dynamic",
@@ -211,13 +291,20 @@ def edit_scenario() -> dict[str, Any]:
             "type": st.column_config.SelectboxColumn("Building type", options=list(BUILDING_TYPES), required=True),
             "floor_area_m2": st.column_config.NumberColumn("Floor area (m²)", min_value=0.0, step=100.0),
             "units": st.column_config.NumberColumn("Dwellings / units", min_value=0.0, step=1.0),
+            "connections": st.column_config.NumberColumn("Billed connections", min_value=0, step=1),
+            "connection_year": st.column_config.NumberColumn("Connection year", min_value=1, step=1),
+            "connection_probability": st.column_config.NumberColumn("Connection probability", min_value=0.0, max_value=1.0, step=0.05),
         },
         key="building_editor",
     )
-    scenario["demand"]["buildings"] = [
-        {k: (None if pd.isna(v) else v) for k, v in row.items() if not (k in {"floor_area_m2", "units"} and pd.isna(v))}
-        for row in edited_buildings.to_dict("records")
-    ]
+    edited_rows = []
+    for row in edited_buildings.to_dict("records"):
+        clean = {k: v for k, v in row.items() if not pd.isna(v)}
+        for integer_key in ("units", "connections", "connection_year"):
+            if integer_key in clean:
+                clean[integer_key] = int(clean[integer_key])
+        edited_rows.append(clean)
+    scenario["demand"]["buildings"] = edited_rows
 
     st.subheader("3. Network configuration")
     net = scenario["network"]
@@ -284,7 +371,7 @@ def edit_scenario() -> dict[str, Any]:
 
     st.subheader("4. Heating technologies")
     auto_col1, auto_col2 = st.columns([3, 1])
-    auto_col1.caption("Order matters: sources are dispatched in the order shown. Put low-cost/low-carbon base-load sources before peak boilers.")
+    auto_col1.caption("Sources are dispatched each hour by marginal cost; boilers remain available for peak and backup duty.")
     if auto_col2.button("Auto-size from demand", type="secondary", help="Let the model recommend technology capacities based on the demand profile above"):
         import copy as _cp
         _auto_sc = _cp.deepcopy(scenario)
@@ -294,7 +381,7 @@ def edit_scenario() -> dict[str, Any]:
             from scenarios.scenario_runner import load_weather as _load_w
             _w = _apply_clim(_load_w(), _auto_sc["climate_scenario"])
             _d = _synth(_w, {"demand_nodes": _auto_sc["demand"]["buildings"]})
-            _tech_types = list({s.get("type","ashp") for s in _auto_sc.get("sources", [])}) or ["ashp", "gas_boiler"]
+            _tech_types = list(dict.fromkeys(s.get("type", "ashp") for s in _auto_sc.get("sources", []))) or ["ashp", "gas_boiler"]
             _inc_cool = bool(net.get("include_cooling"))
             _bld_types = [b.get("type") for b in _auto_sc["demand"]["buildings"]]
             rec = recommend_sizing(
@@ -309,11 +396,8 @@ def edit_scenario() -> dict[str, Any]:
             )
             # Apply recommended sources to the scenario
             new_heat_sources = []
-            # UNIT_TYPES in the runner (ashp, booster_heat_pump, air_cooled_chiller)
-            # map capacity_MW → unit_capacity_MW in _overrides(). If we pass both
-            # capacity_MW and n_units, the runner treats capacity_MW as the PER-UNIT
-            # size (giving n × capacity_MW total, which is wrong). For these types,
-            # compute the per-unit size explicitly.
+            # capacity_MW is consistently TOTAL installed capacity throughout
+            # scenario JSON, auto-sizing, the editor and the runner.
             _unit_types = {"ashp", "booster_heat_pump", "air_cooled_chiller"}
             for rs in rec["sources"]:
                 stype = rs["type"]
@@ -322,8 +406,6 @@ def edit_scenario() -> dict[str, Any]:
                 s_cfg = {"type": stype, "preset": preset, "name": stype.replace("_", " ").title(),
                          "capacity_MW": rs["capacity_MW"]}
                 if "n_units" in rs and stype in _unit_types:
-                    # Runner expects capacity_MW as the per-unit size for these types
-                    s_cfg["capacity_MW"] = round(rs["capacity_MW"] / rs["n_units"], 3)
                     s_cfg["n_units"] = rs["n_units"]
                 elif "n_units" in rs:
                     s_cfg["n_units"] = rs["n_units"]
@@ -428,7 +510,7 @@ def show_result(result: dict[str, Any]) -> None:
     m[0].metric("System", "4-pipe" if h["system_type"].startswith("4_") else "2-pipe")
     m[1].metric("Total CAPEX", f"\u00a3{h['capex_total_GBP']/1e6:.2f}m")
     m[2].metric("Annual OPEX", f"\u00a3{h['annual_total_opex_GBP']/1e6:.2f}m")
-    m[3].metric("LCoH", f"\u00a3{h['levelised_energy_service_GBP_per_kWh']:.3f}/kWh")
+    m[3].metric("Discounted LCO service", f"\u00a3{h['levelised_energy_service_GBP_per_kWh']:.3f}/kWh")
     m[4].metric("Carbon", f"{h['carbon_intensity_kgCO2_per_kWh_service']*1000:.0f} gCO\u2082e/kWh")
     m[5].metric("Network length", f"{h.get('network_total_length_m', 0):,.0f} m")
 
@@ -436,10 +518,19 @@ def show_result(result: dict[str, Any]) -> None:
         st.warning(f"\u26a0\ufe0f Unmet heat: {h['annual_unmet_demand_MWh']:.1f} MWh/yr")
     if h["annual_unmet_cooling_MWh"] > 0.5:
         st.warning(f"\u26a0\ufe0f Unmet cooling: {h['annual_unmet_cooling_MWh']:.1f} MWh/yr")
+    audit = result.get("audit", {})
+    if audit.get("warnings"):
+        with st.expander(f"Assumptions and assurance warnings ({len(audit['warnings'])})", expanded=True):
+            for warning in audit["warnings"]:
+                st.warning(warning)
+            st.caption(
+                f"Model {audit.get('model_version', '—')} · scenario hash "
+                f"{audit.get('scenario_sha256', '')[:12]} · run {audit.get('run_timestamp_utc', '—')}"
+            )
 
     # -- Payback line charts --
     st.subheader("Project cash position over life")
-    view_tab1, view_tab2 = st.tabs(["Society vs counterfactual", "Investor (revenue-based)"])
+    view_tab1, view_tab2 = st.tabs(["Whole-system vs counterfactual", "Investor (revenue-based)"])
 
     with view_tab1:
         if f and f.get("cashflow_years"):
@@ -458,6 +549,16 @@ def show_result(result: dict[str, Any]) -> None:
             )
             st.altair_chart(ch, use_container_width=True)
             st.caption("Red line = break-even. Positive = district scheme cheaper than individual systems.")
+            if f.get("social", {}).get("basis"):
+                st.caption(f["social"]["basis"])
+            with st.expander("Whole-system annual cash-flow audit"):
+                social_df = pd.DataFrame(f.get("social", {}).get("annual_table", []))
+                st.dataframe(social_df, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download whole-system cash flow CSV",
+                    social_df.to_csv(index=False).encode("utf-8"),
+                    "whole_system_cashflow.csv", "text/csv",
+                )
         else:
             st.info("Select a counterfactual in section 1 to enable this view.")
 
@@ -470,6 +571,11 @@ def show_result(result: dict[str, Any]) -> None:
             col_b.metric("Discounted payback", "No payback" if pb_inv is None else f"{pb_inv:.1f} years")
             irr_inv = inv.get("irr")
             col_c.metric("IRR", "\u2014" if irr_inv is None else f"{irr_inv*100:.1f}%")
+            req = inv.get("required_heat_tariff_p_per_kWh_for_zero_NPV")
+            fund = inv.get("peak_funding_requirement_GBP")
+            r1, r2 = st.columns(2)
+            r1.metric("Heat tariff for zero NPV", "—" if req is None else f"{req:.2f} p/kWh")
+            r2.metric("Peak funding requirement", "—" if fund is None else f"£{fund/1e6:.2f}m")
             st.caption(f"Revenue basis: {inv.get('revenue_basis','')}")
             ch2 = _payback_chart(
                 inv["cashflow_years"],
@@ -478,6 +584,14 @@ def show_result(result: dict[str, Any]) -> None:
                 "Cumulative investor position (scheme revenue minus OPEX vs total CAPEX)",
             )
             st.altair_chart(ch2, use_container_width=True)
+            with st.expander("Investor annual cash-flow audit", expanded=False):
+                investor_df = pd.DataFrame(inv.get("annual_table", []))
+                st.dataframe(investor_df, use_container_width=True, hide_index=True)
+                st.download_button(
+                    "Download investor cash flow CSV",
+                    investor_df.to_csv(index=False).encode("utf-8"),
+                    "investor_cashflow.csv", "text/csv",
+                )
         else:
             st.info("Investor view not available.")
 
@@ -498,6 +612,17 @@ def show_result(result: dict[str, Any]) -> None:
         if not source_df.empty:
             st.dataframe(source_df, use_container_width=True, hide_index=True)
 
+    with st.expander("CAPEX and annual OPEX breakdown", expanded=False):
+        capex_df = pd.DataFrame([
+            {"Line item": key.replace("_GBP", "").replace("_", " ").title(), "CAPEX (£)": value}
+            for key, value in h.get("capex_breakdown_GBP", {}).items()
+        ])
+        st.dataframe(capex_df, use_container_width=True, hide_index=True)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Energy and pumping", f"£{h['annual_energy_cost_GBP']:,.0f}/yr")
+        c2.metric("Technology/network O&M", f"£{h['annual_om_cost_GBP']:,.0f}/yr")
+        c3.metric("Other annual OPEX", f"£{h.get('annual_additional_opex_GBP', 0):,.0f}/yr")
+
     with st.expander("Monthly demand profile", expanded=False):
         index = pd.DatetimeIndex(result["demand"]["datetime_index"])
         heat_m = pd.Series(result["demand"]["total_heat_kW"], index=index).groupby(index.month).sum() / 1000
@@ -513,6 +638,11 @@ def show_result(result: dict[str, Any]) -> None:
             st.metric("Eligible CAPEX", f"\u00a3{g['eligible_capex_GBP']/1e6:.2f}m")
             st.metric("Grant amount", f"\u00a3{g['grant_GBP']/1e6:.2f}m")
             st.metric("Net CAPEX after grant", f"\u00a3{g['net_capex_GBP']/1e6:.2f}m")
+            if g.get("output_based_cap_GBP") is not None:
+                st.metric("Heat-output grant cap", f"\u00a3{g['output_based_cap_GBP']/1e6:.2f}m")
+                st.caption(g.get("output_cap_basis", ""))
+            if g.get("carbon_eligibility"):
+                st.caption(f"Carbon test: {g['carbon_eligibility']}")
 
     # -- Feasibility verdict --
     st.subheader("Feasibility verdict")
@@ -562,7 +692,7 @@ def show_comparison() -> None:
     rows = [result_summary_row(r) for r in results]
     df = pd.DataFrame(rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
-    numeric_cols = [c for c in df.columns if c not in {"Scenario", "System"}]
+    numeric_cols = list(df.select_dtypes(include="number").columns)
     metric = st.selectbox("Graph metric", numeric_cols, index=numeric_cols.index("NPV vs counterfactual (£m)") if "NPV vs counterfactual (£m)" in numeric_cols else 0)
     chart = df.set_index("Scenario")[[metric]]
     st.bar_chart(chart)
