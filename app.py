@@ -309,11 +309,24 @@ def edit_scenario() -> dict[str, Any]:
             )
             # Apply recommended sources to the scenario
             new_heat_sources = []
+            # UNIT_TYPES in the runner (ashp, booster_heat_pump, air_cooled_chiller)
+            # map capacity_MW → unit_capacity_MW in _overrides(). If we pass both
+            # capacity_MW and n_units, the runner treats capacity_MW as the PER-UNIT
+            # size (giving n × capacity_MW total, which is wrong). For these types,
+            # compute the per-unit size explicitly.
+            _unit_types = {"ashp", "booster_heat_pump", "air_cooled_chiller"}
             for rs in rec["sources"]:
-                preset = "ealing_phase1"  # sensible default
-                s_cfg = {"type": rs["type"], "preset": preset, "name": rs["type"].replace("_"," ").title(),
+                stype = rs["type"]
+                type_presets = HEAT_PRESETS.get(stype, {})
+                preset = list(type_presets.keys())[0] if type_presets else "ealing_phase1"
+                s_cfg = {"type": stype, "preset": preset, "name": stype.replace("_", " ").title(),
                          "capacity_MW": rs["capacity_MW"]}
-                if "n_units" in rs: s_cfg["n_units"] = rs["n_units"]
+                if "n_units" in rs and stype in _unit_types:
+                    # Runner expects capacity_MW as the per-unit size for these types
+                    s_cfg["capacity_MW"] = round(rs["capacity_MW"] / rs["n_units"], 3)
+                    s_cfg["n_units"] = rs["n_units"]
+                elif "n_units" in rs:
+                    s_cfg["n_units"] = rs["n_units"]
                 if "flow_temp_C" in rs: s_cfg["flow_temp_C"] = rs["flow_temp_C"]
                 if "depends_on" in rs: s_cfg["depends_on"] = rs["depends_on"]
                 if "dispatch_direct" in rs: s_cfg["dispatch_direct"] = rs["dispatch_direct"]
@@ -327,10 +340,19 @@ def edit_scenario() -> dict[str, Any]:
                                      "name": "Central chiller bank", "capacity_MW": cs["capacity_MW"],
                                      "n_units": cs.get("n_units", 1)})
                 st.session_state.scenario["cooling_sources"] = new_cool
-            st.info("\n\n".join(rec["sizing_notes"]))
+            # CRITICAL: clear the cached widget values for source editors,
+            # otherwise Streamlit's own widget state (heat_0_type, heat_0_capacity,
+            # etc.) from the PREVIOUS render overwrites the new sources on rerun —
+            # the widgets show old values, _source_editor returns those, and
+            # line `scenario["sources"] = retained_heat` silently reverts the change.
+            _clear_editor_widget_state()
+            st.session_state["_auto_size_notes"] = "\n\n".join(rec["sizing_notes"])
             st.rerun()
         except Exception as exc:
             st.exception(exc)
+    # Show auto-size rationale if it just ran (survives the rerun via session state)
+    if st.session_state.get("_auto_size_notes"):
+        st.info(st.session_state.pop("_auto_size_notes"))
     heat_sources = scenario.get("sources", [])
     retained_heat = []
     for i, source in enumerate(heat_sources):
