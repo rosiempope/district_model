@@ -13,7 +13,7 @@ import io
 import json
 from typing import Any
 
-import matplotlib.pyplot as plt
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -65,7 +65,7 @@ def _new_scenario() -> dict[str, Any]:
 
 def _clear_editor_widget_state() -> None:
     """Clear widget values when loading a different JSON/template scenario."""
-    prefixes = ("heat_", "cool_", "remove_heat_", "remove_cool_", "building_editor")
+    prefixes = ("heat_", "cool_", "remove_heat_", "remove_cool_", "building_editor", "tree_seg_", "remove_seg_")
     for key in list(st.session_state.keys()):
         if key.startswith(prefixes) or key == "building_editor":
             del st.session_state[key]
@@ -197,16 +197,59 @@ def edit_scenario() -> dict[str, Any]:
 
     st.subheader("3. Network configuration")
     net = scenario["network"]
-    n1, n2, n3, n4, n5 = st.columns(5)
-    net["mode"] = n1.selectbox("Network approach", ["generic_length", "none"], index=["generic_length", "none"].index(net["mode"]))
-    net["length_m"] = n2.number_input("Network length (m)", min_value=0.0, value=number(net.get("length_m"), 3000.0), step=100.0)
-    net["heat_flow_temp_C"] = n3.number_input("Heat flow (°C)", min_value=30.0, max_value=100.0, value=number(net["heat_flow_temp_C"], 70.0), step=1.0)
-    net["heat_return_temp_C"] = n4.number_input("Heat return (°C)", min_value=15.0, max_value=90.0, value=number(net["heat_return_temp_C"], 40.0), step=1.0)
-    net["include_cooling"] = n5.toggle("Include cooling / 4-pipe", value=bool(net["include_cooling"]))
+    net["mode"] = st.radio(
+        "Network approach",
+        ["generic_length", "tree", "none"],
+        index=["generic_length", "tree", "none"].index(net.get("mode", "generic_length")),
+        format_func={"generic_length": "Single trunk (total length)", "tree": "Tree topology (branch lengths)", "none": "No network"}.get,
+        horizontal=True,
+    )
+
+    if net["mode"] == "generic_length":
+        t1, t2, t3, t4, t5 = st.columns(5)
+        net["length_m"] = t1.number_input("Total network length (m)", min_value=0.0, value=number(net.get("length_m"), 3000.0), step=100.0, help="Total route length of the main and branch pipes. Used to size one representative trunk per duty.")
+        heat_col_temp, return_col_temp, cool_col_1, cool_col_2 = t2, t3, t4, t5
+    elif net["mode"] == "tree":
+        st.caption("Define each pipe segment. Every building must be connected. Add junction nodes to model branching.")
+        building_names_for_tree = [""] + [b.get("name","") for b in scenario.get("demand",{}).get("buildings",[]) if b.get("name")]
+        segs = net.setdefault("segments", [])
+        from scenarios.scenario_schema import TREE_ROOT_ID
+        kept_segs = []
+        for i, seg in enumerate(segs):
+            with st.container(border=True):
+                sc1, sc2, sc3, sc4, sc5 = st.columns([2, 2, 1.5, 2, 0.8])
+                nid = sc1.text_input("Segment ID", value=seg.get("node_id",""), key=f"tree_seg_{i}_id",
+                                     help="Unique label, e.g. J1, B2, MAIN-S")
+                pid = sc2.text_input("Connects to (parent ID or EC)", value=seg.get("parent_id", TREE_ROOT_ID), key=f"tree_seg_{i}_pid",
+                                     help=f"Use '{TREE_ROOT_ID}' to connect directly to the energy centre")
+                length = sc3.number_input("Length (m)", min_value=1.0, value=float(seg.get("length_m", 100.0)), step=10.0, key=f"tree_seg_{i}_len")
+                bld_idx = building_names_for_tree.index(seg.get("building","")) if seg.get("building") in building_names_for_tree else 0
+                bld = sc4.selectbox("Serves building", building_names_for_tree, index=bld_idx, key=f"tree_seg_{i}_bld",
+                                    help="Leave blank for a junction segment with no building at the end")
+                remove_seg = sc5.button("✕", key=f"remove_seg_{i}", help="Remove this segment")
+                if remove_seg:
+                    st.session_state.scenario["network"]["segments"].pop(i)
+                    st.rerun()
+                kept_segs.append({"node_id": nid, "parent_id": pid, "length_m": float(length), "building": bld if bld else None})
+        net["segments"] = kept_segs
+        if st.button("+ Add segment"):
+            st.session_state.scenario["network"].setdefault("segments", []).append(
+                {"node_id": f"S{len(segs)+1}", "parent_id": TREE_ROOT_ID, "length_m": 100.0, "building": None}
+            )
+            st.rerun()
+        n1_temp, n2_temp = st.columns(2)
+        heat_col_temp, return_col_temp = n1_temp, n2_temp
+        cool_col_1, cool_col_2 = st.columns(2)
+    else:
+        heat_col_temp, return_col_temp, cool_col_1, cool_col_2 = st.columns(4)
+
+    net["heat_flow_temp_C"] = heat_col_temp.number_input("Heat flow (°C)", min_value=30.0, max_value=100.0, value=number(net["heat_flow_temp_C"], 70.0), step=1.0)
+    net["heat_return_temp_C"] = return_col_temp.number_input("Heat return (°C)", min_value=15.0, max_value=90.0, value=number(net["heat_return_temp_C"], 40.0), step=1.0)
+    net["include_cooling"] = cool_col_1.toggle("Include cooling / 4-pipe", value=bool(net["include_cooling"]))
     if net["include_cooling"]:
-        co1, co2 = st.columns(2)
-        net["cool_flow_temp_C"] = co1.number_input("Cooling flow (°C)", min_value=2.0, max_value=15.0, value=number(net.get("cool_flow_temp_C"), 6.0), step=0.5)
-        net["cool_return_temp_C"] = co2.number_input("Cooling return (°C)", min_value=4.0, max_value=22.0, value=number(net.get("cool_return_temp_C"), 12.0), step=0.5)
+        net["cool_flow_temp_C"] = cool_col_2.number_input("Cooling flow (°C)", min_value=2.0, max_value=15.0, value=number(net.get("cool_flow_temp_C"), 6.0), step=0.5)
+        cool_ret_c1, cool_ret_c2 = st.columns(2)
+        net["cool_return_temp_C"] = cool_ret_c1.number_input("Cooling return (°C)", min_value=4.0, max_value=22.0, value=number(net.get("cool_return_temp_C"), 12.0), step=0.5)
         econ["counterfactual"] = "individual_gas_and_ac"
         st.info("The fair counterfactual is now individual gas boilers plus individual AC.")
     else:
@@ -256,54 +299,130 @@ def edit_scenario() -> dict[str, Any]:
     return scenario
 
 
+def _payback_chart(years, cumulative_disc, cumulative_undisc, title):
+    """Line chart of cumulative cash position (discounted + undiscounted)."""
+    import altair as alt
+    disc_df   = pd.DataFrame({"Year": years, "Value (£m)": [v/1e6 for v in cumulative_disc],   "Track": "Discounted"})
+    undisc_df = pd.DataFrame({"Year": years, "Value (£m)": [v/1e6 for v in cumulative_undisc], "Track": "Undiscounted"})
+    df = pd.concat([disc_df, undisc_df], ignore_index=True)
+    zero_line = (
+        alt.Chart(pd.DataFrame({"y": [0]}))
+        .mark_rule(color="red", strokeDash=[4, 3], strokeWidth=1)
+        .encode(y="y:Q")
+    )
+    line = (
+        alt.Chart(df)
+        .mark_line()
+        .encode(
+            x=alt.X("Year:Q", axis=alt.Axis(tickMinStep=1)),
+            y=alt.Y("Value (£m):Q", title="Cumulative cash position (£m)"),
+            color=alt.Color("Track:N", scale=alt.Scale(
+                domain=["Discounted", "Undiscounted"],
+                range=["#1f77b4", "#aec7e8"])),
+            tooltip=["Year:Q", "Track:N", alt.Tooltip("Value (£m):Q", format=".2f")],
+        )
+    )
+    return (line + zero_line).properties(title=title, height=280)
+
+
 def show_result(result: dict[str, Any]) -> None:
     h, f = result["headline"], result.get("financial", {})
     st.success(f"Completed: {result['scenario_name']}")
+
+    # -- Headline KPIs --
     st.subheader("Headline result")
-    metrics = st.columns(6)
-    metrics[0].metric("System", "4-pipe" if h["system_type"].startswith("4_") else "2-pipe")
-    metrics[1].metric("Total CAPEX", f"£{h['capex_total_GBP']/1e6:.2f}m")
-    metrics[2].metric("Annual OPEX", f"£{h['annual_total_opex_GBP']/1e6:.2f}m")
-    metrics[3].metric("Carbon intensity", f"{h['carbon_intensity_kgCO2_per_kWh_service']*1000:.0f} gCO₂e/kWh")
-    metrics[4].metric("Unmet heat", f"{h['annual_unmet_demand_MWh']:.1f} MWh")
-    metrics[5].metric("Unmet cooling", f"{h['annual_unmet_cooling_MWh']:.1f} MWh")
+    m = st.columns(6)
+    m[0].metric("System", "4-pipe" if h["system_type"].startswith("4_") else "2-pipe")
+    m[1].metric("Total CAPEX", f"\u00a3{h['capex_total_GBP']/1e6:.2f}m")
+    m[2].metric("Annual OPEX", f"\u00a3{h['annual_total_opex_GBP']/1e6:.2f}m")
+    m[3].metric("LCoH", f"\u00a3{h['levelised_energy_service_GBP_per_kWh']:.3f}/kWh")
+    m[4].metric("Carbon", f"{h['carbon_intensity_kgCO2_per_kWh_service']*1000:.0f} gCO\u2082e/kWh")
+    m[5].metric("Network length", f"{h.get('network_total_length_m', 0):,.0f} m")
 
-    left, right = st.columns(2)
-    with left:
-        st.markdown("**Financial comparison**")
-        if f:
-            st.metric("NPV vs counterfactual", f"£{f.get('npv_vs_counterfactual_GBP', 0)/1e6:.2f}m")
+    if h["annual_unmet_demand_MWh"] > 0.5:
+        st.warning(f"\u26a0\ufe0f Unmet heat: {h['annual_unmet_demand_MWh']:.1f} MWh/yr")
+    if h["annual_unmet_cooling_MWh"] > 0.5:
+        st.warning(f"\u26a0\ufe0f Unmet cooling: {h['annual_unmet_cooling_MWh']:.1f} MWh/yr")
+
+    # -- Payback line charts --
+    st.subheader("Project cash position over life")
+    view_tab1, view_tab2 = st.tabs(["Society vs counterfactual", "Investor (revenue-based)"])
+
+    with view_tab1:
+        if f and f.get("cashflow_years"):
             payback = f.get("discounted_payback_years")
-            st.metric("Discounted payback", "No payback within appraisal life" if payback is None else f"{payback:.1f} years")
+            pb_str = "No payback within appraisal life" if payback is None else f"{payback:.1f} years"
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Avoided-cost NPV", f"\u00a3{f.get('npv_vs_counterfactual_GBP', 0)/1e6:.2f}m")
+            col_b.metric("Discounted payback", pb_str)
+            irr_val = f.get("irr_vs_counterfactual")
+            col_c.metric("IRR", "\u2014" if irr_val is None else f"{irr_val*100:.1f}%")
+            ch = _payback_chart(
+                f["cashflow_years"],
+                f["cumulative_discounted_GBP"],
+                f["cumulative_undiscounted_GBP"],
+                "Cumulative position vs. everyone-goes-individual counterfactual",
+            )
+            st.altair_chart(ch, use_container_width=True)
+            st.caption("Red line = break-even. Positive = district scheme cheaper than individual systems.")
         else:
-            st.info("No counterfactual selected.")
-    with right:
-        st.markdown("**Energy service**")
-        st.metric("Heat demand", f"{h['annual_heat_demand_MWh']:,.0f} MWh/year")
+            st.info("Select a counterfactual in section 1 to enable this view.")
+
+    with view_tab2:
+        inv = f.get("investor", {}) if f else {}
+        if inv:
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Investor NPV", f"\u00a3{inv.get('npv_GBP', 0)/1e6:.2f}m")
+            pb_inv = inv.get("discounted_payback_years")
+            col_b.metric("Discounted payback", "No payback" if pb_inv is None else f"{pb_inv:.1f} years")
+            irr_inv = inv.get("irr")
+            col_c.metric("IRR", "\u2014" if irr_inv is None else f"{irr_inv*100:.1f}%")
+            st.caption(f"Revenue basis: {inv.get('revenue_basis','')}")
+            ch2 = _payback_chart(
+                inv["cashflow_years"],
+                inv["cumulative_discounted_GBP"],
+                inv["cumulative_undiscounted_GBP"],
+                "Cumulative investor position (scheme revenue minus OPEX vs total CAPEX)",
+            )
+            st.altair_chart(ch2, use_container_width=True)
+        else:
+            st.info("Investor view not available.")
+
+    # -- Energy & network detail (collapsed) --
+    with st.expander("Energy service detail", expanded=False):
+        ec1, ec2 = st.columns(2)
+        ec1.metric("Heat demand", f"{h['annual_heat_demand_MWh']:,.0f} MWh/year")
+        ec1.metric("Network heat loss", f"{h['annual_network_heat_loss_MWh']:.0f} MWh/year")
         if h["annual_cooling_demand_MWh"] > 0:
-            st.metric("Cooling demand", f"{h['annual_cooling_demand_MWh']:,.0f} MWh/year")
-        st.metric("Levelised energy service", f"£{h['levelised_energy_service_GBP_per_kWh']:.3f}/kWh")
+            ec2.metric("Cooling demand", f"{h['annual_cooling_demand_MWh']:,.0f} MWh/year")
+            ec2.metric("Network cooling gain", f"{h.get('annual_network_cooling_gain_MWh', 0):.0f} MWh/year")
 
-    st.subheader("Source energy supplied")
-    rows = []
-    for duty, values in [("Heating", h["annual_heat_by_source_MWh"]), ("Cooling", h["annual_cooling_by_source_MWh"])]:
-        rows.extend({"Duty": duty, "Source": source, "MWh/year": value} for source, value in values.items())
-    source_df = pd.DataFrame(rows)
-    if not source_df.empty:
-        st.bar_chart(source_df.pivot_table(index="Source", columns="Duty", values="MWh/year", aggfunc="sum", fill_value=0))
-        st.dataframe(source_df, use_container_width=True, hide_index=True)
+    with st.expander("Source generation mix", expanded=False):
+        rows = []
+        for duty, values in [("Heating", h["annual_heat_by_source_MWh"]), ("Cooling", h["annual_cooling_by_source_MWh"])]:
+            rows.extend({"Duty": duty, "Source": source, "MWh/year": value} for source, value in values.items())
+        source_df = pd.DataFrame(rows)
+        if not source_df.empty:
+            st.dataframe(source_df, use_container_width=True, hide_index=True)
 
-    st.subheader("Monthly demand profile")
-    index = pd.DatetimeIndex(result["demand"]["datetime_index"])
-    heat = pd.Series(result["demand"]["total_heat_kW"], index=index).groupby(index.month).sum() / 1000
-    cool = pd.Series(result["demand"]["total_cooling_kW"], index=index).groupby(index.month).sum() / 1000
-    monthly = pd.DataFrame({"Heating + DHW (MWh)": heat, "Cooling (MWh)": cool})
-    monthly.index = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    st.bar_chart(monthly)
+    with st.expander("Monthly demand profile", expanded=False):
+        index = pd.DatetimeIndex(result["demand"]["datetime_index"])
+        heat_m = pd.Series(result["demand"]["total_heat_kW"], index=index).groupby(index.month).sum() / 1000
+        cool_m = pd.Series(result["demand"]["total_cooling_kW"], index=index).groupby(index.month).sum() / 1000
+        monthly = pd.DataFrame({"Heating + DHW (MWh)": heat_m, "Cooling (MWh)": cool_m})
+        monthly.index = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        st.bar_chart(monthly)
 
-    st.download_button("Download scenario JSON", scenario_to_json_bytes(result["input"]), "scenario.json", "application/json")
-    csv = pd.DataFrame([result_summary_row(result)]).to_csv(index=False).encode("utf-8")
-    st.download_button("Download result summary CSV", csv, "scenario_result.csv", "text/csv")
+    nd = result.get("network_detail")
+    if nd:
+        with st.expander("Network segment detail", expanded=True):
+            st.dataframe(pd.DataFrame(nd), use_container_width=True, hide_index=True)
+
+    # Downloads
+    dl1, dl2 = st.columns(2)
+    dl1.download_button("Download scenario JSON", scenario_to_json_bytes(result["input"]), "scenario.json", "application/json")
+    csv_bytes = pd.DataFrame([result_summary_row(result)]).to_csv(index=False).encode("utf-8")
+    dl2.download_button("Download result CSV", csv_bytes, "scenario_result.csv", "text/csv")
 
 
 def show_comparison() -> None:

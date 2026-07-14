@@ -147,7 +147,17 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
     annual_opex_GBP now correctly includes BOTH the real retail-priced
     unit-rate fuel cost AND the real standing charge for one connection.
     """
-    peak_MW = node["peak_heat_kW"] / 1000.0
+    # SIZING FIX: node["peak_heat_kW"] is the peak of the SPACE-HEATING
+    # array only (see demand_synthesis.synthesise_building()), but this
+    # boiler is dispatched against node["total_heat_kW"] = heating + DHW.
+    # Sizing to the heating-only peak left the boiler 7-22% undersized on
+    # the worked buildings, silently producing unmet demand INSIDE the
+    # counterfactual (which under-costs it, since unmet heat burns no
+    # fuel). A real individual boiler is sized to the building's full
+    # coincident peak including hot water — use the true peak of the
+    # actual array being dispatched.
+    true_peak_kW = float(np.asarray(node["total_heat_kW"]).max())
+    peak_MW = true_peak_kW / 1000.0
     retail_gas_price_GBP_per_MWh = OFGEM_GAS_CAP_P_PER_KWH * 10.0   # p/kWh -> £/MWh
     boiler = GasBoiler(
         name=f"{node['name']} individual gas boiler",
@@ -156,7 +166,7 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
         gas_price_GBP_per_MWh=retail_gas_price_GBP_per_MWh,
     )
     result = run_dispatch(node["total_heat_kW"], [boiler], storage=None, duty="heat")
-    capex_GBP = individual_system_capex_GBP(node["peak_heat_kW"], "gas_boiler")
+    capex_GBP = individual_system_capex_GBP(true_peak_kW, "gas_boiler")
     standing_charge_GBP = OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY * 365.0 / 100.0
     fuel_opex_GBP = result.summary()["total_annual_opex_GBP"]
     return {
@@ -225,6 +235,14 @@ def counterfactual_individual_ac_dispatch(node: dict, weather_df) -> dict:
     -------
     dict: {"capex_GBP", "dispatch_result", "annual_opex_GBP"}
     """
+    # Buildings with genuinely zero cooling demand (e.g. a data_centre
+    # archetype whose cooling is modelled elsewhere) would otherwise get
+    # a 0-capacity chiller here — dispatch then divides by capacity_MW=0
+    # (RuntimeWarning) and reports a meaningless load fraction. Skip
+    # them cleanly: no cooling demand -> no individual AC to buy or run.
+    if node["peak_cool_kW"] <= 0:
+        return {"capex_GBP": 0.0, "dispatch_result": None, "annual_opex_GBP": 0.0}
+
     peak_MW = node["peak_cool_kW"] / 1000.0
     ac = AirCooledChiller(
         name=f"{node['name']} individual AC",

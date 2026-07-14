@@ -5,14 +5,16 @@ from profiles.demand_synthesis import BUILDING_TYPES
 
 HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre", "booster_heat_pump", "efw_chp"}
 COOLING_SOURCE_TYPES = {"air_cooled_chiller"}
-NETWORK_MODES = {"none", "generic_length"}
+NETWORK_MODES = {"none", "generic_length", "tree"}
+TREE_ROOT_ID = "EC"   # the implicit energy-centre root every tree hangs off
 CLIMATE_SCENARIOS = {"baseline", "2050_central", "2050_high"}
 COUNTERFACTUALS = {"none", "individual_gas", "individual_gas_and_ac"}
 DEFAULTS = {
     "climate_scenario": "baseline",
     "network": {"mode":"generic_length", "length_m":3000.0, "include_cooling":False,
                 "heat_flow_temp_C":70.0, "heat_return_temp_C":40.0,
-                "cool_flow_temp_C":6.0, "cool_return_temp_C":12.0},
+                "cool_flow_temp_C":6.0, "cool_return_temp_C":12.0,
+                "segments":[]},
     "cooling_sources": [],
     "economics": {"project_lifetime_years":25, "discount_rate":0.105,
                   "om_rate":0.01, "counterfactual":"individual_gas"},
@@ -24,9 +26,13 @@ def apply_defaults(scenario: dict) -> dict:
         if isinstance(value, dict):
             cfg.setdefault(key, {})
             for k, v in value.items():
-                cfg[key].setdefault(k, v)
+                # deepcopy the default: inserting a shared mutable (list/
+                # dict) straight from DEFAULTS would let later scenario
+                # edits silently mutate DEFAULTS itself for every
+                # subsequent scenario in the same session
+                cfg[key].setdefault(k, deepcopy(v))
         else:
-            cfg.setdefault(key, value)
+            cfg.setdefault(key, deepcopy(value))
     return cfg
 
 def _validate_sources(items, allowed, path, errors, required=False):
@@ -47,6 +53,63 @@ def _validate_sources(items, allowed, path, errors, required=False):
             errors.append(f"{p}.preset: required text")
         if "capacity_MW" in source and (not isinstance(source["capacity_MW"], (int, float)) or source["capacity_MW"] <= 0):
             errors.append(f"{p}.capacity_MW: must be positive")
+
+def _validate_tree_segments(segments, buildings, errors) -> None:
+    """
+    Validate a tree-mode segment list BEFORE the runner tries to build a
+    NetworkTopology from it, so problems surface as readable messages in
+    the UI rather than tracebacks. Conventions:
+      - the energy centre is the implicit root, id TREE_ROOT_ID ("EC")
+      - every segment: {node_id, parent_id, length_m, building (optional)}
+      - every building in demand.buildings must be served by exactly one
+        segment (all demand is dispatched through the network, so a
+        building with no route to the energy centre is inconsistent)
+    """
+    if not isinstance(segments, list) or not segments:
+        errors.append("network.segments: add at least one pipe segment for the tree layout")
+        return
+    building_names = {b.get("name") for b in buildings if isinstance(b, dict)}
+    seen_ids, seen_buildings = set(), {}
+    for i, seg in enumerate(segments):
+        p = f"network.segments[{i}]"
+        if not isinstance(seg, dict):
+            errors.append(f"{p}: must be an object")
+            continue
+        nid = seg.get("node_id")
+        if not isinstance(nid, str) or not nid.strip():
+            errors.append(f"{p}.node_id: required text (a unique segment ID, e.g. 'J1' or 'B2')")
+        elif nid == TREE_ROOT_ID:
+            errors.append(f"{p}.node_id: '{TREE_ROOT_ID}' is reserved for the energy centre root")
+        elif nid in seen_ids:
+            errors.append(f"{p}.node_id: '{nid}' appears more than once — segment IDs must be unique")
+        else:
+            seen_ids.add(nid)
+        if not isinstance(seg.get("parent_id"), str) or not seg["parent_id"].strip():
+            errors.append(f"{p}.parent_id: required — use '{TREE_ROOT_ID}' to connect directly to the energy centre")
+        if not isinstance(seg.get("length_m"), (int, float)) or seg["length_m"] <= 0:
+            errors.append(f"{p}.length_m: must be a positive length in metres")
+        b = seg.get("building")
+        if b not in (None, ""):
+            if b not in building_names:
+                errors.append(f"{p}.building: '{b}' is not one of the buildings in section 2 "
+                              f"(available: {sorted(n for n in building_names if n)})")
+            elif b in seen_buildings:
+                errors.append(f"{p}.building: '{b}' is already served by segment "
+                              f"'{seen_buildings[b]}' — each building connects once")
+            else:
+                seen_buildings[b] = seg.get("node_id")
+    # parents must resolve to the root or another segment
+    for i, seg in enumerate(segments):
+        if isinstance(seg, dict):
+            pid = seg.get("parent_id")
+            if isinstance(pid, str) and pid.strip() and pid != TREE_ROOT_ID and pid not in seen_ids:
+                errors.append(f"network.segments[{i}].parent_id: '{pid}' doesn't match any "
+                              f"segment ID or '{TREE_ROOT_ID}'")
+    unserved = building_names - set(seen_buildings)
+    if not errors and unserved:
+        errors.append(f"network.segments: these buildings have no connecting segment: "
+                      f"{sorted(n for n in unserved if n)} — every building needs a route to the energy centre")
+
 
 def validate_scenario(scenario: dict) -> list[str]:
     if not isinstance(scenario, dict):
@@ -77,6 +140,22 @@ def validate_scenario(scenario: dict) -> list[str]:
         errors.append(f"network.mode: choose one of {sorted(NETWORK_MODES)}")
     if network.get("mode") == "generic_length" and (not isinstance(network.get("length_m"), (int, float)) or network["length_m"] <= 0):
         errors.append("network.length_m: must be positive for generic_length")
+    if network.get("mode") == "tree":
+        _validate_tree_segments(network.get("segments"), demand.get("buildings", []), errors)
+
+    # Design temperatures must give a usable delta-T for pipe sizing —
+    # without this, an equal (or inverted) flow/return pair reaches
+    # pipe_catalog.size_pipe_for_peak() and surfaces as a raw traceback
+    # in the UI instead of a readable validation message.
+    hf, hr = network.get("heat_flow_temp_C"), network.get("heat_return_temp_C")
+    if isinstance(hf, (int, float)) and isinstance(hr, (int, float)) and hf - hr < 5.0:
+        errors.append("network: heat flow temperature must be at least 5°C above the return "
+                      f"temperature (got flow {hf}°C / return {hr}°C)")
+    if network.get("include_cooling"):
+        cf_, cr = network.get("cool_flow_temp_C"), network.get("cool_return_temp_C")
+        if isinstance(cf_, (int, float)) and isinstance(cr, (int, float)) and cr - cf_ < 2.0:
+            errors.append("network: cooling return temperature must be at least 2°C above the "
+                          f"flow temperature (got flow {cf_}°C / return {cr}°C)")
     _validate_sources(cfg.get("sources"), HEAT_SOURCE_TYPES, "sources", errors, required=True)
     src_list = cfg.get("sources", [])
     dc_positions = {i for i, s in enumerate(src_list) if isinstance(s, dict) and s.get("type") == "data_centre"}
