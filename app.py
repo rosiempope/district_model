@@ -25,6 +25,7 @@ from components.booster_heat_pump import BOOSTER_PRESETS
 from components.peak_demand_option import GAS_BOILER_PRESETS, ELECTRIC_BOILER_PRESETS
 from components.chiller import CHILLER_PRESETS
 from scenarios.scenario_runner import run_scenario
+from optimisation.auto_size import recommend_sizing, DIVERSITY_FACTORS
 from scenarios.scenario_schema import apply_defaults, validate_scenario
 from scenarios.worked_scenarios import WORKED_SCENARIOS
 
@@ -140,7 +141,15 @@ def _source_editor(prefix: str, source: dict[str, Any], allowed: dict[str, dict]
                                                        value=number(source.get("flow_temp_C"), 70.0), step=1.0,
                                                        key=f"{prefix}_flow")
         if source_type == "data_centre":
-            edited["dispatch_direct"] = st.checkbox("Dispatch direct heat as well as using a booster", value=bool(source.get("dispatch_direct", False)), key=f"{prefix}_direct")
+            edited["dispatch_direct"] = st.checkbox(
+                "Dispatch raw waste heat directly (no booster)",
+                value=bool(source.get("dispatch_direct", False)), key=f"{prefix}_direct",
+                help="Only valid if the network flow temperature (section 3) is 35°C or below — "
+                     "data-centre waste heat is recovered at ~28-35°C and normally needs a booster "
+                     "heat pump to reach a typical 70°C network flow temperature. Leave this off and "
+                     "add a booster source below with 'Data-centre source position' pointing at this "
+                     "source for a standard network.",
+            )
         if source_type == "booster_heat_pump":
             edited["depends_on"] = int(st.number_input(
                 "Data-centre source position (counting ALL heating sources above, starting at 0 — must point at a 'Data-centre waste heat' source)",
@@ -168,8 +177,23 @@ def edit_scenario() -> dict[str, Any]:
                                               value=number(econ["discount_rate"], 0.105), step=0.005,
                                               format="%.3f")
     c5, c6 = st.columns(2)
-    econ["om_rate"] = c5.number_input("Annual O&M rate of total CAPEX", min_value=0.0, max_value=0.2,
-                                        value=number(econ["om_rate"], 0.01), step=0.001, format="%.3f")
+    econ["om_rate"] = c5.number_input("O&M rate (legacy flat)", min_value=0.0, max_value=0.2,
+                                        value=number(econ["om_rate"], 0.01), step=0.001, format="%.3f",
+                                        help="Flat rate used for counterfactual only; the scheme itself uses per-technology rates automatically")
+    c7, c8, c9 = st.columns(3)
+    grant_cfg = econ.setdefault("ghnf_grant", {"enabled": False, "rate": 0.40})
+    grant_cfg["enabled"] = c7.toggle("GHNF grant", value=bool(grant_cfg.get("enabled", False)),
+                                      help="Green Heat Network Fund — reduces effective CAPEX by up to 50%")
+    if grant_cfg["enabled"]:
+        grant_cfg["rate"] = c8.number_input("Grant rate", min_value=0.0, max_value=0.50,
+                                             value=number(grant_cfg.get("rate"), 0.40), step=0.05, format="%.2f",
+                                             help="GHNF awards typically 30-50% of eligible CAPEX")
+    c9_esc1, c9_esc2 = st.columns(2)
+    econ["electricity_escalation_pct"] = c9_esc1.number_input("Electricity escalation (%/yr)", min_value=0.0, max_value=5.0,
+                                                              value=number(econ.get("electricity_escalation_pct"), 1.5), step=0.5,
+                                                              help="Real-terms annual price escalation for energy costs in the NPV cash-flow series")
+    econ["gas_escalation_pct"] = c9_esc2.number_input("Gas escalation (%/yr)", min_value=0.0, max_value=5.0,
+                                                       value=number(econ.get("gas_escalation_pct"), 1.0), step=0.5)
 
     st.subheader("2. Buildings and demand")
     st.caption("Enter a positive floor area for commercial buildings. For residential archetypes, you may use either floor area or unit count.")
@@ -259,7 +283,54 @@ def edit_scenario() -> dict[str, Any]:
                                                 format_func=lambda x: "Individual gas boilers" if x == "individual_gas" else "No counterfactual")
 
     st.subheader("4. Heating technologies")
-    st.caption("Order matters: sources are dispatched in the order shown. Put low-cost/low-carbon base-load sources before peak boilers.")
+    auto_col1, auto_col2 = st.columns([3, 1])
+    auto_col1.caption("Order matters: sources are dispatched in the order shown. Put low-cost/low-carbon base-load sources before peak boilers.")
+    if auto_col2.button("Auto-size from demand", type="secondary", help="Let the model recommend technology capacities based on the demand profile above"):
+        import copy as _cp
+        _auto_sc = _cp.deepcopy(scenario)
+        try:
+            from profiles.demand_synthesis import synthesise_network as _synth
+            from profiles.climate_scenarios import apply_climate_scenario as _apply_clim
+            from scenarios.scenario_runner import load_weather as _load_w
+            _w = _apply_clim(_load_w(), _auto_sc["climate_scenario"])
+            _d = _synth(_w, {"demand_nodes": _auto_sc["demand"]["buildings"]})
+            _tech_types = list({s.get("type","ashp") for s in _auto_sc.get("sources", [])}) or ["ashp", "gas_boiler"]
+            _inc_cool = bool(net.get("include_cooling"))
+            _bld_types = [b.get("type") for b in _auto_sc["demand"]["buildings"]]
+            rec = recommend_sizing(
+                demand_kW=_d["total_heat_kW"], peak_demand_kW=_d["peak_heat_kW"],
+                technology_types=_tech_types, weather_df=_w,
+                network_flow_temp_C=net["heat_flow_temp_C"],
+                include_cooling=_inc_cool,
+                cooling_demand_kW=_d["total_cooling_kW"] if _inc_cool else None,
+                peak_cooling_kW=_d["peak_cool_kW"] if _inc_cool else 0.0,
+                n_buildings=len(_auto_sc["demand"]["buildings"]),
+                building_types=_bld_types,
+            )
+            # Apply recommended sources to the scenario
+            new_heat_sources = []
+            for rs in rec["sources"]:
+                preset = "ealing_phase1"  # sensible default
+                s_cfg = {"type": rs["type"], "preset": preset, "name": rs["type"].replace("_"," ").title(),
+                         "capacity_MW": rs["capacity_MW"]}
+                if "n_units" in rs: s_cfg["n_units"] = rs["n_units"]
+                if "flow_temp_C" in rs: s_cfg["flow_temp_C"] = rs["flow_temp_C"]
+                if "depends_on" in rs: s_cfg["depends_on"] = rs["depends_on"]
+                if "dispatch_direct" in rs: s_cfg["dispatch_direct"] = rs["dispatch_direct"]
+                s_cfg["rationale"] = rs.get("rationale", "")
+                new_heat_sources.append(s_cfg)
+            st.session_state.scenario["sources"] = new_heat_sources
+            if _inc_cool and rec.get("cooling_sources"):
+                new_cool = []
+                for cs in rec["cooling_sources"]:
+                    new_cool.append({"type": cs["type"], "preset": "generic_2MW_bank",
+                                     "name": "Central chiller bank", "capacity_MW": cs["capacity_MW"],
+                                     "n_units": cs.get("n_units", 1)})
+                st.session_state.scenario["cooling_sources"] = new_cool
+            st.info("\n\n".join(rec["sizing_notes"]))
+            st.rerun()
+        except Exception as exc:
+            st.exception(exc)
     heat_sources = scenario.get("sources", [])
     retained_heat = []
     for i, source in enumerate(heat_sources):
@@ -413,6 +484,41 @@ def show_result(result: dict[str, Any]) -> None:
         monthly.index = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
         st.bar_chart(monthly)
 
+    # -- Grant info --
+    if result.get("grant"):
+        g = result["grant"]
+        with st.expander(f"GHNF grant: \u00a3{g['grant_GBP']/1e6:.2f}m ({g['grant_rate']*100:.0f}%)", expanded=False):
+            st.metric("Eligible CAPEX", f"\u00a3{g['eligible_capex_GBP']/1e6:.2f}m")
+            st.metric("Grant amount", f"\u00a3{g['grant_GBP']/1e6:.2f}m")
+            st.metric("Net CAPEX after grant", f"\u00a3{g['net_capex_GBP']/1e6:.2f}m")
+
+    # -- Feasibility verdict --
+    st.subheader("Feasibility verdict")
+    inv = f.get("investor", {}) if f else {}
+    inv_irr = inv.get("irr")
+    inv_pb = inv.get("discounted_payback_years")
+    life_yrs = result["input"]["economics"]["project_lifetime_years"]
+    unmet_pct = h["annual_unmet_demand_MWh"] / max(h["annual_heat_demand_MWh"], 0.1) * 100
+
+    verdict_parts = []
+    if inv_irr is not None and inv_irr > 0.09:
+        verdict_parts.append(("\u2705", f"IRR {inv_irr*100:.1f}% exceeds typical 9% hurdle rate"))
+    elif inv_irr is not None:
+        verdict_parts.append(("\u26a0\ufe0f", f"IRR {inv_irr*100:.1f}% is below 9% hurdle rate"))
+    else:
+        verdict_parts.append(("\u274c", "No positive IRR — scheme does not recover CAPEX from revenue"))
+    if inv_pb is not None and inv_pb <= life_yrs:
+        verdict_parts.append(("\u2705", f"Discounted payback in {inv_pb:.1f} years (within {life_yrs}-year life)"))
+    else:
+        verdict_parts.append(("\u274c", f"No payback within {life_yrs}-year project life"))
+    if unmet_pct < 1:
+        verdict_parts.append(("\u2705", "Plant capacity meets >99% of demand"))
+    else:
+        verdict_parts.append(("\u26a0\ufe0f", f"{unmet_pct:.1f}% of demand unmet — consider adding capacity"))
+
+    for icon, text in verdict_parts:
+        st.markdown(f"{icon} {text}")
+
     nd = result.get("network_detail")
     if nd:
         with st.expander("Network segment detail", expanded=True):
@@ -455,15 +561,6 @@ def main() -> None:
             st.session_state.scenario = _new_scenario() if selected == "New blank scenario" else apply_defaults(templates[selected])
             st.session_state.last_result = None
             st.rerun()
-        uploaded = st.file_uploader("Upload scenario JSON", type=["json"])
-        if uploaded is not None and st.button("Load uploaded JSON", use_container_width=True):
-            try:
-                _clear_editor_widget_state()
-                st.session_state.scenario = apply_defaults(json.load(uploaded))
-                st.session_state.last_result = None
-                st.rerun()
-            except (json.JSONDecodeError, TypeError) as exc:
-                st.error(f"Could not read JSON: {exc}")
         st.divider()
         if st.button("Run all worked scenarios", use_container_width=True):
             with st.spinner("Running worked scenarios..."):

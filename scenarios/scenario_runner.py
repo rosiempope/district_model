@@ -15,6 +15,19 @@ from economics.metrics import (levelised_cost_of_heat_GBP_per_kWh, npv, irr, sim
                                annual_revenue_GBP, discounted_cash_flow_series)
 
 
+def _cumulative_position_escalated(capex_GBP, annual_cashflow_GBP, life_years, rate, annual_escalation=0.0):
+    """Cumulative cash position with annual escalation of the cash flow.
+    Each year's cash flow grows by (1 + annual_escalation) compound."""
+    years = np.arange(1, life_years + 1)
+    escalated = annual_cashflow_GBP * (1 + annual_escalation) ** years
+    if rate > 0:
+        discounted = escalated / (1 + rate) ** years
+    else:
+        discounted = escalated
+    cum = np.concatenate([[0.0], np.cumsum(discounted)])
+    return [round(v - capex_GBP, 0) for v in cum]
+
+
 def _cumulative_position(capex_GBP, annual_cashflow_GBP, life_years, rate):
     """Cumulative cash position by year: [-capex at year 0, then + each
     year's (optionally discounted) cash flow] — the series the payback
@@ -265,16 +278,35 @@ def run_scenario(scenario):
     capex = aggregate_capex(sources=all_sources)
     total_capex = capex["grand_total_GBP"] + network_capex
     n_buildings = len(demand["nodes"])
-    om = annual_om_cost_GBP(total_capex, cfg["economics"]["om_rate"])
+    # Per-technology O&M (replaces the flat CHDU 1% of total CAPEX)
+    from economics.om_rates import total_annual_om_GBP as _tech_om
+    om_detail = _tech_om(all_sources, network_capex)
+    om = om_detail["total_GBP"]
     energy_cost = heat_summary["total_annual_opex_GBP"] + (cooling_summary["total_annual_opex_GBP"] if cooling_summary else 0.0)
     annual_opex = energy_cost + om
+
+    # GHNF grant (optional — reduces effective CAPEX for financial metrics)
+    from economics.grant import apply_ghnf_grant
+    grant_cfg = cfg["economics"].get("ghnf_grant", {})
+    grant_result = None
+    effective_capex = total_capex
+    if grant_cfg.get("enabled", False):
+        grant_result = apply_ghnf_grant(
+            total_capex_GBP=total_capex,
+            network_capex_GBP=network_capex,
+            source_capex_GBP=capex["by_category"]["sources_GBP"],
+            grant_rate=grant_cfg.get("rate", 0.40),
+        )
+        effective_capex = grant_result["net_capex_GBP"]
 
     counterfactual = None
     financial = {}
     life, rate = cfg["economics"]["project_lifetime_years"], cfg["economics"]["discount_rate"]
+    elec_esc = cfg["economics"].get("electricity_escalation_pct", 1.5) / 100.0
+    gas_esc = cfg["economics"].get("gas_escalation_pct", 1.0) / 100.0
     if cfg["economics"]["counterfactual"] != "none":
         counterfactual = _combined_counterfactual(demand["nodes"], weather, include_cooling, cfg["economics"]["om_rate"])
-        incremental_capex = total_capex - counterfactual["total_capex_GBP"]
+        incremental_capex = effective_capex - counterfactual["total_capex_GBP"]
         annual_saving = counterfactual["total_annual_opex_GBP"] - annual_opex
         financial = {"counterfactual": cfg["economics"]["counterfactual"],
                      "counterfactual_capex_GBP": counterfactual["total_capex_GBP"],
@@ -292,8 +324,8 @@ def run_scenario(scenario):
                      # the chart can show simple vs discounted payback on
                      # the same axes.
                      "cashflow_years": list(range(0, life + 1)),
-                     "cumulative_discounted_GBP": _cumulative_position(incremental_capex, annual_saving, life, rate),
-                     "cumulative_undiscounted_GBP": _cumulative_position(incremental_capex, annual_saving, life, 0.0)}
+                     "cumulative_discounted_GBP": _cumulative_position_escalated(incremental_capex, annual_saving, life, rate, elec_esc),
+                     "cumulative_undiscounted_GBP": _cumulative_position_escalated(incremental_capex, annual_saving, life, 0.0, elec_esc)}
 
     # INVESTOR view — a genuinely different question from the avoided-cost
     # comparison above. The avoided-cost NPV asks "is the district scheme
@@ -313,13 +345,13 @@ def run_scenario(scenario):
         "revenue_basis": "Gas-parity tariff (Ofgem cap unit rate on all delivered kWh incl. cooling, "
                          "plus one standing charge per connected building)",
         "annual_net_cashflow_GBP": round(investor_cashflow, 0),
-        "npv_GBP": round(npv(total_capex, investor_cashflow, life, rate), 0),
-        "irr": irr(total_capex, investor_cashflow, life),
-        "simple_payback_years": simple_payback_years(total_capex, investor_cashflow),
-        "discounted_payback_years": discounted_payback_years(total_capex, investor_cashflow, life, rate),
+        "npv_GBP": round(npv(effective_capex, investor_cashflow, life, rate), 0),
+        "irr": irr(effective_capex, investor_cashflow, life),
+        "simple_payback_years": simple_payback_years(effective_capex, investor_cashflow),
+        "discounted_payback_years": discounted_payback_years(effective_capex, investor_cashflow, life, rate),
         "cashflow_years": list(range(0, life + 1)),
-        "cumulative_discounted_GBP": _cumulative_position(total_capex, investor_cashflow, life, rate),
-        "cumulative_undiscounted_GBP": _cumulative_position(total_capex, investor_cashflow, life, 0.0),
+        "cumulative_discounted_GBP": _cumulative_position_escalated(effective_capex, investor_cashflow, life, rate, elec_esc),
+        "cumulative_undiscounted_GBP": _cumulative_position_escalated(effective_capex, investor_cashflow, life, 0.0, elec_esc),
     }
 
     heat_delivered = demand["annual_heat_MWh"] + demand["annual_dhw_MWh"]
@@ -338,7 +370,7 @@ def run_scenario(scenario):
         "annual_unmet_demand_MWh": heat_summary["annual_unmet_demand_MWh"], "peak_unmet_MW": heat_summary["peak_unmet_MW"],
         "annual_unmet_cooling_MWh": cooling_summary["annual_unmet_demand_MWh"] if cooling_summary else 0.0,
         "peak_unmet_cooling_MW": cooling_summary["peak_unmet_MW"] if cooling_summary else 0.0,
-        "capex_total_GBP": round(total_capex, 0), "capex_sources_GBP": capex["by_category"]["sources_GBP"], "capex_network_GBP": round(network_capex, 0),
+        "capex_total_GBP": round(total_capex, 0), "effective_capex_GBP": round(effective_capex, 0), "capex_sources_GBP": capex["by_category"]["sources_GBP"], "capex_network_GBP": round(network_capex, 0),
         "annual_energy_cost_GBP": round(energy_cost, 0), "annual_om_cost_GBP": round(om, 0), "annual_total_opex_GBP": round(annual_opex, 0),
         # LCOH denominator FIX: previously divided by heat GENERATED
         # (building demand + network losses) rather than heat DELIVERED to
@@ -359,6 +391,7 @@ def run_scenario(scenario):
         headline["network_total_length_m"] = 0.0
 
     return {"scenario_name": cfg["name"], "input": cfg, "headline": headline, "financial": financial,
+            "grant": grant_result, "om_detail": om_detail,
             "network_detail": network_detail,
             "counterfactual": counterfactual, "demand": demand, "weather": weather, "network": network,
             "heat_sources": heat_sources, "cooling_sources": cooling_sources,

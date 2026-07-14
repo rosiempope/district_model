@@ -160,6 +160,7 @@ def validate_scenario(scenario: dict) -> list[str]:
     src_list = cfg.get("sources", [])
     dc_positions = {i for i, s in enumerate(src_list) if isinstance(s, dict) and s.get("type") == "data_centre"}
     has_dc = bool(dc_positions)
+    boosted_dc_positions = set()
     for i, s in enumerate(src_list):
         if isinstance(s, dict) and s.get("type") == "booster_heat_pump":
             if not has_dc:
@@ -171,6 +172,42 @@ def validate_scenario(scenario: dict) -> list[str]:
                     f"sources[{i}].depends_on: must be the position (0-based, counting "
                     f"ALL sources in this list) of a data_centre source; valid positions "
                     f"here are {sorted(dc_positions)}, got {depends_on!r}"
+                )
+            else:
+                boosted_dc_positions.add(depends_on)
+
+    # PHYSICS CHECK: data-centre waste heat is recovered at ~28-35°C —
+    # well below a typical 70°C LTHW network flow temperature. Dispatching
+    # it straight into network duty ("dispatch_direct") without a booster
+    # heat pump to lift it is only physically valid if the network itself
+    # runs cool enough to accept it directly (a genuine low-temperature/
+    # ambient-loop-style scheme, not the fixed-direction 2-pipe/4-pipe
+    # networks this model builds). 35°C is a generous upper bound for
+    # that case. Otherwise every data_centre source must have a booster.
+    DIRECT_DISPATCH_MAX_FLOW_TEMP_C = 35.0
+    network_flow_temp_C = network.get("heat_flow_temp_C")
+    for i in sorted(dc_positions):
+        s = src_list[i]
+        dispatches_direct = bool(s.get("dispatch_direct", False))
+        network_cool_enough = (
+            isinstance(network_flow_temp_C, (int, float))
+            and network_flow_temp_C <= DIRECT_DISPATCH_MAX_FLOW_TEMP_C
+        )
+        if i not in boosted_dc_positions and not (dispatches_direct and network_cool_enough):
+            if i not in boosted_dc_positions and dispatches_direct and not network_cool_enough:
+                errors.append(
+                    f"sources[{i}] (data_centre): 'dispatch direct' is only physically valid when "
+                    f"the network flow temperature is \u2264{DIRECT_DISPATCH_MAX_FLOW_TEMP_C:.0f}\u00b0C "
+                    f"(this network runs at {network_flow_temp_C}\u00b0C) \u2014 data-centre waste heat "
+                    f"needs a booster heat pump to reach that flow temperature. Add a booster source "
+                    f"with depends_on={i}, or lower the network flow temperature if this is genuinely "
+                    f"a low-temperature scheme."
+                )
+            elif i not in boosted_dc_positions:
+                errors.append(
+                    f"sources[{i}] (data_centre): needs a booster heat pump to lift its ~30\u00b0C waste "
+                    f"heat up to the network's {network_flow_temp_C}\u00b0C flow temperature \u2014 add a "
+                    f"booster source with depends_on={i}."
                 )
     cooling = bool(network.get("include_cooling"))
     _validate_sources(cfg.get("cooling_sources"), COOLING_SOURCE_TYPES, "cooling_sources", errors, required=cooling)
