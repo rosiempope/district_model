@@ -5,7 +5,28 @@
       "Skill(dataviz:*)",
       "Bash(python3 -c ' *)",
       "Bash(grep -A 15 \"Traceback\" /tmp/climate_test.log | tail -20)",
-      "Bash(grep -n \"Question 2\\\\|Question 3\\\\|</div>$\" /tmp/claude-1000/-home-rosiempope-district-model-finall/38453aac-c866-46a1-9056-d2d61209377c/scratchpad/exeter_simple.html)"
+      "Bash(grep -n \"Question 2\\\\|Question 3\\\\|</div>$\" /tmp/claude-1000/-home-rosiempope-district-model-finall/38453aac-c866-46a1-9056-d2d61209377c/scratchpad/exeter_simple.html)",
+      "Bash(git -C /home/rosiempope/district_model_finall log --oneline -20)",
+      "WebSearch",
+      "WebFetch(domain:assets.publishing.service.gov.uk)",
+      "WebFetch(domain:www.seai.ie)",
+      "WebFetch(domain:communityheat.org.uk)",
+      "WebFetch(domain:www.logstor.com)",
+      "WebFetch(domain:www.cowleygroup.co.uk)",
+      "WebFetch(domain:www.stheatingservices.co.uk)",
+      "WebFetch(domain:www.london.gov.uk)",
+      "Bash(python3 -c \"import pypdf\")",
+      "Bash(python3 -c \"import PyPDF2\")",
+      "Bash(python3 -c \"import fitz\")",
+      "Bash(pip list *)",
+      "Bash(apt list *)",
+      "WebFetch(domain:www.ofgem.gov.uk)",
+      "Bash(pip install *)",
+      "Bash(python3 -c \"import pypdf; print\\('ok'\\)\")",
+      "WebFetch(domain:www.moduledge.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "Bash(python3 -m pip --version)",
+      "Bash(sudo apt-get install -y poppler-utils)"
     ]
   }
 }
