@@ -1,0 +1,5 @@
+Technology,"NPV, 2-pipe heating only (£m)","NPV, 4-pipe heating+cooling (£m)",Cooling makes NPV...,Delta (£m)
+Gas-only reference,-23.09,-41.76,worse,-18.67
+ASHP + gas peak,-35.34,-54.13,worse,-18.79
+Data-centre waste heat + booster + gas peak,-34.15,-52.96,worse,-18.81
+EfW heat export + ASHP + gas peak,-23.38,-41.02,worse,-17.63

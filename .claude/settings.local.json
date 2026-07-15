@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -A 15 \"Traceback\" /tmp/climate_test.log | tail -20)",
+      "Bash(grep -n \"Question 2\\\\|Question 3\\\\|</div>$\" /tmp/claude-1000/-home-rosiempope-district-model-finall/38453aac-c866-46a1-9056-d2d61209377c/scratchpad/exeter_simple.html)"
+    ]
+  }
+}

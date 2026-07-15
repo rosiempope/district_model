@@ -1,0 +1,40 @@
+Technology,Route (m),Linear heat density (MWh/m/yr),Required break-even tariff (p/kWh),Equivalent gas-parity tariff (p/kWh)
+ASHP + gas peak,250,44.51,31.576,7.954
+ASHP + gas peak,400,27.819,31.89,7.954
+ASHP + gas peak,600,18.546,32.308,7.954
+ASHP + gas peak,900,12.364,32.935,7.954
+ASHP + gas peak,1300,8.56,33.772,7.954
+ASHP + gas peak,1800,6.182,34.818,7.954
+ASHP + gas peak,2500,4.451,36.284,7.954
+ASHP + gas peak,3500,3.179,38.38,7.954
+ASHP + gas peak,5000,2.225,47.759,7.954
+ASHP + gas peak,7000,1.59,53.358,7.954
+ASHP + gas peak,10000,1.113,61.772,7.954
+ASHP + gas peak,14000,0.795,73.022,7.954
+ASHP + gas peak,19000,0.586,87.135,7.954
+Data-centre waste heat + booster + gas peak,250,44.51,33.083,7.954
+Data-centre waste heat + booster + gas peak,400,27.819,33.507,7.954
+Data-centre waste heat + booster + gas peak,600,18.546,34.071,7.954
+Data-centre waste heat + booster + gas peak,900,12.364,34.918,7.954
+Data-centre waste heat + booster + gas peak,1300,8.56,36.047,7.954
+Data-centre waste heat + booster + gas peak,1800,6.182,37.459,7.954
+Data-centre waste heat + booster + gas peak,2500,4.451,39.437,7.954
+Data-centre waste heat + booster + gas peak,3500,3.179,42.264,7.954
+Data-centre waste heat + booster + gas peak,5000,2.225,46.508,7.954
+Data-centre waste heat + booster + gas peak,7000,1.59,52.173,7.954
+Data-centre waste heat + booster + gas peak,10000,1.113,60.686,7.954
+Data-centre waste heat + booster + gas peak,14000,0.795,72.062,7.954
+Data-centre waste heat + booster + gas peak,19000,0.586,86.32,7.954
+EfW heat export + ASHP + gas peak,250,44.51,23.431,7.954
+EfW heat export + ASHP + gas peak,400,27.819,23.711,7.954
+EfW heat export + ASHP + gas peak,600,18.546,24.086,7.954
+EfW heat export + ASHP + gas peak,900,12.364,24.648,7.954
+EfW heat export + ASHP + gas peak,1300,8.56,25.397,7.954
+EfW heat export + ASHP + gas peak,1800,6.182,26.334,7.954
+EfW heat export + ASHP + gas peak,2500,4.451,27.648,7.954
+EfW heat export + ASHP + gas peak,3500,3.179,29.526,7.954
+EfW heat export + ASHP + gas peak,5000,2.225,32.348,7.954
+EfW heat export + ASHP + gas peak,7000,1.59,36.51,7.954
+EfW heat export + ASHP + gas peak,10000,1.113,44.274,7.954
+EfW heat export + ASHP + gas peak,14000,0.795,54.658,7.954
+EfW heat export + ASHP + gas peak,19000,0.586,75.337,7.954

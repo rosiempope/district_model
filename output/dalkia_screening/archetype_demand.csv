@@ -1,0 +1,4 @@
+Archetype,Buildings,Connections,Annual heat+DHW demand (MWh),Annual cooling demand (MWh),Peak heat demand (MW),Load factor (%),Illustrative route length (m),Linear heat density (MWh/m/yr),Demand per connection (MWh/yr),Route note
+Dense (town centre),5,723,13180.0,1327.0,7.93,19.0,900,14.64,18.2,Tight urban grid; short closely-packed connections.
+Middle (suburban mixed),4,483,8495.0,594.0,5.74,16.9,2800,3.03,17.6,Estate-scale spacing; moderate branch lengths.
+Scarce (low-density edge),3,321,4222.0,149.0,2.17,22.2,6500,0.65,13.2,Spread housing clusters; long branch runs to reach few connections.

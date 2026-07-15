@@ -1,0 +1,169 @@
+Technology mix,Support case,Demand scale,Route (km),Annual heat (GWh),Annual cooling (GWh),Linear heat density (MWh/m/yr),Investor NPV (£m),Investor IRR (%),Equivalent heat tariff (p/kWh),Break-even heat tariff (p/kWh),Carbon (gCO2e/kWh),Unmet heat (MWh),Unmet cooling (MWh),Decision,Failed gates
+Gas boiler reference,True,0.5,1.0,7.0575,0.0,7.058,-6.86800972,,8.171,18.581,201.6,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,0.5,1.5,7.0575,0.0,4.705,-8.05722563,,8.171,20.383,206.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,0.5,2.0,7.0575,0.0,3.529,-9.24674923,,8.171,22.186,210.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,0.5,2.5,7.0575,0.0,2.823,-10.436572210000001,,8.171,23.99,215.29999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,0.5,3.0,7.0575,0.0,2.353,-11.62671401,,8.171,25.793,219.79999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.0,1.0,14.115,0.0,14.115,-4.731742349999999,,8.168,11.754,197.0,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.0,1.5,14.115,0.0,9.41,-6.03686542,,8.168,12.743,199.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.0,2.0,14.115,0.0,7.058,-7.34233257,,8.168,13.732,201.5,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.0,2.5,14.115,0.0,5.646,-8.648134050000001,,8.168,14.722,203.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.0,3.0,14.115,0.0,4.705,-9.95428858,,8.168,15.712,206.0,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.5,1.0,21.1725,0.0,21.172,-2.4369426499999998,4.295144,8.167,9.398,195.89999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.5,1.5,21.1725,0.0,14.115,-3.77925368,1.782973,8.167,10.076,197.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.5,2.0,21.1725,0.0,10.586,-5.1223183,-0.527609,8.167,10.755,199.4,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.5,2.5,21.1725,0.0,8.469,-6.46612767,-3.212082,8.167,11.434,201.1,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,1.5,3.0,21.1725,0.0,7.058,-7.81070013,,8.167,12.113,202.8,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,2.0,1.0,28.23,0.0,28.23,-0.28065742,9.923549,8.166,8.273,195.39999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,2.0,1.5,28.23,0.0,18.82,-1.7285905,7.319117,8.166,8.821,196.8,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,2.0,2.0,28.23,0.0,14.115,-3.17712246,5.20177,8.166,9.37,198.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,2.0,2.5,28.23,0.0,11.292,-4.62627259,3.4226739999999998,8.166,9.919,199.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Gas boiler reference,True,2.0,3.0,28.23,0.0,9.41,-6.07602242,1.8678130000000002,8.166,10.469,201.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,0.5,1.0,7.0575,0.0,7.058,-17.06567119,,8.171,34.037,218.9,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,0.5,1.5,7.0575,0.0,4.705,-18.455555699999998,,8.171,36.144,223.8,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,0.5,2.0,7.0575,0.0,3.529,-19.84573517,,8.171,38.251,228.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,0.5,2.5,7.0575,0.0,2.823,-21.23620023,,8.171,40.359,233.6,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,0.5,3.0,7.0575,0.0,2.353,-22.626969589999998,,8.171,42.467,238.6,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.0,1.0,14.115,0.0,14.115,-23.9557835,,8.168,26.323,213.9,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.0,1.5,14.115,0.0,9.41,-25.4516372,,8.168,27.456,216.29999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.0,2.0,14.115,0.0,7.058,-26.94782893,,8.168,28.59,218.79999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.0,2.5,14.115,0.0,5.646,-28.44434936,,8.168,29.724,221.20000000000002,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.0,3.0,14.115,0.0,4.705,-29.94121717,,8.168,30.859,223.6,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.5,1.0,21.1725,0.0,21.172,-30.707264379999998,,8.167,23.681,212.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.5,1.5,21.1725,0.0,14.115,-32.24031073,,8.167,24.456,214.60000000000002,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.5,2.0,21.1725,0.0,10.586,-33.774107,,8.167,25.231,216.4,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.5,2.5,21.1725,0.0,8.469,-35.30864386,,8.167,26.006,218.20000000000002,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,1.5,3.0,21.1725,0.0,7.058,-36.84394,,8.167,26.782,220.1,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,2.0,1.0,28.23,0.0,28.23,-37.65896486,,8.166,22.436,212.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,2.0,1.5,28.23,0.0,18.82,-39.32848276,,8.166,23.069,213.7,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,2.0,2.0,28.23,0.0,14.115,-40.9985961,,8.166,23.702,215.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,2.0,2.5,28.23,0.0,11.292,-42.66932357,,8.166,24.335,216.79999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,True,2.0,3.0,28.23,0.0,9.41,-44.34064648,,8.166,24.968,218.29999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP only,True,0.5,1.0,7.0575,0.0,7.058,-11.84783522,,8.171,26.129,93.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,0.5,1.5,7.0575,0.0,4.705,-12.690094199999999,,8.171,27.405,95.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,0.5,2.0,7.0575,0.0,3.529,-13.53264812,,8.171,28.682,97.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,0.5,2.5,7.0575,0.0,2.823,-14.375486650000001,,8.171,29.96,99.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,0.5,3.0,7.0575,0.0,2.353,-19.42397246,,8.171,37.612,101.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP only,True,1.0,1.0,14.115,0.0,14.115,-14.5558652,,8.168,19.199,91.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.0,1.5,14.115,0.0,9.41,-15.474338470000001,,8.168,19.895,92.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.0,2.0,14.115,0.0,7.058,-16.39314977,,8.168,20.591,93.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.0,2.5,14.115,0.0,5.646,-17.312290760000003,,8.168,21.288,94.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.0,3.0,14.115,0.0,4.705,-18.23177813,,8.168,21.985,95.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.5,1.0,21.1725,0.0,21.172,-17.184762199999998,,8.167,16.849,90.89999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.5,1.5,21.1725,0.0,14.115,-18.14042811,,8.167,17.332,91.80000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.5,2.0,21.1725,0.0,10.586,-19.09684395,,8.167,17.815,92.7,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.5,2.5,21.1725,0.0,8.469,-20.05400137,,8.167,18.299,93.60000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,1.5,3.0,21.1725,0.0,7.058,-21.01191708,,8.167,18.783,94.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,2.0,1.0,28.23,0.0,28.23,-19.89499524,,8.166,15.705,90.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,2.0,1.5,28.23,0.0,18.82,-20.927691929999998,,8.166,16.096,91.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,2.0,2.0,28.23,0.0,14.115,-21.96098306,,8.166,16.488,92.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,2.0,2.5,28.23,0.0,11.292,-22.99488932,,8.166,16.88,92.7,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP only,True,2.0,3.0,28.23,0.0,9.41,-24.02939102,,8.166,17.272,93.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,0.5,1.0,7.0575,0.0,7.058,-9.609115599999999,,8.171,22.735,98.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,0.5,1.5,7.0575,0.0,4.705,-12.66789727,,8.171,27.372,101.1,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,0.5,2.0,7.0575,0.0,3.529,-13.88534065,,8.171,29.217,103.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,0.5,2.5,7.0575,0.0,2.823,-15.10284609,,8.171,31.062,105.6,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,0.5,3.0,7.0575,0.0,2.353,-16.320453529999998,,8.171,32.908,107.89999999999999,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,1.0,1.0,14.115,0.0,14.115,-9.84059935,,8.168,15.625,96.69999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.0,1.5,14.115,0.0,9.41,-10.75363026,,8.168,16.317,97.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.0,2.0,14.115,0.0,7.058,-11.66688974,,8.168,17.01,98.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.0,2.5,14.115,0.0,5.646,-16.83440306,,8.168,20.926,100.1,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,1.0,3.0,14.115,0.0,4.705,-18.167286920000002,,8.168,21.936,101.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,1.5,1.0,21.1725,0.0,21.172,-9.99225411,,8.167,13.215,96.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.5,1.5,21.1725,0.0,14.115,-10.94253434,,8.167,13.695,97.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.5,2.0,21.1725,0.0,10.586,-11.89352879,,8.167,14.176,98.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.5,2.5,21.1725,0.0,8.469,-12.84518342,,8.167,14.657,99.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,1.5,3.0,21.1725,0.0,7.058,-19.549805550000002,,8.167,18.044,100.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + gas backup,True,2.0,1.0,28.23,0.0,28.23,-10.223488699999999,,8.166,12.04,96.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,2.0,1.5,28.23,0.0,18.82,-11.24993899,,8.166,12.429,96.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,2.0,2.0,28.23,0.0,14.115,-12.27695267,,8.166,12.818,97.60000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,2.0,2.5,28.23,0.0,11.292,-13.30452821,,8.166,13.208,98.4,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,True,2.0,3.0,28.23,0.0,9.41,-14.33261343,,8.166,13.597,99.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,0.5,1.0,7.0575,0.0,7.058,-10.06008091,,8.171,23.419,99.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,0.5,1.5,7.0575,0.0,4.705,-13.23023711,,8.171,28.224,102.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,0.5,2.0,7.0575,0.0,3.529,-14.47046592,,8.171,30.104,104.5,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,0.5,2.5,7.0575,0.0,2.823,-15.71164584,,8.171,31.985,106.80000000000001,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,0.5,3.0,7.0575,0.0,2.353,-16.95376585,,8.171,33.868,109.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,1.0,1.0,14.115,0.0,14.115,-10.94873241,,8.168,16.465,97.69999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,1.0,1.5,14.115,0.0,9.41,-11.88134376,,8.168,17.172,98.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,1.0,2.0,14.115,0.0,7.058,-16.82850606,,8.168,20.921,100.0,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,1.0,2.5,14.115,0.0,5.646,-18.1815767,,8.168,21.947,101.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,1.0,3.0,14.115,0.0,4.705,-19.535364350000002,,8.168,22.973,102.4,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,1.5,1.0,21.1725,0.0,21.172,-11.760097230000001,,8.167,14.108,97.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,1.5,1.5,21.1725,0.0,14.115,-12.72972925,,8.167,14.598,98.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,1.5,2.0,21.1725,0.0,10.586,-13.700218289999999,,8.167,15.089,99.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,1.5,2.5,21.1725,0.0,8.469,-20.27335556,,8.167,18.41,100.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,1.5,3.0,21.1725,0.0,7.058,-21.66495036,,8.167,19.113,101.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP + electric backup,True,2.0,1.0,28.23,0.0,28.23,-12.65733689,,8.166,12.962,97.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,2.0,1.5,28.23,0.0,18.82,-13.706218439999999,,8.166,13.36,97.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,2.0,2.0,28.23,0.0,14.115,-14.755797320000001,,8.166,13.758,98.6,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,2.0,2.5,28.23,0.0,11.292,-15.80615819,,8.166,14.156,99.4,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,True,2.0,3.0,28.23,0.0,9.41,-24.249917789999998,,8.166,17.355,100.2,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,0.5,1.0,7.0575,0.0,7.058,-6.51639188,,8.171,18.048,67.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,0.5,1.5,7.0575,0.0,4.705,-7.28844364,,8.171,19.218,69.6,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,0.5,2.0,7.0575,0.0,3.529,-8.061218910000001,,8.171,20.389,71.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,0.5,2.5,7.0575,0.0,2.823,-8.834770480000001,,8.171,21.562,73.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,0.5,3.0,7.0575,0.0,2.353,-9.60905831,,8.171,22.735,74.80000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.0,1.0,14.115,0.0,14.115,-3.79161934,3.292838,8.168,11.041,66.19999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.0,1.5,14.115,0.0,9.41,-4.64265118,2.2308950000000003,8.168,11.686,67.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.0,2.0,14.115,0.0,7.058,-5.4942676,1.26959,8.168,12.332,68.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.0,2.5,14.115,0.0,5.646,-6.34649749,0.382029,8.168,12.977,68.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.0,3.0,14.115,0.0,4.705,-7.19932953,-0.453253,8.168,13.624,69.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.5,1.0,21.1725,0.0,21.172,-0.98101283,9.02252,8.167,8.662,66.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.5,1.5,21.1725,0.0,14.115,-1.8690551299999998,7.843678,8.167,9.111,66.9,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.5,2.0,21.1725,0.0,10.586,-2.75796799,6.7877350000000005,8.167,9.56,67.7,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.5,2.5,21.1725,0.0,8.469,-3.64783773,5.833424,8.167,10.01,68.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,1.5,3.0,21.1725,0.0,7.058,-4.538588150000001,4.963337999999999,8.167,10.46,69.4,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,2.0,1.0,28.23,0.0,28.23,1.77011245,12.722869000000001,8.166,7.495,65.8,0.0,0.0,CONDITIONAL PASS,
+EfW + ASHP + gas backup,True,2.0,1.5,28.23,0.0,18.82,0.8160089,11.471416,8.166,7.857,66.4,0.0,0.0,CONDITIONAL PASS,
+EfW + ASHP + gas backup,True,2.0,2.0,28.23,0.0,14.115,-0.13878201,10.343009,8.166,8.219,67.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,2.0,2.5,28.23,0.0,11.292,-1.09437926,9.320851,8.166,8.581,67.7,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,True,2.0,3.0,28.23,0.0,9.41,-2.05075528,8.390457,8.166,8.943,68.4,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,0.5,1.0,7.0575,0.0,7.058,-9.090322619999998,,8.171,21.949,89.89999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,0.5,1.5,7.0575,0.0,4.705,-9.91746558,,8.171,23.203,92.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,0.5,2.0,7.0575,0.0,3.529,-10.744769439999999,,8.171,24.457,94.39999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,0.5,2.5,7.0575,0.0,2.823,-11.5722302,,8.171,25.711,96.69999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,0.5,3.0,7.0575,0.0,2.353,-12.39985862,,8.171,26.965,99.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.0,1.0,14.115,0.0,14.115,-8.82228267,,8.168,14.854,87.7,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.0,1.5,14.115,0.0,9.41,-9.7265497,,8.168,15.539,88.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.0,2.0,14.115,0.0,7.058,-10.631109210000002,,8.168,16.225,90.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.0,2.5,14.115,0.0,5.646,-11.535933380000001,,8.168,16.91,91.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.0,3.0,14.115,0.0,4.705,-12.441039029999999,,8.168,17.596,92.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.5,1.0,21.1725,0.0,21.172,-8.47356044,,8.167,12.448,87.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.5,1.5,21.1725,0.0,14.115,-9.41505515,,8.167,12.924,88.3,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.5,2.0,21.1725,0.0,10.586,-10.357271019999999,,8.167,13.4,89.30000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.5,2.5,21.1725,0.0,8.469,-11.30019891,,8.167,13.876,90.30000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,1.5,3.0,21.1725,0.0,7.058,-12.24385558,,8.167,14.353,91.30000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,2.0,1.0,28.23,0.0,28.23,-8.201583339999999,,8.166,11.274,87.0,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,2.0,1.5,28.23,0.0,18.82,-9.21782906,,8.166,11.659,87.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,2.0,2.0,28.23,0.0,14.115,-10.234636,,8.166,12.044,88.6,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,2.0,2.5,28.23,0.0,11.292,-11.25203445,,8.166,12.43,89.39999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,True,2.0,3.0,28.23,0.0,9.41,-12.26999539,,8.166,12.816,90.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,0.5,1.0,7.0575,0.9556,7.058,-11.41569233,,8.171,25.474,91.80000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,0.5,1.5,7.0575,0.9556,4.705,-13.060834,,8.171,27.967,93.89999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,0.5,2.0,7.0575,0.9556,3.529,-14.706172480000001,,8.171,30.461,96.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,0.5,2.5,7.0575,0.9556,2.823,-16.35173317,,8.171,32.955,98.19999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,0.5,3.0,7.0575,0.9556,2.353,-23.9994766,,8.171,44.547,100.4,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.0,1.0,14.115,1.9112,14.115,-11.997467619999998,,8.168,17.26,89.89999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.0,1.5,14.115,1.9112,9.41,-13.800158640000001,,8.168,18.626,91.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.0,2.0,14.115,1.9112,7.058,-15.603336050000001,,8.168,19.993,92.39999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.0,2.5,14.115,1.9112,5.646,-17.406990760000003,,8.168,21.36,93.60000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.0,3.0,14.115,1.9112,4.705,-19.211106140000002,,8.168,22.727,94.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.5,1.0,21.1725,2.8668,21.172,-12.56383537,,8.167,14.514,89.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.5,1.5,21.1725,2.8668,14.115,-14.51651407,,8.167,15.501,90.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.5,2.0,21.1725,2.8668,10.586,-16.47011359,,8.167,16.488,91.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.5,2.5,21.1725,2.8668,8.469,-18.42460891,,8.167,17.476,92.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,1.5,3.0,21.1725,2.8668,7.058,-20.38000133,,8.167,18.463,93.5,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,2.0,1.0,28.23,3.8224,28.23,-13.167088130000002,,8.166,13.156,89.1,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,2.0,1.5,28.23,3.8224,18.82,-15.28724761,,8.166,13.959,89.89999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,2.0,2.0,28.23,3.8224,14.115,-17.40811165,,8.166,14.763,90.6,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,2.0,2.5,28.23,3.8224,11.292,-19.529662050000002,,8.166,15.567,91.39999999999999,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,True,2.0,3.0,28.23,3.8224,9.41,-21.65185793,,8.166,16.371,92.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Gas boiler reference,False,1.0,1.5,14.115,0.0,9.41,-14.85019335,,8.168,19.422,199.3,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,False,1.0,1.5,14.115,0.0,9.41,-34.26496512,,8.168,34.136,216.29999999999998,0.0,0.0,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP only,False,1.0,1.5,14.115,0.0,9.41,-29.38189639,,8.168,30.435,92.2,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,False,1.0,1.5,14.115,0.0,9.41,-22.98263219,,8.168,25.585,97.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,False,1.0,1.5,14.115,0.0,9.41,-24.289391690000002,,8.168,26.576,98.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,False,1.0,1.5,14.115,0.0,9.41,-17.51643111,-3.5684069999999997,8.168,21.443,67.10000000000001,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,False,1.0,1.5,14.115,0.0,9.41,-22.32003762,,8.168,25.083,88.8,0.0,0.0,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,False,1.0,1.5,14.115,1.9112,9.41,-27.629922559999997,,8.168,29.107,91.1,0.0,0.0,FAIL,Investor NPV; Investor IRR

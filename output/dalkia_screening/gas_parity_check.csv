@@ -1,0 +1,13 @@
+Archetype,Technology,Tariff mode,Year-1 district heat bill (£),Year-1 gas-counterfactual bill (£),"Bill ratio (district/gas, %)",Equivalent heat tariff (p/kWh)
+Dense (town centre),Gas-only reference,counterfactual_bill_parity,1021574.0,1021574.0,100.0,8.314
+Dense (town centre),ASHP + gas peak,counterfactual_bill_parity,1021574.0,1021574.0,100.0,8.314
+Dense (town centre),Data-centre waste heat + booster + gas peak,counterfactual_bill_parity,1021574.0,1021574.0,100.0,8.314
+Dense (town centre),EfW heat export + ASHP + gas peak,counterfactual_bill_parity,1021574.0,1021574.0,100.0,8.314
+Middle (suburban mixed),Gas-only reference,counterfactual_bill_parity,626122.0,626122.0,100.0,8.326
+Middle (suburban mixed),ASHP + gas peak,counterfactual_bill_parity,626122.0,626122.0,100.0,8.326
+Middle (suburban mixed),Data-centre waste heat + booster + gas peak,counterfactual_bill_parity,626122.0,626122.0,100.0,8.326
+Middle (suburban mixed),EfW heat export + ASHP + gas peak,counterfactual_bill_parity,626122.0,626122.0,100.0,8.326
+Scarce (low-density edge),Gas-only reference,counterfactual_bill_parity,173016.0,173016.0,100.0,8.538
+Scarce (low-density edge),ASHP + gas peak,counterfactual_bill_parity,173016.0,173016.0,100.0,8.538
+Scarce (low-density edge),Data-centre waste heat + booster + gas peak,counterfactual_bill_parity,173016.0,173016.0,100.0,8.538
+Scarce (low-density edge),EfW heat export + ASHP + gas peak,counterfactual_bill_parity,173016.0,173016.0,100.0,8.538

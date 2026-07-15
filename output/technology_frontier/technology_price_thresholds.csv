@@ -1,0 +1,8 @@
+Technology mix,Variable,Highest tested passing value,Passing cases
+ASHP + electric backup,Electricity price (£/MWh),,0
+ASHP + gas backup,Electricity price (£/MWh),80.0,1
+ASHP only,Electricity price (£/MWh),,0
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),80.0,1
+EfW + ASHP + gas backup,EfW heat price (£/MWh),10.0,4
+Electric boiler,Electricity price (£/MWh),,0
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),,0

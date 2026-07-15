@@ -1,0 +1,206 @@
+Scenario,Year,Cumulative discounted cash flow (£m),Cumulative undiscounted cash flow (£m)
+F2 - Compact anchor cluster / private hurdle,0,-13.113921490000001,-13.113921490000001
+F2 - Compact anchor cluster / private hurdle,1,-5.7722595,-5.001385
+F2 - Compact anchor cluster / private hurdle,2,-5.96182443,-5.23284851
+F2 - Compact anchor cluster / private hurdle,3,-6.1333764,-5.4643120199999995
+F2 - Compact anchor cluster / private hurdle,4,-6.28862704,-5.695775530000001
+F2 - Compact anchor cluster / private hurdle,5,-6.42912537,-5.92723904
+F2 - Compact anchor cluster / private hurdle,6,-6.55627317,-6.15870255
+F2 - Compact anchor cluster / private hurdle,7,-6.671339059999999,-6.390166059999999
+F2 - Compact anchor cluster / private hurdle,8,-6.77547109,-6.6216295700000005
+F2 - Compact anchor cluster / private hurdle,9,-6.86970821,-6.85309308
+F2 - Compact anchor cluster / private hurdle,10,-6.95499068,-7.0845566
+F2 - Compact anchor cluster / private hurdle,11,-7.03216938,-7.31602011
+F2 - Compact anchor cluster / private hurdle,12,-7.10201436,-7.54748362
+F2 - Compact anchor cluster / private hurdle,13,-7.1652224900000006,-7.77894713
+F2 - Compact anchor cluster / private hurdle,14,-7.22242442,-8.01041064
+F2 - Compact anchor cluster / private hurdle,15,-7.27419086,-8.241874150000001
+F2 - Compact anchor cluster / private hurdle,16,-7.32103833,-8.47333766
+F2 - Compact anchor cluster / private hurdle,17,-7.363434219999999,-8.70480117
+F2 - Compact anchor cluster / private hurdle,18,-7.40180155,-8.936264679999999
+F2 - Compact anchor cluster / private hurdle,19,-7.43652311,-9.16772819
+F2 - Compact anchor cluster / private hurdle,20,-7.78493225,-11.734191699999998
+F2 - Compact anchor cluster / private hurdle,21,-7.81336865,-11.96565522
+F2 - Compact anchor cluster / private hurdle,22,-7.83910296,-12.19711873
+F2 - Compact anchor cluster / private hurdle,23,-7.86239192,-12.42858224
+F2 - Compact anchor cluster / private hurdle,24,-7.8834679,-12.66004575
+F2 - Compact anchor cluster / private hurdle,25,-7.90254119,-12.89150926
+F2 - Compact anchor cluster / private hurdle,26,-7.91980209,-13.122972769999999
+F2 - Compact anchor cluster / private hurdle,27,-7.9354228099999995,-13.35443628
+F2 - Compact anchor cluster / private hurdle,28,-7.9495592,-13.58589979
+F2 - Compact anchor cluster / private hurdle,29,-7.96235232,-13.8173633
+F2 - Compact anchor cluster / private hurdle,30,-7.99865901,-14.54322681
+F2 - Compact anchor cluster / private hurdle,31,-8.00913637,-14.77469032
+F2 - Compact anchor cluster / private hurdle,32,-8.01861815,-15.00615384
+F2 - Compact anchor cluster / private hurdle,33,-8.02719894,-15.237617349999999
+F2 - Compact anchor cluster / private hurdle,34,-8.03496436,-15.46908086
+F2 - Compact anchor cluster / private hurdle,35,-8.04199189,-15.70054437
+F2 - Compact anchor cluster / private hurdle,36,-8.04835165,-15.93200788
+F2 - Compact anchor cluster / private hurdle,37,-8.05410709,-16.16347139
+F2 - Compact anchor cluster / private hurdle,38,-8.05931563,-16.3949349
+F2 - Compact anchor cluster / private hurdle,39,-8.06402924,-16.62639841
+F2 - Compact anchor cluster / private hurdle,40,-8.11132737,-19.192861920000002
+DC1 - Data-centre-only service stress test,0,-12.58061532,-12.58061532
+DC1 - Data-centre-only service stress test,1,-5.225022559999999,-4.45268531
+DC1 - Data-centre-only service stress test,2,-5.40198043,-4.6687553
+DC1 - Data-centre-only service stress test,3,-5.56212331,-4.8848253
+DC1 - Data-centre-only service stress test,4,-5.707048980000001,-5.10089529
+DC1 - Data-centre-only service stress test,5,-5.83820344,-5.316965280000001
+DC1 - Data-centre-only service stress test,6,-5.95689526,-5.533035269999999
+DC1 - Data-centre-only service stress test,7,-6.06430867,-5.749105259999999
+DC1 - Data-centre-only service stress test,8,-6.16151538,-5.96517525
+DC1 - Data-centre-only service stress test,9,-6.24948525,-6.18124524
+DC1 - Data-centre-only service stress test,10,-6.32909599,-6.39731523
+DC1 - Data-centre-only service stress test,11,-6.40114191,-6.61338522
+DC1 - Data-centre-only service stress test,12,-6.46634184,-6.82945521
+DC1 - Data-centre-only service stress test,13,-6.5253463,-7.0455252
+DC1 - Data-centre-only service stress test,14,-6.578744,-7.26159519
+DC1 - Data-centre-only service stress test,15,-7.230918440000001,-10.17766518
+DC1 - Data-centre-only service stress test,16,-7.2746503,-10.39373517
+DC1 - Data-centre-only service stress test,17,-7.31422665,-10.60980516
+DC1 - Data-centre-only service stress test,18,-7.35004235,-10.82587515
+DC1 - Data-centre-only service stress test,19,-7.38245475,-11.041945140000001
+DC1 - Data-centre-only service stress test,20,-7.411787240000001,-11.25801513
+DC1 - Data-centre-only service stress test,21,-7.438332480000001,-11.47408512
+DC1 - Data-centre-only service stress test,22,-7.46235532,-11.69015511
+DC1 - Data-centre-only service stress test,23,-7.484095440000001,-11.9062251
+DC1 - Data-centre-only service stress test,24,-7.50376977,-12.122295099999999
+DC1 - Data-centre-only service stress test,25,-7.626267599999999,-13.60886509
+DC1 - Data-centre-only service stress test,26,-7.642380559999999,-13.82493508
+DC1 - Data-centre-only service stress test,27,-7.65696242,-14.04100507
+DC1 - Data-centre-only service stress test,28,-7.67015867,-14.25707506
+DC1 - Data-centre-only service stress test,29,-7.68210098,-14.473145050000001
+DC1 - Data-centre-only service stress test,30,-7.82795876,-17.38921504
+DC1 - Data-centre-only service stress test,31,-7.83773933,-17.60528503
+DC1 - Data-centre-only service stress test,32,-7.8465905099999995,-17.82135502
+DC1 - Data-centre-only service stress test,33,-7.854600639999999,-18.037425010000003
+DC1 - Data-centre-only service stress test,34,-7.86184962,-18.253495
+DC1 - Data-centre-only service stress test,35,-7.86840978,-18.46956499
+DC1 - Data-centre-only service stress test,36,-7.87434658,-18.68563498
+DC1 - Data-centre-only service stress test,37,-7.87971925,-18.901704969999997
+DC1 - Data-centre-only service stress test,38,-7.8845814,-19.117774960000002
+DC1 - Data-centre-only service stress test,39,-7.888981530000001,-19.33384495
+DC1 - Data-centre-only service stress test,40,-7.89296355,-19.54991494
+DC2 - Typical air-cooled data centre plus reserve,0,-13.93440949,-13.93440949
+DC2 - Typical air-cooled data centre plus reserve,1,-6.94158642,-6.20734
+DC2 - Typical air-cooled data centre plus reserve,2,-7.44684266,-6.8242705
+DC2 - Typical air-cooled data centre plus reserve,3,-7.90408814,-7.4412010099999994
+DC2 - Typical air-cooled data centre plus reserve,4,-8.31788495,-8.05813152
+DC2 - Typical air-cooled data centre plus reserve,5,-8.69236169,-8.67506203
+DC2 - Typical air-cooled data centre plus reserve,6,-9.03125468,-9.291992539999999
+DC2 - Typical air-cooled data centre plus reserve,7,-9.33794517,-9.90892305
+DC2 - Typical air-cooled data centre plus reserve,8,-9.61549312,-10.52585356
+DC2 - Typical air-cooled data centre plus reserve,9,-9.86666773,-11.142784070000001
+DC2 - Typical air-cooled data centre plus reserve,10,-10.09397508,-11.75971458
+DC2 - Typical air-cooled data centre plus reserve,11,-10.29968308,-12.37664509
+DC2 - Typical air-cooled data centre plus reserve,12,-10.48584417,-12.9935756
+DC2 - Typical air-cooled data centre plus reserve,13,-10.65431574,-13.61050611
+DC2 - Typical air-cooled data centre plus reserve,14,-10.806778710000001,-14.227436619999999
+DC2 - Typical air-cooled data centre plus reserve,15,-11.49224556,-17.29236713
+DC2 - Typical air-cooled data centre plus reserve,16,-11.6171103,-17.909297640000002
+DC2 - Typical air-cooled data centre plus reserve,17,-11.730110060000001,-18.526228149999998
+DC2 - Typical air-cooled data centre plus reserve,18,-11.832372289999999,-19.14315866
+DC2 - Typical air-cooled data centre plus reserve,19,-11.92491729,-19.76008916
+DC2 - Typical air-cooled data centre plus reserve,20,-12.00866842,-20.377019670000003
+DC2 - Typical air-cooled data centre plus reserve,21,-12.084461300000001,-20.99395018
+DC2 - Typical air-cooled data centre plus reserve,22,-12.15305214,-21.610880690000002
+DC2 - Typical air-cooled data centre plus reserve,23,-12.2151253,-22.227811199999998
+DC2 - Typical air-cooled data centre plus reserve,24,-12.271300109999999,-22.84474171
+DC2 - Typical air-cooled data centre plus reserve,25,-12.390663369999999,-24.29327222
+DC2 - Typical air-cooled data centre plus reserve,26,-12.43666964,-24.91020273
+DC2 - Typical air-cooled data centre plus reserve,27,-12.47830428,-25.527133239999998
+DC2 - Typical air-cooled data centre plus reserve,28,-12.51598268,-26.14406375
+DC2 - Typical air-cooled data centre plus reserve,29,-12.55008078,-26.76099426
+DC2 - Typical air-cooled data centre plus reserve,30,-12.75490353,-30.855924769999998
+DC2 - Typical air-cooled data centre plus reserve,31,-12.78282933,-31.47285528
+DC2 - Typical air-cooled data centre plus reserve,32,-12.80810155,-32.08978579
+DC2 - Typical air-cooled data centre plus reserve,33,-12.83097233,-32.706716300000004
+DC2 - Typical air-cooled data centre plus reserve,34,-12.851669869999998,-33.32364681
+DC2 - Typical air-cooled data centre plus reserve,35,-12.87040068,-33.94057732
+DC2 - Typical air-cooled data centre plus reserve,36,-12.88735164,-34.55750782
+DC2 - Typical air-cooled data centre plus reserve,37,-12.90269187,-35.17443833
+DC2 - Typical air-cooled data centre plus reserve,38,-12.91657444,-35.791368840000004
+DC2 - Typical air-cooled data centre plus reserve,39,-12.92913784,-36.40829935
+DC2 - Typical air-cooled data centre plus reserve,40,-12.94050744,-37.025229859999996
+DC3 - Compact liquid-cooled baseload hybrid,0,-10.96544532,-10.96544532
+DC3 - Compact liquid-cooled baseload hybrid,1,-3.55395283,-2.77574612
+DC3 - Compact liquid-cooled baseload hybrid,2,-3.6803227200000004,-2.93004692
+DC3 - Compact liquid-cooled baseload hybrid,3,-3.79468462,-3.08434771
+DC3 - Compact liquid-cooled baseload hybrid,4,-3.89817954,-3.23864851
+DC3 - Compact liquid-cooled baseload hybrid,5,-3.99184011,-3.39294931
+DC3 - Compact liquid-cooled baseload hybrid,6,-4.0766008,-3.5472501000000003
+DC3 - Compact liquid-cooled baseload hybrid,7,-4.15330731,-3.7015509
+DC3 - Compact liquid-cooled baseload hybrid,8,-4.22272497,-3.8558517
+DC3 - Compact liquid-cooled baseload hybrid,9,-4.2855463700000005,-4.01015249
+DC3 - Compact liquid-cooled baseload hybrid,10,-4.34239833,-4.16445329
+DC3 - Compact liquid-cooled baseload hybrid,11,-4.39384806,-4.31875409
+DC3 - Compact liquid-cooled baseload hybrid,12,-4.4404089,-4.47305488
+DC3 - Compact liquid-cooled baseload hybrid,13,-4.48254541,-4.62735568
+DC3 - Compact liquid-cooled baseload hybrid,14,-4.520678,-4.7816564800000005
+DC3 - Compact liquid-cooled baseload hybrid,15,-4.812830099999999,-6.0879572699999995
+DC3 - Compact liquid-cooled baseload hybrid,16,-4.84406009,-6.24225807
+DC3 - Compact liquid-cooled baseload hybrid,17,-4.87232251,-6.39655887
+DC3 - Compact liquid-cooled baseload hybrid,18,-4.89789937,-6.55085966
+DC3 - Compact liquid-cooled baseload hybrid,19,-4.92104584,-6.70516046
+DC3 - Compact liquid-cooled baseload hybrid,20,-4.94199288,-6.85946126
+DC3 - Compact liquid-cooled baseload hybrid,21,-4.96094948,-7.0137620499999995
+DC3 - Compact liquid-cooled baseload hybrid,22,-4.97810477,-7.168062849999999
+DC3 - Compact liquid-cooled baseload hybrid,23,-4.99362992,-7.322363650000001
+DC3 - Compact liquid-cooled baseload hybrid,24,-5.00767982,-7.47666444
+DC3 - Compact liquid-cooled baseload hybrid,25,-5.05846486,-8.09296524
+DC3 - Compact liquid-cooled baseload hybrid,26,-5.069971509999999,-8.24726604
+DC3 - Compact liquid-cooled baseload hybrid,27,-5.080384769999999,-8.40156683
+DC3 - Compact liquid-cooled baseload hybrid,28,-5.08980853,-8.555867630000002
+DC3 - Compact liquid-cooled baseload hybrid,29,-5.09833683,-8.71016843
+DC3 - Compact liquid-cooled baseload hybrid,30,-5.21519536,-11.04646922
+DC3 - Compact liquid-cooled baseload hybrid,31,-5.22217989,-11.20077002
+DC3 - Compact liquid-cooled baseload hybrid,32,-5.22850074,-11.35507082
+DC3 - Compact liquid-cooled baseload hybrid,33,-5.23422096,-11.509371609999999
+DC3 - Compact liquid-cooled baseload hybrid,34,-5.23939764,-11.66367241
+DC3 - Compact liquid-cooled baseload hybrid,35,-5.24408241,-11.817973210000002
+DC3 - Compact liquid-cooled baseload hybrid,36,-5.24832202,-11.972274
+DC3 - Compact liquid-cooled baseload hybrid,37,-5.252158769999999,-12.1265748
+DC3 - Compact liquid-cooled baseload hybrid,38,-5.2556309500000005,-12.2808756
+DC3 - Compact liquid-cooled baseload hybrid,39,-5.25877319,-12.43517639
+DC3 - Compact liquid-cooled baseload hybrid,40,-5.26161684,-12.58947719
+DC4 - Same compact hybrid without grant or contributions,0,-15.72755832,-15.72755832
+DC4 - Same compact hybrid without grant or contributions,1,-15.867197050000001,-15.88185912
+DC4 - Same compact hybrid without grant or contributions,2,-15.99356695,-16.03615992
+DC4 - Same compact hybrid without grant or contributions,3,-16.10792884,-16.19046071
+DC4 - Same compact hybrid without grant or contributions,4,-16.21142376,-16.34476151
+DC4 - Same compact hybrid without grant or contributions,5,-16.30508433,-16.49906231
+DC4 - Same compact hybrid without grant or contributions,6,-16.38984502,-16.6533631
+DC4 - Same compact hybrid without grant or contributions,7,-16.46655153,-16.807663899999998
+DC4 - Same compact hybrid without grant or contributions,8,-16.53596919,-16.9619647
+DC4 - Same compact hybrid without grant or contributions,9,-16.5987906,-17.11626549
+DC4 - Same compact hybrid without grant or contributions,10,-16.65564255,-17.270566289999998
+DC4 - Same compact hybrid without grant or contributions,11,-16.707092279999998,-17.42486709
+DC4 - Same compact hybrid without grant or contributions,12,-16.75365312,-17.57916788
+DC4 - Same compact hybrid without grant or contributions,13,-16.795789629999998,-17.73346868
+DC4 - Same compact hybrid without grant or contributions,14,-16.833922219999998,-17.88776948
+DC4 - Same compact hybrid without grant or contributions,15,-17.126074329999998,-19.19407027
+DC4 - Same compact hybrid without grant or contributions,16,-17.157304309999997,-19.34837107
+DC4 - Same compact hybrid without grant or contributions,17,-17.18556673,-19.50267187
+DC4 - Same compact hybrid without grant or contributions,18,-17.21114359,-19.65697266
+DC4 - Same compact hybrid without grant or contributions,19,-17.23429007,-19.811273460000002
+DC4 - Same compact hybrid without grant or contributions,20,-17.255237100000002,-19.96557426
+DC4 - Same compact hybrid without grant or contributions,21,-17.274193699999998,-20.11987505
+DC4 - Same compact hybrid without grant or contributions,22,-17.29134899,-20.274175850000002
+DC4 - Same compact hybrid without grant or contributions,23,-17.30687414,-20.428476649999997
+DC4 - Same compact hybrid without grant or contributions,24,-17.320924050000002,-20.58277744
+DC4 - Same compact hybrid without grant or contributions,25,-17.37170908,-21.19907824
+DC4 - Same compact hybrid without grant or contributions,26,-17.38321573,-21.35337904
+DC4 - Same compact hybrid without grant or contributions,27,-17.39362899,-21.507679829999997
+DC4 - Same compact hybrid without grant or contributions,28,-17.40305276,-21.66198063
+DC4 - Same compact hybrid without grant or contributions,29,-17.411581050000002,-21.81628143
+DC4 - Same compact hybrid without grant or contributions,30,-17.528439579999997,-24.15258222
+DC4 - Same compact hybrid without grant or contributions,31,-17.53542411,-24.30688302
+DC4 - Same compact hybrid without grant or contributions,32,-17.541744960000003,-24.46118382
+DC4 - Same compact hybrid without grant or contributions,33,-17.54746518,-24.61548461
+DC4 - Same compact hybrid without grant or contributions,34,-17.552641859999998,-24.76978541
+DC4 - Same compact hybrid without grant or contributions,35,-17.55732663,-24.924086210000002
+DC4 - Same compact hybrid without grant or contributions,36,-17.561566239999998,-25.078387
+DC4 - Same compact hybrid without grant or contributions,37,-17.565403,-25.2326878
+DC4 - Same compact hybrid without grant or contributions,38,-17.568875170000002,-25.386988600000002
+DC4 - Same compact hybrid without grant or contributions,39,-17.57201741,-25.54128939
+DC4 - Same compact hybrid without grant or contributions,40,-17.57486107,-25.69559019

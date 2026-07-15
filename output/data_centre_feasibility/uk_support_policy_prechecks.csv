@@ -1,0 +1,5 @@
+Scenario,Urban demand >= 2 GWh/year,Carbon <= 100 gCO2e/kWh,Service screen,Requested grant < 50%,4.5p/kWh grant cap,Investor NPV >= 0,Customer detriment gate,GHNF social IRR >= 3.5%,Jurisdiction / additionality
+DC1 - Data-centre-only service stress test,True,True,False,True,True,False,REQUIRES CUSTOMER CLASSIFICATION / GHNF WORKBOOK,REQUIRES GHNF APPLICATION MODEL,MANUAL EVIDENCE REQUIRED
+DC2 - Typical air-cooled data centre plus reserve,True,True,True,True,True,False,REQUIRES CUSTOMER CLASSIFICATION / GHNF WORKBOOK,REQUIRES GHNF APPLICATION MODEL,MANUAL EVIDENCE REQUIRED
+DC3 - Compact liquid-cooled baseload hybrid,True,True,True,True,True,False,REQUIRES CUSTOMER CLASSIFICATION / GHNF WORKBOOK,REQUIRES GHNF APPLICATION MODEL,MANUAL EVIDENCE REQUIRED
+DC4 - Same compact hybrid without grant or contributions,True,True,True,True,True,False,REQUIRES CUSTOMER CLASSIFICATION / GHNF WORKBOOK,REQUIRES GHNF APPLICATION MODEL,MANUAL EVIDENCE REQUIRED

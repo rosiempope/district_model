@@ -1,0 +1,14 @@
+Multiplier,Connections,Annual heat+cool (GWh),Annual cooling share (%),Fixed-cost scale factor,CAPEX (£m),Carbon gate,Investor NPV (£m),Investor IRR (%),Screening decision
+1,601,9.9,15.2,1.42,43.0,PASS,-41.02,,FAIL
+2,601,14.3,20.4,2.5,54.21,PASS,-52.73,,FAIL
+3,601,18.7,23.1,3.59,65.17,PASS,-64.4,,FAIL
+5,751,,,5.76,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=1.0013 m3/s at 6.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+8,1201,,,9.02,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=1.6020 m3/s at 6.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+12,1801,,,13.36,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=2.4030 m3/s at 6.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+18,2701,,,19.87,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=3.6045 m3/s at 6.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+25,3751,,,27.47,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=0.8673 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+35,5251,,,38.33,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=1.2142 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+50,7501,,,54.61,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=1.7345 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+70,10501,,,76.33,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=2.4284 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+100,15001,,,108.9,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=3.4691 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."
+140,21001,,,152.32,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=4.8567 m3/s at 70.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."

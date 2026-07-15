@@ -1,0 +1,51 @@
+Technology mix,Variable,Value,Investor NPV (£m),Decision,Failed gates
+Electric boiler,Electricity price (£/MWh),80.0,-10.4763269,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),100.0,-15.88580709,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),120.0,-21.29528728,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),140.0,-26.70476747,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),160.0,-32.11424766,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),180.5,-37.65896486,FAIL,Carbon intensity; Investor NPV; Investor IRR
+Electric boiler,Electricity price (£/MWh),200.0,-42.93320804,FAIL,Carbon intensity; Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),80.0,-8.29808761,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),100.0,-10.60592992,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),120.0,-12.913772230000001,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),140.0,-15.22161455,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),160.0,-17.52945686,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),180.5,-19.89499524,FAIL,Investor NPV; Investor IRR
+ASHP only,Electricity price (£/MWh),200.0,-22.145141489999997,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),80.0,0.60842334,CONDITIONAL PASS,
+ASHP + gas backup,Electricity price (£/MWh),100.0,-1.5471810400000001,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),120.0,-3.70278543,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),140.0,-5.85838982,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),160.0,-8.0139942,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),180.5,-10.223488699999999,FAIL,Investor NPV; Investor IRR
+ASHP + gas backup,Electricity price (£/MWh),200.0,-12.32520298,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),80.0,-0.2337154,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),100.0,-2.70607788,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),120.0,-5.17844037,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),140.0,-7.650802860000001,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),160.0,-10.12316534,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),180.5,-12.65733689,FAIL,Investor NPV; Investor IRR
+ASHP + electric backup,Electricity price (£/MWh),200.0,-15.067890310000001,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),80.0,0.55497007,CONDITIONAL PASS,
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),100.0,-1.18762763,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),120.0,-2.93022532,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),140.0,-4.672823019999999,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),160.0,-6.41542071,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),180.5,-8.201583339999999,FAIL,Investor NPV; Investor IRR
+Data-centre heat + booster + gas backup,Electricity price (£/MWh),200.0,-9.900616099999999,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),80.0,-1.67103704,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),100.0,-3.9588084,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),120.0,-6.2465797599999995,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),140.0,-8.534351119999998,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),160.0,-10.82212248,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),180.5,-13.167088130000002,FAIL,Investor NPV; Investor IRR
+Four-pipe ASHP + gas + chiller,Electricity price (£/MWh),200.0,-15.397665199999999,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,EfW heat price (£/MWh),0.0,3.57723026,CONDITIONAL PASS,
+EfW + ASHP + gas backup,EfW heat price (£/MWh),5.0,2.4477816299999997,CONDITIONAL PASS,
+EfW + ASHP + gas backup,EfW heat price (£/MWh),8.0,1.77011245,CONDITIONAL PASS,
+EfW + ASHP + gas backup,EfW heat price (£/MWh),10.0,1.318333,CONDITIONAL PASS,
+EfW + ASHP + gas backup,EfW heat price (£/MWh),20.0,-0.94056427,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,EfW heat price (£/MWh),30.0,-3.1994615299999998,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,EfW heat price (£/MWh),40.0,-5.45835879,FAIL,Investor NPV; Investor IRR
+EfW + ASHP + gas backup,EfW heat price (£/MWh),50.0,-7.7172560599999995,FAIL,Investor NPV; Investor IRR
