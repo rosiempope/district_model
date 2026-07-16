@@ -375,8 +375,24 @@ def _cooling_profile(
     reference_annual_ramp: Optional[float]  = None,
 ) -> np.ndarray:
     """
-    THREE-part cooling demand model, ADDITIVE (not max()'d) and summing
-    EXACTLY to the (climate-scaled) annual_cool_kWh target:
+    THREE-part cooling demand model. Parts 1 and 2 are ADDITIVE (not max()'d)
+    and between them allocate exactly the (climate-scaled) annual_cool_kWh
+    budget. Part 3 is a floor applied on top, so the FINAL annual total can
+    land somewhat ABOVE that budget — see the accuracy note below.
+
+    ACCURACY NOTE — this does NOT sum exactly to annual_cool_kWh
+    ------------------------------------------------------------
+    This docstring used to claim the model sums "EXACTLY" to the target. It
+    does not, and the claim was checked and found false: on a real London
+    office year the total lands ~9-10% ABOVE the benchmark. Part 3 is applied
+    as np.maximum(part_1 + part_2, comfort_floor), and wherever the comfort
+    floor binds it adds energy on top of an already fully-allocated budget.
+    That is a large improvement on the ~47% over-allocation of the
+    max()-of-two-separately-normalised-parts version this replaced, and it is
+    conservative in direction (it overstates cooling, not understates it), but
+    it is an overshoot, not an identity. tests/test_demand_synthesis.py bounds
+    it at 15% rather than asserting equality, so the model can be corrected
+    without a test rewrite but cannot silently drift back toward 47%.
 
     Part 1 (internal gains floor): a flat load present whenever the
     building is occupied, INDEPENDENT of outdoor temperature. Real UK
@@ -474,7 +490,24 @@ def _cooling_profile(
     CDD_annual = CDD_h.sum()
     if CDD_annual > 0.1 and annual_weather_driven_kWh > 0:
         reference_A = reference_annual_CDD_h if reference_annual_CDD_h is not None else CDD_annual
-        effective_weather_kWh = annual_weather_driven_kWh * (CDD_annual / reference_A)
+        # The guard above tests THIS year's CDD, but the ratio divides by the
+        # REFERENCE year's. A baseline weather year that never exceeds
+        # cool_base_C (a cool-climate EPW — Scotland, Nordic — or simply a
+        # higher cool_base_C) gives reference_A == 0, so a scenario year that
+        # DOES have cooling degree-hours divided by zero and produced inf ->
+        # NaN, which then propagated silently through cooling demand, dispatch,
+        # OPEX and NPV. The sibling ramp_scale below was already guarded this
+        # way; this branch was not.
+        #
+        # When the reference year has no cooling signal at all, there is no
+        # meaningful ratio to form ("infinitely more cooling than a baseline
+        # with none"). Fall back to a scaling factor of 1.0 — i.e. allocate the
+        # weather-driven share as-is, exactly as an unreferenced standalone run
+        # would.
+        if reference_A > 0.1:
+            effective_weather_kWh = annual_weather_driven_kWh * (CDD_annual / reference_A)
+        else:
+            effective_weather_kWh = annual_weather_driven_kWh
         raw_2 = CDD_h * occ_modifier
         part_2 = raw_2 * (effective_weather_kWh / raw_2.sum()) if raw_2.sum() > 0 else np.zeros(n)
     else:
