@@ -1,7 +1,0 @@
-Climate,System,Annual heat demand (MWh),Annual cooling demand (MWh),Peak heat plant (MW),Peak cooling plant (MW),CAPEX (£m),Carbon gate,Investor NPV (£m),Screening decision
-baseline,2-pipe,8355.0,0.0,9.5,0.0,28.51,PASS,-24.97,FAIL
-baseline,4-pipe,8355.0,1501.0,9.5,6.0,41.07,PASS,-37.76,FAIL
-2050_central,2-pipe,7051.0,0.0,10.7,0.0,29.58,PASS,-27.73,FAIL
-2050_central,4-pipe,7051.0,5524.0,10.7,4.0,44.56,PASS,-39.66,FAIL
-2050_high,2-pipe,5888.0,0.0,12.9,0.0,31.32,PASS,-31.22,FAIL
-2050_high,4-pipe,,,,,,,,"EXCEEDS PIPE CATALOG: No standard DN satisfies both criteria for flow=2.1845 m3/s at 6.0°C (max_velocity=2.5 m/s, max_pressure_gradient=150.0 Pa/m). Largest available is DN600 — consider a parallel pipe or extending the DN series."

@@ -1,7 +1,0 @@
-Technology,Duty,Density needed to break even (MWh/m/yr),Extrapolated beyond swept range?,Max swept density (MWh/m/yr),NPV at max swept density (£m)
-ASHP + gas backup,Heating only,2.371181896983524e+18,True,44.51,-72.92
-ASHP + gas backup,Heating + cooling,591060755614.71,True,49.08,-122.38
-EfW + ASHP (no gas),Heating only,7901148142161239.0,True,44.51,-63.93
-EfW + ASHP (no gas),Heating + cooling,13057646383.07,True,49.08,-113.35
-Data centre + booster + electric backup,Heating only,3.735726468974146e+16,True,44.51,-79.38
-Data centre + booster + electric backup,Heating + cooling,88281305752.77,True,49.08,-129.62

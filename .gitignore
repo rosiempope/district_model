@@ -11,8 +11,15 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Generated model results
-outputs/
+# Generated model results.
+# This said "outputs/" for a long time while the directory has always been
+# "output/", so ~5MB of regenerable PNG/CSV was being committed. The figures
+# and tables are rebuilt by the study scripts in reports/ and analysis/; the
+# .md readouts are kept in git because they are written prose (the findings
+# narrative), not generated output.
+output/**
+!output/**/
+!output/**/*.md
 
 # Streamlit local files
 .streamlit/secrets.toml
@@ -21,3 +28,7 @@ outputs/
 .DS_Store
 .vscode/
 .idea/
+
+# WSL alternate-data-stream artifacts. Windows writes one of these next to
+# every file downloaded/copied through Explorer; 86 of them had been committed.
+*:Zone.Identifier

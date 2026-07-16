@@ -1,6 +1,0 @@
-scenario,connections,annual_service_MWh,route_m,capex_total_GBP,capex_per_connection_GBP,capex_per_MWh_yr_GBP,capex_per_route_m_GBP,opex_total_GBP_per_yr,opex_per_connection_GBP_yr,required_tariff_p_per_kWh,equivalent_tariff_p_per_kWh,npv_GBP
-A1 — Gas district reference (not low-carbon),564,14115.0,3000.0,19263091.0,34154.0,1365.0,6421.0,893362.0,1584.0,23.626,7.745,-17876848.59
-A3 — ASHP plus gas peak/backup,564,14115.0,3000.0,21083196.0,37382.0,1494.0,7028.0,1865228.0,3307.0,32.391,7.745,-27977072.18
-A4 — Data-centre heat plus booster and backup,564,14115.0,3000.0,23121022.0,40995.0,1638.0,7707.0,2091109.0,3708.0,35.786,7.745,-31889128.25
-A5 — EfW export plus ASHP and backup,564,14115.0,3000.0,23876196.0,42334.0,1692.0,7959.0,931431.0,1651.0,28.348,7.745,-23317687.48
-A6 — Four-pipe heating and cooling,564,16026.0,3000.0,29360216.0,52057.0,1832.0,9787.0,2051769.0,3638.0,40.519,7.745,-37343511.29

@@ -1,4 +1,0 @@
-Scenario,Route (m),Linear heat density (MWh/m),Losses (%),Gross CAPEX (£m),Grant (£m),Net CAPEX (£m),Connection contributions (£m),Annual OPEX (£m),Unmet heat (MWh),Carbon (gCO2e/kWh),Investor NPV (£m),Investor IRR (%),Discount rate (%),Required heat tariff (p/kWh),Outcome
-F1 - Dense town-centre core / public appraisal,2148.0,6.592737430167598,6.882185125554331,21.635191,5.312919,16.322272,5.0064,1.355468,0.0,55.5,-18.922909899999997,,3.5000000000000004,14.011,DO NOT PROGRESS
-F2 - Compact anchor cluster / private hurdle,1800.0,7.867333333333334,5.767166624297376,19.940257,6.826336,13.113922,8.344,1.329459,0.0,54.800000000000004,-8.11132737,,10.5,13.881,DO NOT PROGRESS
-F3 - Extended lower-density route / reject,3000.0,4.720400000000001,9.612179758777504,25.784856,6.723805,19.061051,5.0064,1.419075,0.49,57.3,-23.020018620000002,,3.5000000000000004,15.366,DO NOT PROGRESS

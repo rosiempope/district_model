@@ -1,5 +1,0 @@
-Source,Carbon (gCO2e/kWh),Meets carbon limit?,Final NPV (£m)
-Gas boiler only,218.0,False,-17.95
-Heat pump + gas backup,101.0,False,-34.48
-Data-centre waste heat + gas,122.0,False,-33.24
-Waste-to-energy + heat pump + gas,69.0,True,-20.63

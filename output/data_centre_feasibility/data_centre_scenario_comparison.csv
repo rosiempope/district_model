@@ -1,5 +1,0 @@
-Scenario,Route (m),Heat demand (GWh),Gross CAPEX (£m),Grant (£m),Connection contributions (£m),Annual OPEX (£m),Unmet heat (MWh),Carbon (gCO2e/kWh),NPV (£m),IRR (%),Required tariff (p/kWh),Service gate,Carbon gate,Outcome
-DC1 - Data-centre-only service stress test,1200.0,14.161200000000001,18.894558,6.313943,8.344,1.314066,314.19,35.1,-7.89296355,,13.716,FAIL,PASS,DO NOT PROGRESS
-DC2 - Typical air-cooled data centre plus reserve,1800.0,14.161200000000001,21.549057,7.614648,8.344,1.714926,0.0,55.5,-12.94050744,,17.529,PASS,PASS,DO NOT PROGRESS
-DC3 - Compact liquid-cooled baseload hybrid,1200.0,14.161200000000001,15.727558,4.762113,8.344,1.252297,0.0,53.6,-5.26161684,,11.728,PASS,PASS,DO NOT PROGRESS
-DC4 - Same compact hybrid without grant or contributions,1200.0,14.161200000000001,15.727558,0.0,0.0,1.252297,0.0,53.6,-17.57486107,,21.029,PASS,PASS,DO NOT PROGRESS

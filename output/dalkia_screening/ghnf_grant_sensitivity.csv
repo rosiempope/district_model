@@ -1,7 +1,0 @@
-Archetype,Technology,Grant awarded (£m),NPV without grant (£m),NPV with 40% GHNF grant (£m),Screening decision with grant
-Dense (town centre),ASHP + gas peak,2.94,-29.14,-26.2,FAIL
-Dense (town centre),EfW heat export + ASHP + gas peak,3.08,-18.74,-15.66,FAIL
-Middle (suburban mixed),ASHP + gas peak,3.5,-28.14,-24.64,FAIL
-Middle (suburban mixed),EfW heat export + ASHP + gas peak,3.63,-21.49,-17.85,FAIL
-Scarce (low-density edge),ASHP + gas peak,0.0,-26.95,-26.95,FAIL
-Scarce (low-density edge),EfW heat export + ASHP + gas peak,2.85,-24.07,-21.22,FAIL

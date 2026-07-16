@@ -1,9 +1,0 @@
-Technology mix,Passing grid cases,Minimum passing heat density (MWh/m/yr),Maximum passing route at base demand (km),Unsupported central NPV (£m),Unsupported central decision
-Gas boiler reference,0,,,-14.85019335,FAIL
-Electric boiler,0,,,-34.26496512,FAIL
-ASHP only,0,,,-29.38189639,FAIL
-ASHP + gas backup,0,,,-22.98263219,FAIL
-ASHP + electric backup,0,,,-24.289391690000002,FAIL
-EfW + ASHP + gas backup,2,18.82,,-17.51643111,FAIL
-Data-centre heat + booster + gas backup,0,,,-22.32003762,FAIL
-Four-pipe ASHP + gas + chiller,0,,,-27.629922559999997,FAIL
