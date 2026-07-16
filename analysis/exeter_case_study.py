@@ -58,32 +58,30 @@ OUT.mkdir(parents=True, exist_ok=True)
 from profiles.demand_synthesis import synthesise_network
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
-from scenarios.worked_scenarios import COMMON_ECONOMICS, BASE_BUILDINGS
+from scenarios.fixed_cost_scaling import (
+    FIXED_CAPEX_KEYS,
+    FIXED_OPEX_KEYS,
+    MIN_SCALE_FACTOR,
+    reference_peak_MW,
+    scaled_economics,
+)
 from economics.tariffs import OFGEM_GAS_CAP_P_PER_KWH
 
-# ── Fixed-cost scaling — the single source of truth every Exeter script
-# should import this from, not reimplement.
-# ─────────────────────────────────────────────────────────────────────────
-# COMMON_ECONOMICS's five fixed CAPEX items (energy-centre building, land,
-# electricity/gas connection, controls) and five fixed OPEX overheads
-# (billing, insurance, land lease, water treatment, operator overhead) are
-# flat £ figures calibrated for ONE reference scale — the Ealing-style
-# BASE_BUILDINGS demand set (564 connections, 8.58 MW peak heat), computed
-# below directly rather than assumed. Reusing them unscaled for a network
-# of a genuinely different size overstates or understates fixed costs by
-# however far that network's own peak sits from the reference. This is
-# scaled by PEAK THERMAL CAPACITY (not annual energy) because energy-centre
-# building footprint, connection capacity and controls scope are primarily
-# driven by peak plant size, not annual throughput.
-FIXED_CAPEX_KEYS = [
-    "energy_centre_building_GBP", "land_and_enabling_GBP",
-    "electricity_connection_GBP", "gas_connection_GBP", "controls_and_scada_GBP",
+# Re-exported for the sibling Exeter scripts that import these from here.
+__all__ = [
+    "scaled_economics", "reference_peak_MW", "REFERENCE_PEAK_MW",
+    "FIXED_CAPEX_KEYS", "FIXED_OPEX_KEYS", "MIN_SCALE_FACTOR",
+    "CENTRAL_BUILDINGS", "CENTRAL_SEGMENTS", "SOWTON_BUILDINGS", "SOWTON_SEGMENTS",
+    "PRESET_FOR_TYPE", "weather", "build_tree_scenario", "build_generic_scenario",
 ]
-FIXED_OPEX_KEYS = [
-    "billing_and_customer_service_GBP", "insurance_and_rates_GBP",
-    "land_lease_GBP", "water_treatment_GBP", "operator_overhead_GBP",
-]
-MIN_SCALE_FACTOR = 0.20  # floor: even a small energy centre needs some minimum land/enabling/controls
+
+# Fixed-cost scaling now lives in scenarios/fixed_cost_scaling.py — it was
+# described here as "the single source of truth every Exeter script should
+# import this from", which was true of the Exeter scripts and of nothing else,
+# because reaching it meant importing this whole 723-line study module. Moved so
+# any scenario builder can use it. Re-exported below so existing
+# `from analysis.exeter_case_study import scaled_economics` call sites in the
+# other Exeter scripts keep working unchanged.
 
 # ── Palette (same validated set used in the first Dalkia readout) ───────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (
@@ -111,29 +109,7 @@ weather = pd.read_csv(ROOT / "profiles" / "weather_data.csv")
 assert len(weather) == 8760
 weather.index = pd.date_range("2023-01-01", periods=8760, freq="h")
 
-_REFERENCE_DEMAND = synthesise_network(weather, {"demand_nodes": deepcopy(BASE_BUILDINGS)})
-REFERENCE_PEAK_MW = _REFERENCE_DEMAND["peak_heat_kW"] / 1000.0  # 8.58 MW, 564 connections
-
-
-def scaled_economics(peak_total_MW: float) -> dict:
-    """COMMON_ECONOMICS with the five fixed CAPEX items and five fixed OPEX
-    overheads scaled to THIS scenario's own peak thermal capacity (heat, or
-    heat+cooling for a 4-pipe scenario) relative to REFERENCE_PEAK_MW — not
-    held flat regardless of scheme size. See the module docstring note on
-    fixed-cost scaling above. Always call this instead of
-    `deepcopy(COMMON_ECONOMICS)` directly for any Exeter scenario.
-
-    Returns (economics_dict, scale_factor) — the scale factor is worth
-    keeping around for reporting/QA (e.g. "this scenario's fixed costs were
-    scaled by 1.14x the reference").
-    """
-    scale = max(MIN_SCALE_FACTOR, peak_total_MW / REFERENCE_PEAK_MW)
-    econ = deepcopy(COMMON_ECONOMICS)
-    for key in FIXED_CAPEX_KEYS:
-        econ["capex_items"][key] = round(COMMON_ECONOMICS["capex_items"][key] * scale, 0)
-    for key in FIXED_OPEX_KEYS:
-        econ["annual_opex_items"][key] = round(COMMON_ECONOMICS["annual_opex_items"][key] * scale, 0)
-    return econ, scale
+REFERENCE_PEAK_MW = reference_peak_MW()   # 8.58 MW, 564 connections
 
 
 # ═══════════════════════════════════════════════════════════════════════════

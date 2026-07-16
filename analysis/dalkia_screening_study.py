@@ -42,7 +42,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 from profiles.demand_synthesis import synthesise_network
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
-from scenarios.worked_scenarios import COMMON_ECONOMICS
+from scenarios.fixed_cost_scaling import scaled_economics
 from economics.tariffs import OFGEM_GAS_CAP_P_PER_KWH
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
@@ -221,7 +221,20 @@ def build_scenario(name, buildings, route_m, tech_types, include_cooling=False):
         cooling_demand_kW=demand["total_cooling_kW"] if include_cooling else None,
         peak_cooling_kW=demand["peak_cool_kW"] if include_cooling else 0.0,
     )
-    economics = deepcopy(COMMON_ECONOMICS)
+    # Scale the flat fixed CAPEX/OPEX items to THIS archetype's own peak.
+    #
+    # This study previously used deepcopy(COMMON_ECONOMICS) directly, charging
+    # the 321-connection Scarce archetype exactly the Ealing-calibrated
+    # overheads of a 564-connection reference scheme. findings.md flagged the
+    # consequence in its own words — "the absolute NPV gap for Scarce is
+    # overstated until fixed items are re-scoped for scheme size" — but the
+    # scaling helper was unreachable, buried inside analysis/exeter_case_study.py.
+    # It now lives in scenarios/fixed_cost_scaling.py, so the archetype study
+    # gets the same treatment the Exeter study always had.
+    peak_total_MW = demand["peak_heat_kW"] / 1000.0
+    if include_cooling:
+        peak_total_MW += demand["peak_cool_kW"] / 1000.0
+    economics, fixed_cost_scale = scaled_economics(peak_total_MW)
     if include_cooling:
         economics["counterfactual"] = "individual_gas_and_ac"
     scenario = {
@@ -236,6 +249,13 @@ def build_scenario(name, buildings, route_m, tech_types, include_cooling=False):
         },
         "sources": _map_sources(rec["sources"]),
         "economics": economics,
+        # Kept on the scenario so it lands in the audit hash and can be
+        # reported: "this archetype's fixed costs were scaled by 0.72x the
+        # reference" is auditable; a silently rescaled number is not.
+        "description": (
+            f"Fixed CAPEX/OPEX scaled by {fixed_cost_scale:.3f}x the "
+            f"{'heat+cooling' if include_cooling else 'heat'} peak reference."
+        ),
     }
     if include_cooling:
         scenario["cooling_sources"] = _map_sources(rec["cooling_sources"])
