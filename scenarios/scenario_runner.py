@@ -249,6 +249,10 @@ def _customer_revenue_and_energy(
     revenue, heat_energy, cooling_energy = {}, {}, {}
     year1_heat_bill = 0.0
     year1_counterfactual_bill = 0.0
+    year1_standing_revenue = 0.0
+    year1_unit_revenue = 0.0
+    year1_unit_kWh = 0.0
+    standing_charge_exceeds_bill = []
     year1_cooling_bill = 0.0
     year1_counterfactual_cooling_bill = 0.0
     heat_counterfactual = (
@@ -277,6 +281,7 @@ def _customer_revenue_and_energy(
             counterfactual_bill = heat_counterfactual.get("by_building", {}).get(name, {}).get(
                 "annual_customer_bill_GBP"
             )
+        standing_revenue = 0.0
         if tariff_mode == "counterfactual_bill_parity":
             if counterfactual_bill is None:
                 raise ValueError(
@@ -284,16 +289,49 @@ def _customer_revenue_and_energy(
                 )
             base_heat_bill = float(counterfactual_bill) * probability
             heat_bill_rate = changes.get("gas_real_rate", 0.0)
+            # SPLIT THE PARITY BILL, do not add to it.
+            #
+            # Ofgem's heat-network guidance allocates non-consumption costs to a
+            # standing charge and fuel costs to a unit rate, and warns against
+            # recovering the same cost twice. Under parity the TOTAL is pinned to
+            # the customer's alternative bill, so the standing charge has to be
+            # carved OUT of that total — adding it on top would break the parity
+            # promise the whole model rests on.
+            #
+            # Previously the configured standing charge was simply ignored in this
+            # mode: the total was right, but the scheme's tariff STRUCTURE was
+            # invisible, and the reported "equivalent tariff" was a blended all-in
+            # rate masquerading as a unit rate. The customer's alternative bill
+            # already contains their own gas standing charge (see
+            # metrics.counterfactual_gas_boiler_dispatch), so a standing charge is
+            # economically present either way — it just was not shown.
+            standing_revenue = min(fixed, base_heat_bill)
+            base_heat_bill -= standing_revenue
         else:
             base_heat_bill = heat_kWh * heat_rate
             heat_bill_rate = changes.get("heat_tariff_real_rate", 0.0)
+            standing_revenue = fixed
         revenue[f"{name} heat"] = _escalated_series(
             base_heat_bill, life, heat_bill_rate, start
         )
-        if start == 1:
-            year1_heat_bill += base_heat_bill + (
-                fixed if tariff_mode != "counterfactual_bill_parity" else 0.0
+        if standing_revenue:
+            revenue[f"{name} standing charge"] = _escalated_series(
+                standing_revenue, life,
+                heat_bill_rate if tariff_mode == "counterfactual_bill_parity"
+                else changes.get("heat_tariff_real_rate", 0.0),
+                start,
             )
+        if start == 1:
+            year1_heat_bill += base_heat_bill + standing_revenue
+            year1_standing_revenue += standing_revenue
+            year1_unit_revenue += base_heat_bill
+            year1_unit_kWh += heat_kWh
+            if standing_revenue >= float(counterfactual_bill or 0.0) * probability > 0:
+                # The fixed charge alone equals or exceeds the whole alternative
+                # bill, so there is nothing left to charge per kWh. A real tariff
+                # cannot do this — the customer would pay the standing charge and
+                # get their heat free.
+                standing_charge_exceeds_bill.append(name)
             if counterfactual_bill is not None:
                 year1_counterfactual_bill += float(counterfactual_bill) * probability
         if include_cooling and cool_kWh:
@@ -319,10 +357,6 @@ def _customer_revenue_and_energy(
                 year1_cooling_bill += base_cooling_bill
                 if cf_cooling_bill is not None:
                     year1_counterfactual_cooling_bill += float(cf_cooling_bill) * probability
-        if fixed and tariff_mode != "counterfactual_bill_parity":
-            revenue[f"{name} standing charge"] = _escalated_series(
-                fixed, life, changes.get("heat_tariff_real_rate", 0.0), start
-            )
         connection_charge = float(building.get("connection_charge_GBP", 0.0))
         if building.get("connection_charge_GBP_per_kW") is not None:
             reported_peak = float(building.get("peak_total_heat_kW", node["total_heat_kW"].max()))
@@ -337,6 +371,19 @@ def _customer_revenue_and_energy(
     zeros = np.zeros(int(life) + 1)
     metadata = {
         "heat_tariff_mode": tariff_mode,
+        # The tariff STRUCTURE, not just its total. Ofgem allocates
+        # non-consumption costs to the standing charge and fuel to the unit rate;
+        # under parity both are carved out of the same fixed total.
+        "year1_standing_charge_revenue_GBP": year1_standing_revenue,
+        "year1_unit_rate_revenue_GBP": year1_unit_revenue,
+        "year1_implied_unit_rate_p_per_kWh": (
+            round(year1_unit_revenue / year1_unit_kWh * 100.0, 3) if year1_unit_kWh > 0 else None
+        ),
+        "year1_standing_charge_share_of_bill": (
+            round(year1_standing_revenue / (year1_standing_revenue + year1_unit_revenue), 4)
+            if (year1_standing_revenue + year1_unit_revenue) > 0 else None
+        ),
+        "buildings_where_standing_charge_exceeds_bill": standing_charge_exceeds_bill,
         "year1_district_heat_bill_GBP": year1_heat_bill,
         "year1_counterfactual_heat_bill_GBP": year1_counterfactual_bill,
         "year1_customer_bill_ratio": (
