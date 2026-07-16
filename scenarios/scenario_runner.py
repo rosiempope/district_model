@@ -687,7 +687,8 @@ def _fill_segment_detail(detail_rows, sized_segments, duty):
 def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate,
                              counterfactual="individual_gas",
                              apply_bus_grant=True,
-                             counterfactual_electricity_price_p_per_kWh=None):
+                             counterfactual_electricity_price_p_per_kWh=None,
+                             include_boiler_lifecycle=True):
     enriched_nodes = [
         {**node, "connections": _connection_count(building)}
         for node, building in zip(nodes, buildings)
@@ -709,8 +710,12 @@ def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate
             enriched_nodes, fn, weather_df=weather, om_rate=om_rate,
         )
     else:
+        from functools import partial as _partial
         heat = aggregate_counterfactual(
-            enriched_nodes, counterfactual_gas_boiler_dispatch, om_rate=om_rate
+            enriched_nodes,
+            _partial(counterfactual_gas_boiler_dispatch,
+                     include_boiler_lifecycle=include_boiler_lifecycle),
+            om_rate=om_rate,
         )
     if not include_cooling:
         return heat
@@ -988,6 +993,9 @@ def run_scenario(scenario):
             apply_bus_grant=econ_cfg.get("apply_bus_grant", True),
             counterfactual_electricity_price_p_per_kWh=econ_cfg.get(
                 "counterfactual_electricity_price_p_per_kWh"
+            ),
+            include_boiler_lifecycle=econ_cfg.get(
+                "counterfactual_includes_boiler_lifecycle", True
             ),
         )
     revenue_items, connected_heat_kWh, connected_cool_kWh, revenue_meta = _customer_revenue_and_energy(

@@ -61,6 +61,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from economics.CAPEX import (
     INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW, bus_grant_GBP, individual_system_capex_GBP,
 )
+from economics.boiler_lifecycle import boiler_lifecycle_GBP_per_year
 from economics.om_rates import annual_om_cost_GBP, INDIVIDUAL_SYSTEM_OM_RATE
 from economics.tariffs import (
     OFGEM_ELECTRICITY_CAP_P_PER_KWH, OFGEM_ELECTRICITY_CAP_STANDING_CHARGE_P_PER_DAY,
@@ -74,7 +75,7 @@ from components.chiller import AirCooledChiller
 
 # ── Individual-system counterfactuals ───────────────────────────────────────────
 
-def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
+def counterfactual_gas_boiler_dispatch(node: dict, include_boiler_lifecycle: bool = True) -> dict:
     """
     ONE gas boiler, sized exactly to this building's own peak heating
     demand, dispatched against this building's own real hourly heat
@@ -135,13 +136,24 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
         OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY * 365.0 / 100.0 * connections
     )
     fuel_opex_GBP = result.summary()["total_annual_opex_GBP"]
+    # What the boiler costs its owner BEYOND the gas bill: servicing, repairs and
+    # replacement every 15 years. DECC is explicit that the counterfactual "should
+    # include the purchase, replacement, and costs of operation of the heat
+    # source", and warns that omitting it means heat networks "may be
+    # under-[valuing heat]". Leaving it out was understating what the customer's
+    # own alternative genuinely costs them. See economics/boiler_lifecycle.py.
+    lifecycle_GBP = (
+        boiler_lifecycle_GBP_per_year(connections) if include_boiler_lifecycle else 0.0
+    )
+    bill = fuel_opex_GBP + standing_charge_GBP + lifecycle_GBP
     return {
         "capex_GBP": capex_GBP,
         "dispatch_result": result,
-        "annual_opex_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
-        "annual_customer_bill_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
+        "annual_opex_GBP": round(bill, 0),
+        "annual_customer_bill_GBP": round(bill, 0),
         "annual_fuel_GBP": round(fuel_opex_GBP, 0),
         "annual_standing_charge_GBP": round(standing_charge_GBP, 0),
+        "annual_boiler_lifecycle_GBP": round(lifecycle_GBP, 0),
         "connections": connections,
     }
 

@@ -100,11 +100,51 @@ class FinanceRegressionTests(unittest.TestCase):
         ten = counterfactual_gas_boiler_dispatch(node)
         one = counterfactual_gas_boiler_dispatch({**node, "connections": 1})
         expected = 9 * OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY * 365 / 100
+        # Test the standing charge itself, not the whole bill. The bill now has
+        # TWO per-connection terms — the standing charge and the boiler lifecycle
+        # (10 flats have 10 boilers to service and replace) — so differencing the
+        # total would silently measure both and this test would be asserting that
+        # the standing charge is the ONLY per-connection cost, which it is not.
         self.assertAlmostEqual(
-            ten["annual_customer_bill_GBP"] - one["annual_customer_bill_GBP"],
+            ten["annual_standing_charge_GBP"] - one["annual_standing_charge_GBP"],
             expected, delta=2.0,
         )
 
+    def test_counterfactual_boiler_lifecycle_is_per_connection_and_optional(self):
+        """A block of 10 flats has 10 boilers to service and replace, not one."""
+        node = {
+            "name": "Residential block", "connections": 10,
+            "total_heat_kW": np.ones(8760) * 10.0,
+        }
+        ten = counterfactual_gas_boiler_dispatch(node)
+        one = counterfactual_gas_boiler_dispatch({**node, "connections": 1})
+        # delta accommodates rounding: the TOTAL is rounded to the pound, so
+        # 10 x £416.67 = £4,167 rather than 10 x £417 = £4,170.
+        self.assertAlmostEqual(
+            ten["annual_boiler_lifecycle_GBP"],
+            10 * one["annual_boiler_lifecycle_GBP"], delta=10.0,
+        )
+        # And it must be switchable off, because it moves the parity revenue and
+        # the strict fuel-only comparison has to stay reproducible.
+        off = counterfactual_gas_boiler_dispatch(node, include_boiler_lifecycle=False)
+        self.assertEqual(off["annual_boiler_lifecycle_GBP"], 0.0)
+        self.assertGreater(
+            ten["annual_customer_bill_GBP"], off["annual_customer_bill_GBP"]
+        )
+
+    def test_boiler_lifecycle_hits_small_dwellings_hardest_per_kWh(self):
+        """DECC's central point: the fixed cost of owning a boiler is spread over
+        a small heat demand, so it dominates exactly the dwellings heat networks
+        serve. DECC: 1.1 p/kWh for a large dwelling, 4.6 p/kWh for a small one."""
+        big = counterfactual_gas_boiler_dispatch(
+            {"name": "big", "connections": 1, "total_heat_kW": np.ones(8760) * 2.5}
+        )
+        small = counterfactual_gas_boiler_dispatch(
+            {"name": "small", "connections": 1, "total_heat_kW": np.ones(8760) * 0.9}
+        )
+        big_p = big["annual_boiler_lifecycle_GBP"] / (2.5 * 8760) * 100
+        small_p = small["annual_boiler_lifecycle_GBP"] / (0.9 * 8760) * 100
+        self.assertGreater(small_p, big_p * 2.0)
     def test_gas_bill_parity_uses_the_same_customer_counterfactual(self):
         result = run_scenario(GAS_ONLY)
         investor = result["financial"]["investor"]

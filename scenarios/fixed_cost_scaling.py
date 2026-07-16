@@ -71,6 +71,34 @@ FIXED_OPEX_KEYS = [
 # Floor: even a small energy centre needs some minimum land/enabling/controls.
 MIN_SCALE_FACTOR = 0.20
 
+# Economies of scale.
+#
+# This scaled LINEARLY with peak MW, which means a scheme twice the size paid
+# exactly twice the energy-centre cost — i.e. no economies of scale at all. That
+# is wrong, and it is why adding customers to this model barely improved the loss
+# per connection: every new customer brought very nearly its own full share of
+# the "fixed" cost with it. An outside review flagged exactly this, and it was
+# right.
+#
+# Real plant and buildings scale sublinearly. The classic basis is the
+# six-tenths rule (Sinnott, Chemical Engineering Design): cost ~ capacity^0.6 for
+# fabricated equipment. An energy centre is not pure equipment — it is a
+# building, a grid connection, a control system and plant together, some of which
+# scale better than others and some barely at all.
+#
+# 0.7 is used: between the 0.6 of pure equipment and the 1.0 of no economies at
+# all, and deliberately toward the conservative end. At 0.7 a scheme at twice the
+# reference peak pays 2^0.7 = 1.62x, not 2x — a 19% saving per MW. That is the
+# right order against DESNZ's HNIP analysis, which expects economies of scale
+# from larger networks.
+#
+# HEALTH WARNING: 0.7 is an engineering convention, not a measured figure for UK
+# heat-network energy centres, and no public dataset was found that pins one
+# down. It is a genuine judgement call and it moves NPV. Set
+# FIXED_COST_SCALE_EXPONENT = 1.0 to recover the previous linear behaviour and
+# see what it is worth.
+FIXED_COST_SCALE_EXPONENT = 0.70
+
 
 @lru_cache(maxsize=1)
 def reference_peak_MW() -> float:
@@ -106,7 +134,11 @@ def scaled_economics(peak_total_MW: float, base_economics: dict | None = None) -
     if peak_total_MW <= 0:
         raise ValueError(f"peak_total_MW must be positive; got {peak_total_MW}")
     base = base_economics if base_economics is not None else COMMON_ECONOMICS
-    scale = max(MIN_SCALE_FACTOR, peak_total_MW / reference_peak_MW())
+    # Sublinear: (this scheme / reference) ^ 0.7, not ^ 1.0. See
+    # FIXED_COST_SCALE_EXPONENT — linear scaling meant no economies of scale, so
+    # every extra customer carried its own full share of the "fixed" cost.
+    ratio = peak_total_MW / reference_peak_MW()
+    scale = max(MIN_SCALE_FACTOR, ratio ** FIXED_COST_SCALE_EXPONENT)
     econ = deepcopy(base)
     for key in FIXED_CAPEX_KEYS:
         if key in econ.get("capex_items", {}):
