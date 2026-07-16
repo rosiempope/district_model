@@ -28,11 +28,30 @@ The report designed the IZOs to a linear heat density target of **4.0 MWh/m/yr**
 
 ## 3. Birmingham Central IZO, run at the report's real costs
 
-| Case                                  |   CAPEX (£m) |   of which network (£m) |   Annual OPEX (£m) |   Heat delivered (GWh) |   Peak heat (MW) |   LHD (MWh/m/yr) |   Loss (%) |   Carbon (gCO2e/kWh) | Carbon gate   |   Unmet (MWh) |   Required tariff (p/kWh) |   Equivalent tariff (p/kWh) |   NPV (£m) | Decision   |
-|:--------------------------------------|-------------:|------------------------:|-------------------:|-----------------------:|-----------------:|-----------------:|-----------:|---------------------:|:--------------|--------------:|--------------------------:|----------------------------:|-----------:|:-----------|
-| Report network cost (£150m, 40km)     |         93.6 |                    34.7 |               4.44 |                   60.2 |           60.462 |              6.5 |       16.3 |                176.3 | FAIL          |             0 |                    24.313 |                        7.73 |      -93.3 | FAIL       |
-| Model SEAI pipe curve                 |         81.9 |                    23   |               4.33 |                   60.2 |           60.462 |              6.5 |       16.3 |                176.3 | FAIL          |             0 |                    22.035 |                        7.73 |      -80.5 | FAIL       |
-| CIBSE 60/30 target, instantaneous HIU |         93.6 |                    34.7 |               4.07 |                   60.2 |           60.462 |              6.5 |       12.6 |                168.7 | FAIL          |             0 |                    23.689 |                        7.73 |      -89.8 | FAIL       |
+| Case                                  |   Low-carbon share of heat (%) |   CAPEX (£m) |   of which network (£m) |   Annual OPEX (£m) |   Heat delivered (GWh) |   Peak heat (MW) |   LHD (MWh/m/yr) |   Loss (%) |   Carbon (gCO2e/kWh) | Carbon gate   |   Unmet (MWh) |   Required tariff (p/kWh) |   Equivalent tariff (p/kWh) |   NPV (£m) | Decision   |
+|:--------------------------------------|-------------------------------:|-------------:|------------------------:|-------------------:|-----------------------:|-----------------:|-----------------:|-----------:|---------------------:|:--------------|--------------:|--------------------------:|----------------------------:|-----------:|:-----------|
+| Report network cost (£150m, 40km)     |                           40.8 |         94.8 |                    34.7 |               4.83 |                   60.2 |           60.462 |              6.5 |       16.3 |                160.1 | FAIL          |             0 |                    25.19  |                        7.73 |      -98.3 | FAIL       |
+| Model SEAI pipe curve                 |                           40.8 |         83.1 |                    23   |               4.71 |                   60.2 |           60.462 |              6.5 |       16.3 |                160.1 | FAIL          |             0 |                    22.912 |                        7.73 |      -85.4 | FAIL       |
+| 62/30, instantaneous HIU (proposed)   |                           40.1 |         94.8 |                    34.7 |               4.39 |                   60.2 |           60.462 |              6.5 |        6.7 |                147   | FAIL          |             0 |                    24.468 |                        7.73 |      -94.2 | FAIL       |
+| CIBSE 60/30 target, instantaneous HIU |                           40.6 |         94.8 |                    34.7 |               4.37 |                   60.2 |           60.462 |              6.5 |       12.6 |                152.2 | FAIL          |             0 |                    24.425 |                        7.73 |      -94   | FAIL       |
+
+> **Do not read the `Loss (%)` column across temperature cases.** These runs use
+> `generic_length` mode, which models the whole 9.3 km route as ONE equivalent trunk
+> carrying full peak flow. Pipe size is a discrete series, so a small ΔT change can tip
+> the trunk across a DN boundary and halve the modelled loss — 70/40 and 60/30 (both
+> ΔT=30) size to DN600 and lose ~8-10 GWh, while 62/30 (ΔT=32) drops to DN500 and loses
+> ~4 GWh. That is a step in the catalog, not a thermal result. A real branched network
+> carries full peak only in its first metres; the DESNZ report's own Figure 6 shows a
+> branched route. Tree mode would resolve this, and cannot be built here — see below.
+
+**Why this study is on the weaker network mode.** The report gives a total route length
+(40 km) and a routed map (Figure 6), but not the per-segment geometry needed for tree
+mode. Appendix 2 is explicit: *"GIS outputs are not being published alongside the report
+as they are subject to change"*, and the data room "will remain restricted to DESNZ and
+the local authority". So branch-level sizing is not reproducible from the public
+document. The Exeter case study (`analysis/exeter_case_study.py`) IS in tree mode with
+real per-branch lengths, and is the right reference for any conclusion that depends on
+network losses or branch sizing.
 
 ## 4. Existing pipework
 

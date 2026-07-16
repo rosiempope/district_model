@@ -82,6 +82,10 @@ it was actually sourced for. See INDIVIDUAL_SYSTEM_OM_RATE below.
 # Per-source-type annual O&M as a fraction of that source's own CAPEX
 SOURCE_OM_RATES = {
     "ashp":               0.025,
+    # Same class of compressor plant as ASHP, same sourcing basis (water/ground
+    # to water rather than air to water, but the same real maintenance drivers).
+    "wshp":               0.025,
+    "gshp":               0.025,
     "gas_boiler":         0.0125,
     "electric_boiler":    0.009,
     "efw_chp":            0.035,

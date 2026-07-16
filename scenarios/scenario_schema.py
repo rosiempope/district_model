@@ -4,7 +4,8 @@ from copy import deepcopy
 from network.design_temperature_limits import DHW_SYSTEM_TYPES
 from profiles.demand_synthesis import BUILDING_TYPES
 
-HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre", "booster_heat_pump", "efw_chp"}
+HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre",
+                     "booster_heat_pump", "efw_chp", "wshp", "gshp"}
 COOLING_SOURCE_TYPES = {"air_cooled_chiller"}
 NETWORK_MODES = {"none", "generic_length", "tree"}
 TREE_ROOT_ID = "EC"   # the implicit energy-centre root every tree hangs off

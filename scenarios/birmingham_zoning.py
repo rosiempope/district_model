@@ -162,9 +162,22 @@ CENTRAL_HEAT_SOURCES = [
     {"name": "ASHP Smithfield energy centre", "type": "ASHP", "capacity_kWp": 7000, "source_temp_C": 8, "ec_ref": "E13"},
 ]
 CENTRAL_TOTAL_IDENTIFIED_SUPPLY_MW = 23.0   # Section 3.1.5: "approximately 23MWth"
-CENTRAL_ASHP_TOTAL_MW = sum(
-    s["capacity_kWp"] for s in CENTRAL_HEAT_SOURCES if s["type"] == "ASHP"
-) / 1000.0   # 14.8 MW — the only part this model can represent; see module docstring
+
+
+def _total_MW(source_type: str) -> float:
+    return sum(
+        s["capacity_kWp"] for s in CENTRAL_HEAT_SOURCES
+        if s["type"] == source_type and s["capacity_kWp"] is not None
+    ) / 1000.0
+
+
+CENTRAL_ASHP_TOTAL_MW = _total_MW("ASHP")   # 14.8 MW
+CENTRAL_WSHP_TOTAL_MW = _total_MW("WSHP")   # 5.0 MW — River Rea
+CENTRAL_GSHP_TOTAL_MW = _total_MW("GSHP")   # 1.2 MW — Aston University only; the
+                                            # Children's Hospital GSHP has capacity
+                                            # "Unknown" in Table 5 and is excluded
+                                            # rather than guessed.
+CENTRAL_REPRESENTABLE_MW = CENTRAL_ASHP_TOTAL_MW + CENTRAL_WSHP_TOTAL_MW + CENTRAL_GSHP_TOTAL_MW  # 21.0
 
 # Table 4 — the ten named heat demands, with the report's own annual MWh.
 # building_type only shapes the HOURLY PROFILE here: annual_heat_kWh is supplied
@@ -426,9 +439,18 @@ def central_izo_scenario(name: str = "Birmingham Central IZO (report costs)",
             # module docstring. This makes carbon and OPEX conservative.
             # The report's real ASHP capacity (Table 5), pro-rated to the anchor
             # core's share of zone heat on the same basis as the route and CapEx.
-            {"type": "ashp", "preset": "large_energy_centre", "name": "ASHP (report Table 5, pro-rated)",
+            {"type": "ashp", "preset": "large_energy_centre", "name": "ASHP (report Table 5)",
              "capacity_MW": round(CENTRAL_ASHP_TOTAL_MW * anchor_share, 2), "n_units": 4,
              "flow_temp_C": heat_flow_temp_C},
+            # The report's real river WSHP and Aston GSHP (Table 5). These lift
+            # from a 10C river and a 12C borehole, not from winter air — which is
+            # why they cannot be approximated as ASHPs. See
+            # components/water_ground_source_hp.py.
+            {"type": "wshp", "preset": "birmingham_river_rea", "name": "WSHP River Rea (report Table 5)",
+             "capacity_MW": round(CENTRAL_WSHP_TOTAL_MW * anchor_share, 2), "n_units": 2},
+            {"type": "gshp", "preset": "birmingham_aston_university",
+             "name": "GSHP Aston University (report Table 5)",
+             "capacity_MW": round(CENTRAL_GSHP_TOTAL_MW * anchor_share, 2), "n_units": 2},
             # Gas peak covers the balance. The report itself identifies a supply
             # deficit in this zone: ~23 MWth of source against 260 GWh/yr of demand,
             # which averages ~30 MW before any peak diversity.

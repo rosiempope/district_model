@@ -46,6 +46,9 @@ from components.datacentre_source import DataCentre, DC_PRESETS
 from components.booster_heat_pump import BoosterHeatPump, BOOSTER_PRESETS
 from components.peak_demand_option import GasBoiler, ElectricBoiler, CARBON_INTENSITY
 from components.chiller import AirCooledChiller, CHILLER_PRESETS
+from components.water_ground_source_hp import (
+    GroundSourceHeatPump, GSHP_PRESETS, WaterSourceHeatPump, WSHP_PRESETS,
+)
 from components.thermal_storage import ThermalStorage, m3_to_mwh
 from economics.tariffs import resolve_electricity_price
 from economics.cashflow import (
@@ -58,18 +61,22 @@ ROOT = Path(__file__).resolve().parents[1]
 MODEL_VERSION = "2.7.1-streamlit-matrix-verified"
 DEFAULT_WEATHER_CSV = ROOT / "profiles" / "weather_data.csv"
 HEAT_CLASSES = {"ashp": ASHPArray, "efw_chp": EfWChp, "data_centre": DataCentre,
-                "gas_boiler": GasBoiler, "electric_boiler": ElectricBoiler}
-UNIT_TYPES = {"ashp", "booster_heat_pump", "air_cooled_chiller"}
+                "gas_boiler": GasBoiler, "electric_boiler": ElectricBoiler,
+                "wshp": WaterSourceHeatPump, "gshp": GroundSourceHeatPump}
+UNIT_TYPES = {"ashp", "booster_heat_pump", "air_cooled_chiller", "wshp", "gshp"}
 PRESETS_BY_TYPE = {
     "ashp": ASHP_PRESETS,
     "booster_heat_pump": BOOSTER_PRESETS,
     "air_cooled_chiller": CHILLER_PRESETS,
     "data_centre": DC_PRESETS,
     "efw_chp": EFW_PRESETS,
+    "wshp": WSHP_PRESETS,
+    "gshp": GSHP_PRESETS,
 }
 
 ELECTRIC_SOURCE_TYPES = {
-    "ashp", "booster_heat_pump", "air_cooled_chiller", "electric_boiler"
+    "ashp", "booster_heat_pump", "air_cooled_chiller", "electric_boiler",
+    "wshp", "gshp",
 }
 
 # CAPEX lines that the development/design, commissioning and contingency
@@ -81,6 +88,8 @@ ELECTRIC_SOURCE_TYPES = {
 EXCLUDED_FROM_CAPEX_ADDERS = {"land_and_enabling_GBP"}
 REPLACEMENT_DEFAULTS = {
     "ashp": (15, 0.60),
+    "wshp": (15, 0.60),
+    "gshp": (20, 0.50),   # borehole field outlives the plant
     "booster_heat_pump": (15, 0.60),
     "air_cooled_chiller": (15, 0.60),
     "gas_boiler": (20, 0.50),
@@ -412,9 +421,17 @@ def build_heat_sources(configs, weather, sink_temp_C, return_assets=False):
             booster_cfgs.append((i, cfg))
             continue
         cls = HEAT_CLASSES[cfg["type"]]
-        obj = (cls.from_preset(cfg["preset"], weather_df=weather, **_overrides(cfg))
-               if cfg["type"] in {"ashp", "data_centre", "efw_chp"}
-               else cls.from_preset(cfg["preset"], **_overrides(cfg)))
+        if cfg["type"] in {"ashp", "data_centre", "efw_chp"}:
+            obj = cls.from_preset(cfg["preset"], weather_df=weather, **_overrides(cfg))
+        elif cfg["type"] in {"wshp", "gshp"}:
+            # Water/ground-source heat pumps lift from their own source to the
+            # NETWORK flow temperature, so they need the sink like the booster
+            # does — unlike an ASHP, whose flow_temp_C is its own preset field.
+            obj = cls.from_preset(
+                cfg["preset"], sink_temp_C=sink_temp_C, weather_df=weather, **_overrides(cfg)
+            )
+        else:
+            obj = cls.from_preset(cfg["preset"], **_overrides(cfg))
         if cfg["type"] == "data_centre":
             dc_by_position[i] = (obj, cfg)
             assets.append(obj)

@@ -156,6 +156,16 @@ def run_central_cases() -> tuple[pd.DataFrame, dict]:
     )
     cases.append(("Model SEAI pipe curve", run_scenario(model_scenario)))
 
+    # 62/30 — the operator's proposed design point. Flow lowered from 70 to buy
+    # COP, return held at 30 rather than 25: CP1's own best practice is a VWART
+    # below 33C, and a return below that is a customer-side achievability problem
+    # (emitter sizing, HIU control), not a network one.
+    proposed, _ = central_izo_scenario(
+        name="Birmingham Central IZO (62/30, instantaneous HIU)",
+        heat_flow_temp_C=62.0, heat_return_temp_C=30.0, dhw_system="instantaneous_hiu",
+    )
+    cases.append(("62/30, instantaneous HIU (proposed)", run_scenario(proposed)))
+
     # CIBSE's 60/30 heat-pump target, at the report's costs.
     lowtemp, _ = central_izo_scenario(
         name="Birmingham Central IZO (60/30, instantaneous HIU)",
@@ -163,11 +173,25 @@ def run_central_cases() -> tuple[pd.DataFrame, dict]:
     )
     cases.append(("CIBSE 60/30 target, instantaneous HIU", run_scenario(lowtemp)))
 
+    # NOT run here: a stored-cylinder variant. The delivered-temperature gate
+    # needs a real route to propagate a temperature along, so it is not assessed
+    # in generic_length mode and the DHW system makes no difference to the result.
+    # The stored-vs-instantaneous question is answered properly, in tree mode, by
+    # reports/temperature_sensitivity.py on Exeter Central. Running it here would
+    # have produced an identical row and implied the choice does not matter.
+
     rows = []
     for label, r in cases:
         h, inv = r["headline"], r["financial"]["investor"]
+        by_src = h["annual_heat_by_source_MWh"]
+        low_carbon = sum(
+            v for k, v in by_src.items() if "Gas" not in k
+        )
         rows.append({
             "Case": label,
+            "Low-carbon share of heat (%)": round(
+                low_carbon / max(sum(by_src.values()), 1e-9) * 100, 1
+            ),
             "CAPEX (£m)": round(h["capex_total_GBP"] / 1e6, 1),
             "of which network (£m)": round(h["capex_network_GBP"] / 1e6, 1),
             "Annual OPEX (£m)": round(h["annual_total_opex_GBP"] / 1e6, 2),
@@ -313,6 +337,24 @@ def main() -> None:
         "## 3. Birmingham Central IZO, run at the report's real costs",
         "",
         cases.to_markdown(index=False),
+        "",
+        "> **Do not read the `Loss (%)` column across temperature cases.** These runs use",
+        "> `generic_length` mode, which models the whole 9.3 km route as ONE equivalent trunk",
+        "> carrying full peak flow. Pipe size is a discrete series, so a small ΔT change can tip",
+        "> the trunk across a DN boundary and halve the modelled loss — 70/40 and 60/30 (both",
+        "> ΔT=30) size to DN600 and lose ~8-10 GWh, while 62/30 (ΔT=32) drops to DN500 and loses",
+        "> ~4 GWh. That is a step in the catalog, not a thermal result. A real branched network",
+        "> carries full peak only in its first metres; the DESNZ report's own Figure 6 shows a",
+        "> branched route. Tree mode would resolve this, and cannot be built here — see below.",
+        "",
+        "**Why this study is on the weaker network mode.** The report gives a total route length",
+        "(40 km) and a routed map (Figure 6), but not the per-segment geometry needed for tree",
+        "mode. Appendix 2 is explicit: *\"GIS outputs are not being published alongside the report",
+        "as they are subject to change\"*, and the data room \"will remain restricted to DESNZ and",
+        "the local authority\". So branch-level sizing is not reproducible from the public",
+        "document. The Exeter case study (`analysis/exeter_case_study.py`) IS in tree mode with",
+        "real per-branch lengths, and is the right reference for any conclusion that depends on",
+        "network losses or branch sizing.",
         "",
         "## 4. Existing pipework",
         "",
