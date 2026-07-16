@@ -1,6 +1,6 @@
 # District Heating & Cooling Screening Model — Capability Summary
 
-**Version 2.7.1** · ~20,000 lines Python · 52 regression tests passing · Prepared for Dalkia review
+**Version 2.7.1** · ~19,000 lines Python · 142 tests passing · Prepared for Dalkia review
 
 ---
 
@@ -75,6 +75,7 @@ Climate scenario applied on top: `baseline` / `2050_central` / `2050_high`.
 | **Whole-system** | Social NPV vs individual-gas(+AC) counterfactual at 3.5% |
 | **Resilience** | N-1 firm capacity at peak, margin, compliance |
 | **Decision** | One screening verdict + per-gate audit, shared identically by UI, API result and CSV export |
+| **Cost decomposition** | Every CAPEX and OPEX line tagged by scaling basis (fixed / per-connection / plant / network / % adder), plus the size-independent burden per connection and in p/kWh |
 | **Audit** | Model version, UTC timestamp, scenario SHA-256, warnings/assumptions log |
 
 ---
@@ -312,19 +313,25 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Feasibility comparison** | `python -m reports.feasibility_comparison` | Dense core vs compact private cluster vs extended route, on one 14.2 GWh customer base; route sensitivity; separate 4-pipe cooling check |
 | **Data-centre waste heat** | `python -m reports.data_centre_feasibility` | 4 DC scenarios, UK support pre-checks, one-at-a-time sensitivities, 40-yr cash-flow comparison |
 | **Technology frontier** | `python -m reports.technology_frontier` | Route/demand frontier, price sensitivities, cooling cost decomposition, fair customer-bill comparison |
+| **Cost decomposition** | `python -m reports.cost_breakdown` | Every CAPEX/OPEX line by scenario, tagged with how it scales; unit costs; size-independent exposure |
 | **Dalkia screening study** | `analysis/dalkia_screening_study.py` | 4 technologies × 3 density archetypes (dense/middle/scarce), auto-sized; GHNF grant sensitivity; gas-parity verification |
 | **Exeter case study** | `analysis/exeter_case_study.py` | **Real tree topology** from the DESNZ Heat Network Zoning Pilot "City Typologies" map — Central Exeter (5 zones, 254 connections, 3,900 m) and Sowton/Airport (2 zones, 601 connections, 5,800 m); linear-density sweep 250 m–19,000 m; 2-pipe vs 4-pipe |
 | **Source-stack comparison** | `analysis/source_stack_comparison{,_ealing}.py` | 3 tech stacks × duty × density × tree-vs-trunk × climate, on two fixed real networks (Exeter Central + Ealing) |
 
 ### Headline findings
 
-1. **Every base case fails the investor NPV gate under strict gas-parity billing.** This is a real,
+1. **Size-independent cost alone consumes ~81% of the customer's bill.** The decomposition puts
+   **5.93 p/kWh** — £13,880 per connection — on cost that does not move with scheme size, against a
+   7.33p Ofgem cap and a ~8.3p modelled gas-parity bill. That is before a single kWh is generated, a
+   metre of pipe is laid, or a connection is made. This is the mechanism behind every other finding
+   here, and the strongest single number in the pack.
+2. **Every base case fails the investor NPV gate under strict gas-parity billing.** This is a real,
    expected district-heating result — not a model defect. Heat networks essentially never clear a
    commercial hurdle on gas-parity tariffs alone.
-2. **The gap is structural, not a tariff-mechanism problem.** Customers are charged ~8.3–8.5 p/kWh
+3. **The gap is structural, not a tariff-mechanism problem.** Customers are charged ~8.3–8.5 p/kWh
    (their own gas bill). Required break-even tariff is **20–105 p/kWh**. Gas-parity billing works
    exactly as designed — it just reveals the size of the hole.
-3. **Linear density is a necessary but not sufficient condition.** The Exeter sweep is the cleanest
+4. **Linear density is a necessary but not sufficient condition.** The Exeter sweep is the cleanest
    result in the pack: even at a 250 m route (an unrealistically compact network), required tariff is
    still **3–4× the Ofgem cap**. At 254 connections, fixed CAPEX/OPEX exceeds what the customer base can
    support *regardless of how short the pipe run is*. Independently reproduced on the larger Ealing-scale
@@ -352,14 +359,41 @@ session-reset / auto-size regressions · source/booster energy and outage coupli
 carbon inclusion · carbon-unit and GHNF cap tests · service and carbon comparison gates · one shared
 screening decision across UI/API/CSV · per-connection gas standing charges in the counterfactual ·
 gas-bill and AC-bill parity modes · hourly pumping-electricity pricing · explicit OPEX reconciliation to
-a zero residual.
+a zero residual · design/commissioning/contingency applied to the whole delivered scope · fixed
+CAPEX/OPEX scaled to scheme peak with the factor recorded in the audit hash.
 
-**52 regression tests, all passing.**
+**142 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
+hydraulics/sizing/cost, demand synthesis and all three COP curves, written against the cited sources
+(Ruhnau's coefficients, REHVA's EER 4.0 at 35 °C, the SEAI cost curve, EN 253 Table 7).
+
+### What review found and fixed
+
+Be ready for "what did the review turn up" — the honest answer is stronger than a clean one:
+
+- **NaN cooling demand.** The CDD branch guarded on the scenario year's degree-hours but divided by the
+  *reference* year's. A cool-climate weather file produced a divide-by-zero whose NaN propagated silently
+  into NPV. Not triggered by the London EPW; found the day physics unit tests were first written.
+- **Contingency base.** Design/commissioning/contingency applied to plant and network only, exempting
+  ~£9.4m of a ~£21m scheme — including the £4.5m of customer connections, the line likeliest to overrun.
+  Now covers the whole delivered scope except land. CAPEX +14%.
+- **Unreachable fixed-cost scaling.** The helper that scales overheads to scheme size existed but was
+  buried in a study script, so the archetype study ran on unscaled Ealing overheads — the exact caveat
+  its own findings recorded. Scarce archetype improves £22.15m → £17.73m once applied.
+- **A parallel financial stack.** `metrics.py` carried an unused second NPV/IRR/payback/LCOH
+  implementation on a 25-year flat-annuity basis, contradicting the live 40-year table. Removed.
 
 ---
 
 ## 12. Known limitations — state these openly
 
+- **The cooling model overshoots its own benchmark by ~9–10%.** Part 3's comfort floor is applied as a
+  `max()` on top of an already fully-allocated budget. The docstring claimed it summed "EXACTLY"; that
+  was false and is corrected. Conservative in direction, and far better than the ~47% over-allocation it
+  replaced — but an overshoot, not an identity.
+- **Physics unit coverage is new and partial.** Dispatch, topology thermal (Shukhov), pumping, storage,
+  tariff shapes and auto-sizing are still exercised only through `run_scenario()`. The first three
+  modules to get unit tests immediately surfaced two real defects; assume the untested ones carry
+  comparable risk.
 - Auto-sizing is a transparent load-duration heuristic, **not a constrained unit-combination optimiser**.
 - **N-1 is a peak-capacity screen only** — it does not prove outage duration, storage autonomy or network
   resilience.
@@ -374,9 +408,13 @@ a zero residual.
 - No customer detriment, nominal mode, monetised carbon/social benefits, tornado sensitivity or
   switching-value optimisation.
 - **CIBSE DSY/DWY design weather not yet implemented** — peak sizing currently uses the representative year.
-- Fixed CAPEX/OPEX line items were held constant across archetypes in the screening studies, reused
-  unscaled from Ealing-calibrated defaults. This penalises small schemes and **overstates the absolute NPV
-  gap for the sparse archetype** until re-scoped for scheme size.
+- Fixed CAPEX/OPEX items are now scaled to scheme peak capacity (with a 0.20 floor) rather than held flat,
+  but that is a **ratio, not a scoping exercise** — a real project sizes these from a drawing.
+- **REPEX covers generating plant only.** Controls/SCADA carries no replacement across 40 years despite a
+  shorter real life. `billing_and_customer_service` is a flat annual figure that plainly should scale with
+  connection count.
+- **Generic-mode pumping applies the design-point pressure gradient at every hour**, so part-load pumping is
+  overstated and peak understated (real pumping power scales with flow cubed).
 - Technology and pipe cost presets need project-specific price-year updates, quotations and uncertainty
   ranges.
 
@@ -399,10 +437,11 @@ a zero residual.
 | Demand, weather, climate, dispatch, sizing | Complete |
 | Network — tree + generic-length modes | Complete |
 | Economics, tariffs, grant, cash flow, screening | Complete |
-| Regression suite (52 tests) | Passing |
-| Validation vs published report | Passing |
-| 7 case studies with figures + CSV exports | Complete |
-| **Streamlit UI (`app.py`, 1,110 lines)** | **Built, not yet verified end-to-end — next sprint** |
+| Test suite (142 tests) | Passing — integration + physics units |
+| Physics unit coverage | Partial: pipe/demand/COP covered; dispatch, Shukhov, auto-size not yet |
+| Validation vs published report | Passing, 13/13 metrics |
+| 8 case studies with figures + CSV exports | Complete |
+| **Streamlit UI (`app.py`, 1,110 lines)** | **Runs; 21/21 templates match direct runs. Polish next sprint** |
 
 The scenario interface is plain JSON-compatible data through `scenarios.scenario_runner.run_scenario`,
 so the UI is a presentation layer over an engine that already runs headless from the command line. Every
@@ -412,6 +451,8 @@ case study in section 10 was generated **directly against the engine**, not thro
 
 ## Suggested narrative for the deck
 
+0. **Lead with the cost decomposition.** 5.93 p/kWh of size-independent cost against a 7.33p cap —
+   81% of the bill gone before anything is built. Everything else follows from that one number.
 1. **We built an auditable screening engine, not a spreadsheet.** 8,760-hour physics, 40-year finance,
    one shared decision, hashed and versioned.
 2. **Every number is sourced or flagged.** Where a citation couldn't be verified, we say so in the code

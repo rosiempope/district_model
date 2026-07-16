@@ -55,6 +55,40 @@ python -m reports.technology_frontier
 The UI template **Ealing report validation - Phase 1** contains the same
 published report inputs and produces zero unmet heat.
 
+Run the CAPEX/OPEX decomposition — where the money goes, by scaling basis:
+
+```bash
+python -m reports.cost_breakdown
+```
+
+## The UI
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py     # opens http://localhost:8501
+```
+
+The UI controls building archetype and either floor area/dwellings or measured
+annual heat/cooling/DHW (plus optional measured peak, billed connections,
+connection year and probability); climate scenario; equivalent-trunk length or an
+editable energy-centre/junction/customer tree; heating and cooling flow/return
+temperatures; technology, preset, capacity and unit count; and separate
+heat/cooling tariffs, project CAPEX, annual OPEX, real price paths,
+project/social discount rates, grant and counterfactual.
+
+Workflow: load a worked scenario or start blank → modify inputs in **Build
+scenario** → **Validate and run scenario** → resolve the visible
+assumptions/default warnings and any failed service or carbon gate → inspect the
+investor and whole-system cash-flow audits in **Results** → **Add result to
+comparison** → repeat for alternatives, then use **Compare scenarios** to graph a
+metric and download the table.
+
+The UI uploads and downloads a plain scenario JSON — the same input contract as
+`scenarios.scenario_runner.run_scenario()`. It is a prototype client for a future
+API implementation, not a second model. For a four-pipe scenario,
+`network.include_cooling` must be `true`, at least one cooling source is
+required, and the counterfactual is automatically set to `individual_gas_and_ac`.
+
 ## End-user workflow
 
 1. Enter each customer/site using either floor area/dwellings for an archetype

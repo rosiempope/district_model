@@ -44,7 +44,7 @@ The 0.49 MWh residual unmet heat in the 3 km case is 0.0035% of annual customer 
 This is an illustrative mixed-building dataset, not an input taken from the Ealing report. It tests whether simply adding a separate central cooling network makes the scheme stronger.
 
 - Outcome: **DO NOT PROGRESS**
-- NPV: GBP-36.47m
-- Gross CAPEX: GBP28.76m
-- Carbon: 103.8 gCO2e/kWh (above the 100 g screening gate)
+- NPV: GBP-40.30m
+- Gross CAPEX: GBP32.31m
+- Carbon: 80.8 gCO2e/kWh (above the 100 g screening gate)
 - Conclusion: do not add four-pipe cooling by default. Re-test only where a concentrated cooling anchor, shared civil works and/or heat recovery materially changes the case.
