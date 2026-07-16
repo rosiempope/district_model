@@ -91,6 +91,49 @@ INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW = {
 }
 
 
+# ── Boiler Upgrade Scheme (BUS) — the customer-facing heat pump subsidy ───────
+#
+# £7,500 off an air-source, ground-source or water-source heat pump, England and
+# Wales. DESNZ confirmed in February 2026 that BUS runs until at least March
+# 2028, with the 2026-28 allocation increased to £1.8bn.
+#   ofgem.gov.uk/environmental-and-social-schemes/boiler-upgrade-scheme-bus
+#
+# ELIGIBILITY IS THE POINT, not the headline number. BUS caps at 45 kWth per
+# installation (70 kWth for multi-heat-pump systems; 300 kWth collective for
+# shared ground loops with 45 kW per unit), and the property must be a home or a
+# small/medium non-domestic building. New-build homes and social housing are
+# excluded.
+#
+# So BUS transforms the individual-heat-pump alternative for a house and does
+# NOTHING for a shopping centre. Birmingham Central's anchor loads — New Street
+# Station at ~15 MW peak, the Bullring at ~7 MW — are three orders of magnitude
+# past the cap. Any "district heat vs individual heat pumps" comparison
+# therefore has a completely different answer for domestic and non-domestic
+# stock, and applying a flat £7,500 per connection across a mixed zone would be
+# straightforwardly wrong.
+#
+# NOT modelled: the new-build and social-housing exclusions, and the EPC
+# requirement. Both would REDUCE eligibility further, so ignoring them is
+# generous to the individual-heat-pump case, i.e. conservative for district heat.
+BUS_GRANT_GBP = 7500.0
+BUS_MAX_CAPACITY_KWTH = 45.0
+
+
+def bus_grant_GBP(peak_kW: float, connections: int = 1) -> float:
+    """BUS grant for one building's individual heat pumps, or 0 if ineligible.
+
+    Applied per CONNECTION: a residential block of 50 flats each taking its own
+    ~8 kW heat pump is 50 eligible installations, not one 400 kW system. A single
+    non-domestic building above the 45 kWth cap gets nothing.
+    """
+    if connections <= 0 or peak_kW <= 0:
+        return 0.0
+    per_installation_kW = float(peak_kW) / int(connections)
+    if per_installation_kW > BUS_MAX_CAPACITY_KWTH:
+        return 0.0
+    return BUS_GRANT_GBP * int(connections)
+
+
 def aggregate_capex(
     sources: Optional[list] = None,
     network_topology=None,

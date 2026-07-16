@@ -14,7 +14,9 @@ from network.network_pumping import annual_pumping_electricity_MWh
 from network.pipe_catalog import water_properties
 from economics.CAPEX import aggregate_capex
 from economics.metrics import (aggregate_counterfactual,
-                               counterfactual_gas_boiler_dispatch, counterfactual_individual_ac_dispatch,
+                               counterfactual_gas_boiler_dispatch,
+                               counterfactual_individual_ac_dispatch,
+                               counterfactual_individual_ashp_dispatch,
                                )
 
 
@@ -583,14 +585,34 @@ def _fill_segment_detail(detail_rows, sized_segments, duty):
             row[f"{label} CAPEX (£)"] = round(s.capex_GBP, 0)
 
 
-def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate):
+def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate,
+                             counterfactual="individual_gas",
+                             apply_bus_grant=True,
+                             counterfactual_electricity_price_p_per_kWh=None):
     enriched_nodes = [
         {**node, "connections": _connection_count(building)}
         for node, building in zip(nodes, buildings)
     ]
-    heat = aggregate_counterfactual(
-        enriched_nodes, counterfactual_gas_boiler_dispatch, om_rate=om_rate
-    )
+    if counterfactual == "individual_ashp":
+        from functools import partial
+        # Every building installs its own heat pump instead. This is the
+        # comparison heat network zoning actually rests on — the Energy Act 2023
+        # framework designates zones where heat networks are "the lowest-cost
+        # solution for DECARBONISING heat", not where they beat a gas boiler.
+        # The BUS grant is applied where eligible (45 kWth cap), because it is
+        # what a real customer would receive.
+        fn = partial(
+            counterfactual_individual_ashp_dispatch,
+            apply_bus_grant=apply_bus_grant,
+            electricity_price_p_per_kWh=counterfactual_electricity_price_p_per_kWh,
+        )
+        heat = aggregate_counterfactual(
+            enriched_nodes, fn, weather_df=weather, om_rate=om_rate,
+        )
+    else:
+        heat = aggregate_counterfactual(
+            enriched_nodes, counterfactual_gas_boiler_dispatch, om_rate=om_rate
+        )
     if not include_cooling:
         return heat
     cooling = aggregate_counterfactual(enriched_nodes, counterfactual_individual_ac_dispatch,
@@ -868,6 +890,11 @@ def run_scenario(scenario):
         counterfactual = _combined_counterfactual(
             demand["nodes"], cfg["demand"]["buildings"], weather,
             include_cooling, econ_cfg["om_rate"],
+            counterfactual=econ_cfg["counterfactual"],
+            apply_bus_grant=econ_cfg.get("apply_bus_grant", True),
+            counterfactual_electricity_price_p_per_kWh=econ_cfg.get(
+                "counterfactual_electricity_price_p_per_kWh"
+            ),
         )
     revenue_items, connected_heat_kWh, connected_cool_kWh, revenue_meta = _customer_revenue_and_energy(
         cfg["demand"]["buildings"], demand["nodes"], econ_cfg, include_cooling, life,

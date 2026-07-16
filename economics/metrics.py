@@ -58,9 +58,14 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from economics.CAPEX import INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW, individual_system_capex_GBP
+from economics.CAPEX import (
+    INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW, bus_grant_GBP, individual_system_capex_GBP,
+)
 from economics.om_rates import annual_om_cost_GBP, INDIVIDUAL_SYSTEM_OM_RATE
-from economics.tariffs import OFGEM_GAS_CAP_P_PER_KWH, OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY
+from economics.tariffs import (
+    OFGEM_ELECTRICITY_CAP_P_PER_KWH, OFGEM_ELECTRICITY_CAP_STANDING_CHARGE_P_PER_DAY,
+    OFGEM_GAS_CAP_P_PER_KWH, OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY,
+)
 from optimisation.dispatch import run_dispatch
 from components.peak_demand_option import GasBoiler
 from components.ASHP import ASHPArray
@@ -141,7 +146,10 @@ def counterfactual_gas_boiler_dispatch(node: dict) -> dict:
     }
 
 
-def counterfactual_individual_ashp_dispatch(node: dict, weather_df) -> dict:
+def counterfactual_individual_ashp_dispatch(
+    node: dict, weather_df, apply_bus_grant: bool = True,
+    electricity_price_p_per_kWh: float | None = None,
+) -> dict:
     """
     ONE air source heat pump, sized exactly to this building's own peak
     heating demand, dispatched against this building's own real hourly
@@ -152,30 +160,74 @@ def counterfactual_individual_ashp_dispatch(node: dict, weather_df) -> dict:
     domestic ASHP and a large centralised one share the same
     fundamental vapour-compression cycle.
 
+    PRICING BASIS — the same fix the gas counterfactual already carries. This
+    function previously left electricity_price_GBP_per_MWh at its default, which
+    resolves to ElectricityTariff()'s ~24 p/kWh LARGE-BUSINESS negotiated rate.
+    A household running its own heat pump pays the Ofgem cap (26.11 p/kWh), plus
+    a real standing charge that no per-MWh dispatch cost captures at all. Both
+    are now passed explicitly. This was the identical bug found and fixed on the
+    gas side, and is very likely why this counterfactual was never wired up.
+
+    BUS GRANT — apply_bus_grant=True nets the £7,500 Boiler Upgrade Scheme grant
+    off the customer's capital cost, where eligible. Eligibility is enforced, not
+    assumed: BUS caps at 45 kWth per installation, so it transforms the sums for
+    a house and does nothing at all for a shopping centre. See
+    economics/CAPEX.py's bus_grant_GBP().
+
+    This is a CUSTOMER-FACING view. BUS is a transfer, not a resource cost, so it
+    belongs in the investor/customer comparison and NOT in the whole-system
+    social case — exactly the treatment this project already gives GHNF.
+
     Parameters
     ----------
-    node        : one building's node dict — must have "peak_heat_kW"
-                  and "total_heat_kW"
-    weather_df  : EPW weather DataFrame (ASHP output is weather-dependent)
+    node             : one building's node dict — needs "peak_heat_kW",
+                       "total_heat_kW" and optionally "connections"
+    weather_df       : EPW weather DataFrame (ASHP output is weather-dependent)
+    apply_bus_grant  : net the BUS grant off capex where eligible
+    electricity_price_p_per_kWh : override the retail rate — this is the hook
+                       for a levy-rebalancing sensitivity
 
     Returns
     -------
-    dict: {"capex_GBP", "dispatch_result", "annual_opex_GBP"}
+    dict: {"capex_GBP", "dispatch_result", "annual_opex_GBP",
+           "annual_customer_bill_GBP", "bus_grant_GBP", "bus_eligible", ...}
     """
-    peak_MW = node["peak_heat_kW"] / 1000.0
+    true_peak_kW = float(np.asarray(node["total_heat_kW"]).max())
+    peak_MW = true_peak_kW / 1000.0
+    retail_elec_p = (
+        OFGEM_ELECTRICITY_CAP_P_PER_KWH if electricity_price_p_per_kWh is None
+        else float(electricity_price_p_per_kWh)
+    )
     ashp = ASHPArray(
         name=f"{node['name']} individual ASHP",
         n_units=1,
         unit_capacity_MW=peak_MW,
         weather_df=weather_df,
         capex_GBP_per_MW=INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW["individual_ashp"] * 1000.0,
+        electricity_price_GBP_per_MWh=retail_elec_p * 10.0,   # p/kWh -> £/MWh
     )
     result = run_dispatch(node["total_heat_kW"], [ashp], storage=None, duty="heat")
-    capex_GBP = individual_system_capex_GBP(node["peak_heat_kW"], "individual_ashp")
+    gross_capex_GBP = individual_system_capex_GBP(true_peak_kW, "individual_ashp")
+
+    connections = max(1, int(node.get("connections", 1)))
+    grant = bus_grant_GBP(true_peak_kW, connections) if apply_bus_grant else 0.0
+    grant = min(grant, gross_capex_GBP)   # a grant cannot exceed the thing it buys
+
+    standing_charge_GBP = (
+        OFGEM_ELECTRICITY_CAP_STANDING_CHARGE_P_PER_DAY * 365.0 / 100.0 * connections
+    )
+    fuel_opex_GBP = result.summary()["total_annual_opex_GBP"]
     return {
-        "capex_GBP": capex_GBP,
+        "capex_GBP": gross_capex_GBP - grant,
+        "gross_capex_GBP": gross_capex_GBP,
+        "bus_grant_GBP": round(grant, 0),
+        "bus_eligible": grant > 0,
         "dispatch_result": result,
-        "annual_opex_GBP": result.summary()["total_annual_opex_GBP"],
+        "annual_opex_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
+        "annual_customer_bill_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
+        "annual_fuel_GBP": round(fuel_opex_GBP, 0),
+        "annual_standing_charge_GBP": round(standing_charge_GBP, 0),
+        "connections": connections,
     }
 
 

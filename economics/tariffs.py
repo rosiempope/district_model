@@ -197,6 +197,103 @@ OFGEM_GAS_CAP_P_PER_KWH = 7.33
 OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY = 29.04
 OFGEM_GAS_CAP_REVIEW_PERIOD = "1 July 2026 - 30 September 2026"
 
+# ── Ofgem ELECTRICITY price cap — the other half of the customer picture ──────
+#
+# The retail rate a household actually pays for electricity, direct debit,
+# inclusive of network, policy and supplier costs and VAT at 5%. Same basis and
+# same review period as the gas cap above.
+#
+# This is the right price for an INDIVIDUAL HEAT PUMP counterfactual, and it is
+# NOT the same as ElectricityTariff's ~24 p/kWh large-business default. A
+# household running its own heat pump pays the cap, not a negotiated commercial
+# rate. This is exactly the mismatch that was already found and fixed on the gas
+# side (see counterfactual_gas_boiler_dispatch's own note) — the ASHP
+# counterfactual had the identical bug, silently pricing a household's
+# electricity at a large scheme's negotiated rate.
+#
+# Source: Ofgem, "Changes to energy price cap between 1 July and 30 September
+# 2026" (published 27 May 2026). Cap £1,862/yr for typical direct-debit use,
+# up 13% on the previous period.
+OFGEM_ELECTRICITY_CAP_P_PER_KWH = 26.11
+OFGEM_ELECTRICITY_CAP_STANDING_CHARGE_P_PER_DAY = 57.19
+
+# The spark gap: what a kWh of electricity costs against a kWh of gas, at the
+# cap. This single ratio decides whether a heat pump is cheaper to run than a
+# gas boiler — a heat pump must achieve a COP above it just to break even.
+OFGEM_SPARK_GAP_RATIO = OFGEM_ELECTRICITY_CAP_P_PER_KWH / OFGEM_GAS_CAP_P_PER_KWH   # ~3.56
+
+# ── Policy costs ("green levies") — the rebalancing lever ─────────────────────
+#
+# Policy costs are ~17-18% of a typical electricity bill against ~7-8% of a gas
+# bill (Nesta, "What's in an energy bill?"; House of Commons Library CBP-10505).
+# Nesta estimated 82% of domestic levy revenue came from electricity and 18%
+# from gas under the Oct-Dec 2024 cap — a historic imbalance, not a reflection
+# of where the costs are caused.
+#
+# This matters enormously for heat pumps: levies loaded onto electricity widen
+# the spark gap and directly tax the technology policy is trying to encourage.
+# Government has begun unwinding it — from April 2026, 75% of domestic
+# Renewables Obligation costs moved to public funding, and from 1 July 2026 ECO
+# costs came off bills entirely.
+#
+# These fractions are the CURRENT policy-cost share of each cap, used by
+# rebalanced_caps() to model a shift. They are a share of the unit rate, which
+# is a simplification — some policy cost sits in the standing charge.
+POLICY_COST_SHARE_OF_ELECTRICITY = 0.18
+POLICY_COST_SHARE_OF_GAS = 0.08
+
+
+def rebalanced_caps(shift_fraction: float = 1.0) -> dict:
+    """Move policy costs off electricity and onto gas, revenue-neutral.
+
+    What "if they took the green levy off electricity" actually means, priced.
+
+    Parameters
+    ----------
+    shift_fraction : how much of the electricity policy cost to move. 1.0 moves
+                     all of it onto gas; 0.5 moves half. Default 1.0.
+
+    Returns a dict of the resulting unit rates and the new spark gap.
+
+    Revenue neutrality is assumed across the two fuels: the levy revenue removed
+    from electricity is recovered from gas. That is the form of the policy most
+    commonly proposed, and it is deliberately the CONSERVATIVE version — moving
+    the cost to general taxation instead (as the 2026 Renewables Obligation
+    change actually did) would cut the electricity rate without raising gas at
+    all, which is better for heat pumps than what is modelled here.
+
+    The gas-side uplift uses each fuel's share of typical household consumption
+    at the cap. This is an approximation: a true rebalancing calculation needs
+    the actual levy revenue and the actual consumption base, not bill shares.
+    Treat the direction and rough magnitude as the finding, not the decimals.
+    """
+    if not 0.0 <= shift_fraction <= 1.0:
+        raise ValueError(f"shift_fraction must be between 0 and 1; got {shift_fraction}")
+
+    # Typical household consumption at the cap (Ofgem's own typical-use basis).
+    ELEC_kWh, GAS_kWh = 2700.0, 11500.0
+
+    elec_policy_p_per_kWh = OFGEM_ELECTRICITY_CAP_P_PER_KWH * POLICY_COST_SHARE_OF_ELECTRICITY
+    moved_revenue_p = elec_policy_p_per_kWh * shift_fraction * ELEC_kWh
+
+    new_elec = OFGEM_ELECTRICITY_CAP_P_PER_KWH - elec_policy_p_per_kWh * shift_fraction
+    new_gas = OFGEM_GAS_CAP_P_PER_KWH + moved_revenue_p / GAS_kWh
+
+    return {
+        "shift_fraction": float(shift_fraction),
+        "electricity_p_per_kWh": round(new_elec, 3),
+        "gas_p_per_kWh": round(new_gas, 3),
+        "electricity_change_p": round(new_elec - OFGEM_ELECTRICITY_CAP_P_PER_KWH, 3),
+        "gas_change_p": round(new_gas - OFGEM_GAS_CAP_P_PER_KWH, 3),
+        "spark_gap_ratio": round(new_elec / new_gas, 3),
+        "baseline_spark_gap_ratio": round(OFGEM_SPARK_GAP_RATIO, 3),
+        "basis": (
+            "Revenue-neutral shift of policy costs from electricity to gas, at the "
+            f"1 Jul-30 Sep 2026 cap. Assumes {POLICY_COST_SHARE_OF_ELECTRICITY:.0%} of the "
+            f"electricity unit rate is policy cost, recovered across typical household gas use."
+        ),
+    }
+
 
 # ── Default escalation rates ────────────────────────────────────────────────────
 # Simple real-terms annual escalation — a sensitivity input, NOT a forecast.

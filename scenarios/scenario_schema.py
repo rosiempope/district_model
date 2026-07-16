@@ -10,7 +10,12 @@ COOLING_SOURCE_TYPES = {"air_cooled_chiller"}
 NETWORK_MODES = {"none", "generic_length", "tree"}
 TREE_ROOT_ID = "EC"   # the implicit energy-centre root every tree hangs off
 CLIMATE_SCENARIOS = {"baseline", "2050_central", "2050_high"}
-COUNTERFACTUALS = {"none", "individual_gas", "individual_gas_and_ac"}
+# What each building would do WITHOUT the network. This choice decides the
+# answer: gas boilers are the cheap alternative policy is removing, individual
+# heat pumps are the alternative that is actually legal long-term and the one
+# heat network zoning is explicitly judged against ("the lowest-cost solution
+# for decarbonising heating"). See economics/metrics.py.
+COUNTERFACTUALS = {"none", "individual_gas", "individual_gas_and_ac", "individual_ashp"}
 DEFAULTS = {
     "climate_scenario": "baseline",
     "screening": {
