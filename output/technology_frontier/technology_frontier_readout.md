@@ -6,7 +6,12 @@ Heat bills are held equal to each customer's modelled individual-gas bill. Cooli
 
 ## Route and demand result
 
-0 of 160 supported grid cases pass all mandatory gates.
+5 of 160 supported grid cases pass all mandatory gates.
+- **EfW + ASHP + gas backup** at 21.17 GWh/year and 1.0 km (21.17 MWh/m/year): NPV £0.06m, IRR 10.6%.
+- **EfW + ASHP + gas backup** at 28.23 GWh/year and 1.0 km (28.23 MWh/m/year): NPV £3.61m, IRR 14.1%.
+- **EfW + ASHP + gas backup** at 28.23 GWh/year and 1.5 km (18.82 MWh/m/year): NPV £2.66m, IRR 13.0%.
+- **EfW + ASHP + gas backup** at 28.23 GWh/year and 2.0 km (14.12 MWh/m/year): NPV £1.71m, IRR 12.0%.
+- **EfW + ASHP + gas backup** at 28.23 GWh/year and 2.5 km (11.29 MWh/m/year): NPV £0.75m, IRR 11.1%.
 
 No unsupported central case passes. At the tested energy prices, simply adding demand does not rescue technologies whose variable cost is too close to or above the gas-parity heat bill; route density solves pipe CAPEX, not an adverse electricity-to-heat price spread.
 

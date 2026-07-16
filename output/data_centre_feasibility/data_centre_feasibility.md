@@ -4,16 +4,16 @@
 
 A data centre should be treated as a steady low-carbon baseload source, not the sole source of heat. Independent peak and reserve capacity remains necessary because heat-source and booster outages do not coincide neatly with customer demand.
 
-The strongest tested data-centre case is **DC3 - Compact liquid-cooled baseload hybrid**, with NPV GBP-5.26m, 0.00 MWh unmet heat and 53.6 gCO2e/kWh. It is not investable at gas-bill-parity customer revenue under the tested assumptions.
+The strongest tested data-centre case is **DC3 - Compact liquid-cooled baseload hybrid**, with NPV GBP-5.21m, 0.00 MWh unmet heat and 53.6 gCO2e/kWh. It is not investable at gas-bill-parity customer revenue under the tested assumptions.
 
 ## Core comparison
 
 | Scenario | Route (m) | Heat demand (GWh) | Gross CAPEX (£m) | Grant (£m) | Connection contributions (£m) | Annual OPEX (£m) | Unmet heat (MWh) | Carbon (gCO2e/kWh) | NPV (£m) | IRR (%) | Required tariff (p/kWh) | Service gate | Carbon gate | Outcome |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DC1 - Data-centre-only service stress test | 1200.00 | 14.16 | 18.89 | 6.31 | 8.34 | 1.31 | 314.19 | 35.10 | -7.89 | None | 8.81 | FAIL | PASS | DO NOT PROGRESS |
-| DC2 - Typical air-cooled data centre plus reserve | 1800.00 | 14.16 | 21.55 | 7.61 | 8.34 | 1.71 | 0.00 | 55.50 | -12.94 | None | 12.62 | PASS | PASS | DO NOT PROGRESS |
-| DC3 - Compact liquid-cooled baseload hybrid | 1200.00 | 14.16 | 15.73 | 4.76 | 8.34 | 1.25 | 0.00 | 53.60 | -5.26 | None | 6.82 | PASS | PASS | DO NOT PROGRESS |
-| DC4 - Same compact hybrid without grant or contributions | 1200.00 | 14.16 | 15.73 | 0.00 | 0.00 | 1.25 | 0.00 | 53.60 | -17.57 | None | 16.12 | PASS | PASS | DO NOT PROGRESS |
+| DC1 - Data-centre-only service stress test | 1200.00 | 14.16 | 18.89 | 6.31 | 8.34 | 1.31 | 314.19 | 35.10 | -7.84 | None | 8.80 | FAIL | PASS | DO NOT PROGRESS |
+| DC2 - Typical air-cooled data centre plus reserve | 1800.00 | 14.16 | 21.55 | 7.61 | 8.34 | 1.71 | 0.00 | 55.50 | -12.89 | None | 12.61 | PASS | PASS | DO NOT PROGRESS |
+| DC3 - Compact liquid-cooled baseload hybrid | 1200.00 | 14.16 | 15.73 | 4.76 | 8.34 | 1.25 | 0.00 | 53.60 | -5.21 | None | 6.81 | PASS | PASS | DO NOT PROGRESS |
+| DC4 - Same compact hybrid without grant or contributions | 1200.00 | 14.16 | 15.73 | 0.00 | 0.00 | 1.25 | 0.00 | 53.60 | -17.52 | None | 16.11 | PASS | PASS | DO NOT PROGRESS |
 
 ## What moves feasibility
 

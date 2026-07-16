@@ -7,7 +7,7 @@ Site: Birmingham Central IZO anchor core (10 named buildings, 60.2 GWh, report c
 
 | Counterfactual                                |   Alternative CAPEX (£m) |   Alternative bill (£m/yr) |   District CAPEX (£m) |   District OPEX (£m/yr) |   Incremental CAPEX (£m) |   Avoided cost (£m/yr) |   Fair tariff at parity (p/kWh) |   Investor NPV (£m) |   Whole-system NPV @3.5% (£m) |   Whole-system payback (yrs) |
 |:----------------------------------------------|-------------------------:|---------------------------:|----------------------:|------------------------:|-------------------------:|-----------------------:|--------------------------------:|--------------------:|------------------------------:|-----------------------------:|
-| Individual gas boilers (being phased out)     |                      7.5 |                       4.73 |                  94.8 |                    4.39 |                     87.3 |                   0.33 |                           7.73  |               -94.2 |                         -85.5 |                        nan   |
+| Individual gas boilers (being phased out)     |                      7.5 |                       4.73 |                  94.8 |                    4.39 |                     87.3 |                   0.34 |                           7.737 |               -94.2 |                         -85.4 |                        nan   |
 | Individual heat pumps (the legal alternative) |                     77.4 |                       7.35 |                  94.8 |                    4.39 |                     17.4 |                   2.96 |                          10.929 |               -76.2 |                          67   |                          5.9 |
 
 ## 2. Where the £7,500 BUS grant actually lands
