@@ -1,6 +1,7 @@
 """UI-facing validation for JSON-compatible 2-pipe and 4-pipe scenarios."""
 from __future__ import annotations
 from copy import deepcopy
+from economics.connection_costs import SENSITIVITY_CASES
 from network.design_temperature_limits import DHW_SYSTEM_TYPES
 from profiles.demand_synthesis import BUILDING_TYPES
 
@@ -70,6 +71,13 @@ DEFAULTS = {
             "electricity_connection_GBP": 0.0,
             "gas_connection_GBP": 0.0,
             "controls_and_scada_GBP": 0.0,
+            # How a connection is priced. "by_building_type" builds it up from
+            # DECC components — per dwelling for residential, per kW of substation
+            # for everything else. "flat_per_connection" is the old behaviour and
+            # uses the two rates below; it charged the same figure to a flat and to
+            # a railway station.
+            "connection_cost_mode": "by_building_type",
+            "connection_cost_case": "base",
             "customer_connection_GBP_per_connection": 0.0,
             "metering_GBP_per_connection": 0.0,
             "development_and_design_pct": 0.0,
@@ -349,6 +357,23 @@ def validate_scenario(scenario: dict) -> list[str]:
     for year_name in ("base_year", "price_year"):
         if not isinstance(econ.get(year_name), int) or isinstance(econ.get(year_name), bool):
             errors.append(f"economics.{year_name}: must be a whole-number year")
+    # NOTE the .get() defaults. apply_defaults() only merges ONE level deep —
+    # DEFAULTS["economics"]["capex_items"] is two levels down, so a scenario that
+    # supplies its own capex_items dict never receives these keys. Validating for
+    # their presence would reject every existing scenario. The defaults here match
+    # what _connection_capex() actually falls back to, so the two cannot drift.
+    capex_items = econ.get("capex_items", {})
+    if capex_items.get("connection_cost_mode", "by_building_type") not in {
+        "by_building_type", "flat_per_connection"
+    }:
+        errors.append(
+            "economics.capex_items.connection_cost_mode: choose 'by_building_type' "
+            "(priced per dwelling / per kW) or 'flat_per_connection'"
+        )
+    if capex_items.get("connection_cost_case", "base") not in SENSITIVITY_CASES:
+        errors.append(
+            f"economics.capex_items.connection_cost_case: choose one of {sorted(SENSITIVITY_CASES)}"
+        )
     if econ.get("counterfactual") not in COUNTERFACTUALS:
         errors.append(f"economics.counterfactual: choose one of {sorted(COUNTERFACTUALS)}")
     if econ.get("financial_basis") not in {"real", "nominal"}:

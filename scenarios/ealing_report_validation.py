@@ -126,6 +126,14 @@ EALING_PHASE1_VALIDATION = {
             "standing_charge_GBP_per_connection_year": 0.0,
         },
         "capex_items": {
+            # This scenario reproduces the published report's own CAPEX line by
+            # line, and the report's total already contains its customer
+            # connections. Pricing them again from DECC components would
+            # double-count and break the validation — so the connection build-up
+            # is switched off here rather than zeroed by accident.
+            "connection_cost_mode": "flat_per_connection",
+            "customer_connection_GBP_per_connection": 0.0,
+            "metering_GBP_per_connection": 0.0,
             "further_project_development_GBP": 925_572.0,
             "contractor_preliminaries_and_design_GBP": 1_295_800.0,
             "construction_insurance_GBP": 61_088.0,

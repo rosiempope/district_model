@@ -33,6 +33,11 @@ class CapexAdderBaseTests(unittest.TestCase):
             "electricity_connection_GBP": 0.0,
             "gas_connection_GBP": 0.0,
             "controls_and_scada_GBP": 0.0,
+            # These tests isolate the ADDER BASE, so connections are priced on the
+            # flat basis where the rate below is the only input. The
+            # by_building_type build-up would add a DECC-derived cost that varies
+            # with each building's peak and drown the thing being tested.
+            "connection_cost_mode": "flat_per_connection",
             "customer_connection_GBP_per_connection": 0.0,
             "metering_GBP_per_connection": 0.0,
             "development_and_design_pct": 0.0,

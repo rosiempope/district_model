@@ -577,6 +577,58 @@ def _build_tree_topology(segments, demand, include_cooling):
     return topo, detail_rows
 
 
+def _connection_capex(buildings, nodes, capex_cfg):
+    """What it costs to connect each building, priced by what the building IS.
+
+    Two modes:
+
+      by_building_type (default) — residential priced per dwelling from DECC's
+        HIU/meter/pipework components; everything else priced on its peak
+        capacity via a £/kW substation. See economics/connection_costs.py.
+
+      flat_per_connection — the previous behaviour: one figure times the
+        connection count, regardless of building. Retained because a scenario may
+        legitimately carry a real quoted figure, or (as in the Birmingham study)
+        have connection cost already inside a published total, in which case the
+        rate is set to zero.
+
+    The flat basis charged the same £8,000 to a 45 m2 flat and to a 15 MW railway
+    station. It is not the default any more.
+    """
+    from economics.connection_costs import building_connection_GBP
+
+    mode = capex_cfg.get("connection_cost_mode", "by_building_type")
+    if mode == "flat_per_connection":
+        total = sum(_connection_count(b) for b in buildings)
+        return {
+            "customer_connections_GBP": (
+                float(capex_cfg.get("customer_connection_GBP_per_connection", 0.0)) * total
+            ),
+            "metering_GBP": float(capex_cfg.get("metering_GBP_per_connection", 0.0)) * total,
+        }, None
+
+    case = capex_cfg.get("connection_cost_case", "base")
+    rows, total = [], 0.0
+    for building, node in zip(buildings, nodes):
+        conns = _connection_count(building)
+        peak_kW = float(np.asarray(node["total_heat_kW"]).max())
+        r = building_connection_GBP(building.get("type", "office"), peak_kW, conns, case)
+        total += r["total_GBP"]
+        rows.append({
+            "Building": building.get("name", node["name"]),
+            "Type": building.get("type", "office"),
+            "Connections": conns,
+            "Peak (kW)": round(peak_kW, 1),
+            "Priced": r["basis"],
+            "£ per connection": r["per_connection_GBP"],
+            "Total (£)": r["total_GBP"],
+        })
+    # Metering is inside the DECC build-up (per-dwelling meter, or bulk meter for
+    # a non-domestic building), so charging metering_GBP_per_connection on top
+    # would count the meter twice.
+    return {"customer_connections_GBP": total, "metering_GBP": 0.0}, rows
+
+
 def _delivered_temperature_check(topo, sized_heat, net_cfg):
     """Does heat arrive hot enough to make DHW, after real route loss?
 
@@ -770,20 +822,15 @@ def run_scenario(scenario):
     capex = aggregate_capex(sources=all_sources, storage=thermal_storage)
     econ_cfg = cfg["economics"]
     capex_cfg = econ_cfg.get("capex_items", {})
-    total_connections = sum(_connection_count(b) for b in cfg["demand"]["buildings"])
     fixed_capex_items = {
         key: float(value)
         for key, value in capex_cfg.items()
         if key.endswith("_GBP") and "per_connection" not in key
     }
-    fixed_capex_items["customer_connections_GBP"] = (
-        float(capex_cfg.get("customer_connection_GBP_per_connection", 0.0))
-        * total_connections
+    connection_items, connection_detail = _connection_capex(
+        cfg["demand"]["buildings"], demand["nodes"], capex_cfg,
     )
-    fixed_capex_items["metering_GBP"] = (
-        float(capex_cfg.get("metering_GBP_per_connection", 0.0))
-        * total_connections
-    )
+    fixed_capex_items.update(connection_items)
 
     # Design, commissioning and contingency apply to the whole delivered scope,
     # not just plant and network.
@@ -1217,6 +1264,8 @@ def run_scenario(scenario):
     # temperature along) — reported as None rather than True, so "not assessed"
     # never reads as "passed".
     headline["dhw_system"] = net_cfg.get("dhw_system", "instantaneous_hiu")
+    headline["connection_cost_mode"] = capex_cfg.get("connection_cost_mode", "by_building_type")
+    headline["connection_cost_case"] = capex_cfg.get("connection_cost_case", "base")
     if delivered_temperature is not None:
         headline.update({
             "minimum_delivered_temp_C": delivered_temperature["minimum_delivered_temp_C"],
@@ -1245,7 +1294,9 @@ def run_scenario(scenario):
         for b in cfg["demand"]["buildings"]
     ):
         warnings.append("One or more customer demands use archetype benchmarks rather than measured/calibrated data.")
-    if not any(float(v) for v in capex_cfg.values()):
+    # capex_items now carries string keys (connection_cost_mode/case) alongside
+    # the numeric ones, so this must filter rather than float() everything.
+    if not any(float(v) for v in capex_cfg.values() if isinstance(v, (int, float))):
         warnings.append("All user-entered project CAPEX additions are zero; connection, building, enabling, utility and contingency costs may be missing.")
     if not any(float(v) for v in additional_opex_items.values()):
         warnings.append("All user-entered annual overhead OPEX lines are zero; billing, rates, insurance and operator overhead may be missing.")
@@ -1306,6 +1357,7 @@ def run_scenario(scenario):
               "audit": audit,
               "network_detail": network_detail,
               "delivered_temperature": delivered_temperature,
+              "connection_detail": connection_detail,
               "counterfactual": counterfactual, "demand": demand, "weather": weather, "network": network,
               "heat_sources": heat_sources, "cooling_sources": cooling_sources,
               "heat_dispatch": heat_dispatch, "cooling_dispatch": cooling_dispatch,

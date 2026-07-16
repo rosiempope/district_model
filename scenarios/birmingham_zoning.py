@@ -343,6 +343,9 @@ def _economics_from_report(izo: str, peak_total_MW: float) -> tuple[dict, dict]:
         "electricity_connection_GBP": 0.0,
         "gas_connection_GBP": 0.0,
         "controls_and_scada_GBP": 0.0,
+        # The report gives ONE total CapEx which already includes connections.
+        # Pricing them again from DECC components would double-count.
+        "connection_cost_mode": "flat_per_connection",
         "customer_connection_GBP_per_connection": 0.0,
         "metering_GBP_per_connection": 0.0,
         # Zeroed: the report's CapEx is already a delivered scheme cost.
