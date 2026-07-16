@@ -22,7 +22,7 @@ Individual-system counterfactual CAPEX
 -----------------------------------------
 This module also holds INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW — real UK
 domestic-scale £/kW figures (genuinely different from this project's
-utility-scale plant figures, e.g. ASHPArray's £600,000/MW = £600/kW
+utility-scale plant figures, e.g. ASHPArray's £770,000/MW = £770/kW
 vs. an individual domestic ASHP's much higher £1,150/kW — individual-
 scale equipment costs MORE per kW than centralised plant, a real
 result this project's network-vs-individual comparison is built to
@@ -56,7 +56,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 #
 # Real UK domestic/small-commercial-scale installed costs, deliberately
 # kept SEPARATE from this project's utility-scale plant figures (e.g.
-# ASHPArray's capex_GBP_per_MW=600,000 = £600/kW) — these are genuinely
+# ASHPArray's capex_GBP_per_MW=770,000 = £770/kW) — these are genuinely
 # different cost regimes, not the same number at a different scale.
 # Sourced from multiple 2025/2026 UK installer/market-review sources
 # (Heatable, MyJobQuote, Less, MoneyWeek, EnergyPages, BestBuilders —

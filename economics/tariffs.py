@@ -55,12 +55,34 @@ Gas price scenarios
 Gas is much flatter intraday than electricity (no equivalent evening spike)
 so the LEVEL matters far more than the shape here. Two scenarios are
 provided as a deliberate sensitivity pair:
-    'desnz_central'    : ~72 p/therm — DESNZ's central long-term projection
-    'current_actual'    : ~101 p/therm — a more conservative case reflecting
-                           actual observed prices in late 2024, higher than
-                           the DESNZ central case
-Reference: DESNZ gas price projections vs actual market data (cross-checked
-publicly, late 2024/2025 reporting).
+    'desnz_central'    : 85 p/therm — DESNZ's central long-term projection
+                          for 2026. Source: DESNZ "Fossil Fuel Price
+                          Assumptions 2025" (published January 2026,
+                          assets.publishing.service.gov.uk/media/
+                          696939b3448fedc1eb424870/fossil-fuel-price-
+                          assumptions-2025.pdf), Table 1, "Assumption B"
+                          (central case), 2026, real 2024 prices. This
+                          REPLACES a previous 72p/therm figure, which was
+                          the equivalent central projection from the
+                          PREVIOUS (2024) edition of this same DESNZ
+                          publication, not the current one.
+    'current_actual'    : 120 p/therm — a live, dated wholesale-market
+                          reading, higher than the DESNZ central case.
+                          Source: UK NBP day-ahead/Winter-2026 wholesale
+                          gas price, ≈118-132 p/therm during early-to-mid
+                          July 2026 (Catalyst Commercial "UK Energy Market
+                          Report", 10 July 2026), driven by Middle East
+                          supply-risk premium, reduced Norwegian flows,
+                          and tight European storage. This REPLACES a
+                          previous 101p/therm figure which, by the time
+                          of this update, had fallen BELOW the live
+                          market price it was meant to represent as a
+                          "conservative" (high) case — a reminder that a
+                          scenario anchored to "actual observed prices"
+                          needs re-dating periodically, not treated as a
+                          fixed constant.
+Reference: DESNZ Fossil Fuel Price Assumptions 2025 (Jan 2026); live NBP
+wholesale gas market reporting, July 2026.
 1 therm = 29.3071 kWh (standard UK gas conversion factor).
 
 Future escalation
@@ -136,13 +158,15 @@ ELEC_STANDING_CHARGE_P_PER_DAY = 146.0
 GAS_PRICE_SCENARIOS = {
     "desnz_central": {
         "description":   "DESNZ central long-term gas price projection",
-        "price_p_per_therm": 72.0,
-        "reference":     "DESNZ long-term energy price projections, central case",
+        "price_p_per_therm": 85.0,
+        "reference":     "DESNZ Fossil Fuel Price Assumptions 2025 (Jan 2026), "
+                          "Table 1, Assumption B, 2026",
     },
     "current_actual": {
         "description":   "Conservative case based on recent actual market prices",
-        "price_p_per_therm": 101.0,
-        "reference":     "Observed UK gas price, late 2024 — higher than DESNZ central",
+        "price_p_per_therm": 120.0,
+        "reference":     "UK NBP wholesale gas, ~10 July 2026 (Catalyst Commercial "
+                          "UK Energy Market Report) — higher than DESNZ central",
     },
 }
 

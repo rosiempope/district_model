@@ -74,15 +74,25 @@ Two additional real-world corrections, mirroring ASHP.py's structure:
 
 CAPEX methodology
 ------------------
-£100,000/MW — derived from real manufacturer price-list data (Trane,
-via a 2012 price list reproduced in public sourcing documents) for
-large air-cooled chillers (~$450/ton at >130 tons, consistent with
-Enersion's independently cited "~$450/ton above 150-tons" figure),
-converted via the standard 3.517 kW/ton refrigeration factor and a
-~0.79 USD/GBP rate. Notably much CHEAPER per MW than ASHP's £600,000/MW
-— which makes physical sense: a chiller is mechanically simpler (no
+£130,000/MW — real-sourcing note: the previous £100,000/MW figure was
+derived from a 2012 Trane EQUIPMENT price list (~$450/ton, consistent
+with Enersion's independently cited "~$450/ton above 150-tons" figure)
+with no inflation or installation markup applied — that number is now
+stale. This revised figure uses two current (2025), fully-installed,
+large-chiller worked examples from thecoolingco.com (a commercial
+chiller cost-analysis site publishing itemised quote breakdowns): a
+200-ton air-cooled package at $110,000-125,000 installed (midpoint
+$117,500 = $587.5/ton) and a 1,000-ton high-efficiency unit at
+$590,000-640,000 installed (midpoint $615,000 = $615/ton). Averaging
+those two large-scale, fully-installed data points gives ≈$601/ton =
+$170.9/kW (at the standard 3.517 kW/ton refrigeration factor),
+converted at ≈0.7457 USD/GBP (mid-2026) = ≈£127,400/MW, rounded to
+£130,000/MW. Still notably CHEAPER per MW than ASHP's £770,000/MW —
+which makes physical sense: a chiller is mechanically simpler (no
 cold-climate-rated compressor, no defrost cycle/controls, lower maximum
-pressure ratio than an ASHP designed for sub-zero heating duty).
+pressure ratio than an ASHP designed for sub-zero heating duty) — but
+the gap is now honestly narrower than the old (uninflated,
+equipment-only) figures implied.
 
 Generalised array design
 -------------------------
@@ -333,12 +343,11 @@ class AirCooledChiller:
                   contract to ASHPArray, via the same
                   economics.tariffs.resolve_electricity_price()
     capex_GBP_per_MW         : capital cost per MW installed. Default
-                  £100,000/MW — see module docstring for the real
-                  manufacturer price-list sourcing (~$450/ton for large
-                  air-cooled units, converted to GBP/MW). Notably much
-                  cheaper per MW than ASHPArray's £600,000/MW default —
-                  a real difference, not an inconsistency (see module
-                  docstring for why).
+                  £130,000/MW — see module docstring for the real,
+                  current (2025) fully-installed large-chiller sourcing.
+                  Notably much cheaper per MW than ASHPArray's
+                  £770,000/MW default — a real difference, not an
+                  inconsistency (see module docstring for why).
     availability_factor     : fleet-average fraction of time each UNIT is
                   available (not in maintenance). Default 0.97, same as
                   ASHPArray — reuses _ashp_unit_outage_profile() directly,
@@ -358,7 +367,7 @@ class AirCooledChiller:
         max_ambient_design_C: float           = 40.0,
         min_capacity_fraction: float          = 0.80,
         electricity_price_GBP_per_MWh         = None,
-        capex_GBP_per_MW: float                = 100_000.0,
+        capex_GBP_per_MW: float                = 130_000.0,
         availability_factor: float             = 0.97,
         seed: int                              = 11,
         reference: str                         = "",

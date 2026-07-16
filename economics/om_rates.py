@@ -7,22 +7,64 @@ The flat CHDU 1% of total CAPEX is a reasonable first pass, but
 compressor-based plant (ASHP, chillers) has genuinely higher annual
 maintenance costs than buried pipework or a simple gas boiler.
 
-Sources:
-  - ASHP/chiller: BSRIA BG 44/2023 "Rules of Thumb" — 2-3% of installed
-    cost for packaged chillers/heat pumps (midpoint 2.5%)
-  - Gas boiler: CIBSE Guide M "Maintenance engineering and management"
-    — 1-1.5% of installed cost (midpoint 1.25%)
-  - Electric boiler: simpler plant than gas (no flue, no gas safety) —
-    0.8-1.0% (midpoint 0.9%)
-  - EfW CHP: complex plant with high availability requirements — WRAP/
-    Defra modelling uses 3-4% of CAPEX (midpoint 3.5%)
-  - Data-centre heat exchanger: passive equipment, minimal maintenance
-    — 0.5%
-  - Booster heat pump: same class as ASHP compressor plant — 2.5%
-  - District pipework: CHDU/DECC's own original 1% figure covers
-    network-level maintenance (valve servicing, leak detection) — kept
-    at 1.0%
-  - Chiller: same as ASHP (compressor plant) — 2.5%
+Sourcing note (real citations, corrected)
+------------------------------------------
+An earlier version of this module cited "BSRIA BG 44/2023 'Rules of
+Thumb'" for the ASHP/chiller rate — that document does not exist. BSRIA
+DID retire its old "Rules of Thumb" guide (BG9/2011) in February 2024,
+replacing it with a four-part BG84-87/2024 series (BG84 Space & Weight,
+BG85 Mechanical Criteria, BG86 Electrical Criteria, BG87 Useful
+Information — bsria.com), of which BG85/2024 is the real, current
+document covering heating/cooling plant. However, BSRIA guides are a
+paid product and their exact maintenance-cost percentages are not
+independently checkable from public sources, so this module does NOT
+cite a specific figure from within it. Where a specific document's
+number couldn't be independently confirmed, the rate below is instead
+cross-referenced against multiple accessible published sources and
+kept as an honest industry-benchmark range/midpoint, not attributed to
+a single unverifiable citation:
+
+  - ASHP/chiller (2.5%): no single public authoritative UK source
+    pins this down precisely (BSRIA BG85/2024 likely does, but is
+    paywalled). Cross-referenced against multiple accessible
+    compressor-plant maintenance benchmarks (industrial HVAC O&M cost
+    literature; chiller total-cost-of-ownership guides) that
+    consistently land in a 2-3% of installed-cost/year range for
+    packaged chillers/heat pumps — 2.5% is the midpoint of that range.
+  - Gas boiler (1.25%): CIBSE Guide M10 "Costs" (2023, cibse.org) is
+    the real, current UK reference for building-services maintenance
+    costing, but its exact published percentage is behind CIBSE's
+    Knowledge Portal paywall. Cross-referenced against accessible
+    boiler lifecycle-cost literature (US EPA industrial boiler O&M
+    studies cite 1-3% of capital cost/year; several boiler lifecycle
+    assessments use ~1% as a simplifying assumption) — 1-1.5% (kept at
+    1.25% midpoint) is a defensible, slightly-conservative figure
+    within that accessible range for a well-maintained commercial
+    condensing gas boiler specifically.
+  - Electric boiler (0.9%): no independent %-of-CAPEX source located.
+    Kept as an engineering-judgment estimate below the gas boiler rate
+    — electric boilers have no flue, no combustion products, and no
+    statutory gas-safety inspection burden, so a somewhat lower rate
+    than gas is a reasonable simplification, not a researched figure.
+  - EfW CHP (3.5%): the "WRAP/Defra modelling" citation in an earlier
+    version of this module could not be located and has been removed.
+    No single authoritative UK EfW-specific O&M-as-%-of-CAPEX source
+    was found publicly. Kept at 3.5% as a reasonable industry-benchmark
+    midpoint for complex CHP plant with high availability requirements,
+    broadly consistent with general waste-to-energy techno-economic
+    literature (which typically cites O&M in the low-to-mid single
+    digits of CAPEX/year) — flagged here as an estimate, not a
+    precisely sourced figure, pending a real project-specific quote.
+  - Data-centre heat exchanger (0.5%): no specific source; reasoned
+    estimate (passive equipment — heat exchangers, piping, controls —
+    genuinely needs less maintenance than rotating/compressor plant).
+  - Booster heat pump (2.5%): same class of plant and same sourcing
+    basis as ASHP/chiller above (compressor-based, water-to-water
+    rather than air-to-water, but the same real maintenance drivers).
+  - District pipework (1.0%): CHDU/DECC's own figure, independently
+    confirmed verbatim on communityheat.org.uk/techno-economic-model/
+    financial-modelling/ — this is the one rate in this module with a
+    directly confirmed live citation.
 """
 
 # Per-source-type annual O&M as a fraction of that source's own CAPEX

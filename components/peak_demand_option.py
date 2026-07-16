@@ -131,8 +131,32 @@ N_HOURS = 8760
 # by load and is applied separately in marginal_cost — see each class's
 # _recompute_marginal_cost()/carbon attribute for how it's actually used.
 CARBON_INTENSITY = {
-    "gas":      0.183,   # Natural gas, gross CV basis (Scope 1). BEIS/DESNZ 2024.
-    "electric": 0.207,   # UK grid average 2024 (will fall over time — see note)
+    # Natural gas, kWh gross CV basis (Scope 1). DESNZ "2026 Government GHG
+    # Conversion Factors for Company Reporting" (published June 2026),
+    # 'Fuels' sheet: Natural gas, kWh (Gross CV), 2026 = 0.18231 kgCO2e/kWh
+    # — essentially unchanged from the 2024 figure this project previously
+    # cited; DESNZ's own "major changes" note confirms no material revision
+    # to fuel factors this year.
+    "gas":      0.1823,
+
+    # UK grid electricity, kWh USED (i.e. what a heat pump/electric boiler
+    # actually draws), = 'electricity generated' factor + T&D losses, per
+    # DESNZ's own guidance ("the 'electricity consumption' figure can be
+    # calculated by adding together the 'electricity generation' and the
+    # 'T&D' values"). Source: DESNZ "2026 Government GHG Conversion
+    # Factors for Company Reporting" (published June 2026):
+    #   'UK electricity' sheet, Electricity generated, 2026: 0.13096 kgCO2e/kWh
+    #   'Transmission and distribution' sheet, T&D, 2026:    0.01299 kgCO2e/kWh
+    #   Total (consumption basis):                            0.14395 kgCO2e/kWh
+    # This REPLACES a stale 2024-vintage 0.207 figure. DESNZ's 2026 update
+    # applied a genuinely large, real year-on-year change (~26% lower than
+    # the 2025 factor) — partly real grid decarbonisation, partly a
+    # methodology change that reduced the data lag from two years to one,
+    # so it captures roughly two years of grid-mix improvement in one
+    # update. This factor is volatile year to year by design (it tracks
+    # the gas/coal/renewables generation mix) — re-check annually against
+    # the current-year DESNZ publication rather than treating as fixed.
+    "electric": 0.1440,
 
     # EfW (Energy from Waste) CHP heat — kgCO2e per kWh of HEAT delivered
     # (not per unit fuel/waste input; this is already a final heat-output
@@ -599,23 +623,46 @@ class ElectricBoiler:
                                      See economics/tariffs.py.
     carbon_price_GBP_per_tonne    : carbon price applied to CO2e cost
     capex_GBP_per_MW              : capital cost per MW installed. Default
-                                     £265,000/MW — real sourcing: core
-                                     equipment (electrode/resistance
-                                     boiler, pressure vessels, controls)
-                                     £130-250/kW plus standard engineering/
-                                     installation £50-100/kW = £180-350/kW,
-                                     midpoint £265/kW = £265,000/MW.
+                                     £150,000/MW — real sourcing: the
+                                     Danish Energy Agency's "Technology
+                                     Data for Generation of Electricity
+                                     and District Heating" (2024 update,
+                                     ens.dk/en/analyses-and-statistics/
+                                     technology-data-generation-electricity
+                                     -and-district-heating) — the standard
+                                     European reference for exactly this
+                                     kind of plant costing — gives a large
+                                     electrode/resistance boiler for
+                                     district heating at $0.20M/MWth
+                                     (2022 USD, held constant 2020-2050),
+                                     converted at ≈0.7457 USD/GBP
+                                     (mid-2026) = ≈£149,100/MW, rounded to
+                                     £150,000/MW. This REPLACES a previous
+                                     £265,000/MW bottom-up estimate that an
+                                     independent check could not verify
+                                     against any real multi-MW UK source —
+                                     large electrode boilers are genuinely
+                                     cheap per MW (essentially a resistive
+                                     element in a pressure vessel, no
+                                     compression cycle), consistent with
+                                     real multi-MW Danish district-heating
+                                     electrode boiler installations (e.g.
+                                     PARAT Halvorsen 8-20 MW units).
+                                     DEA's figure is calibrated at a fairly
+                                     large reference plant size; a very
+                                     small install (see ELECTRIC_BOILER_
+                                     PRESETS' "small_electric", 0.3 MW)
+                                     could run somewhat higher per MW.
                                      Deliberately EXCLUDES grid connection/
-                                     transformer/switchgear upgrades
-                                     (which can push real installs to
-                                     £400-500/kW) — those are genuinely
-                                     site-specific (does this scheme need
-                                     a NEW high-voltage connection, or
-                                     does it sit behind an existing one),
-                                     not a fixed property of the boiler
-                                     itself, so they're excluded from the
-                                     default rather than baked in as an
-                                     assumption that may not apply.
+                                     transformer/switchgear upgrades —
+                                     those are genuinely site-specific
+                                     (does this scheme need a NEW
+                                     high-voltage connection, or does it
+                                     sit behind an existing one), not a
+                                     fixed property of the boiler itself,
+                                     so they're excluded from the default
+                                     rather than baked in as an assumption
+                                     that may not apply.
     """
 
     source_type = "electric_boiler"
@@ -629,7 +676,7 @@ class ElectricBoiler:
         efficiency: float                       = 0.99,
         electricity_price_GBP_per_MWh           = None,
         carbon_price_GBP_per_tonne: float       = 0.0,
-        capex_GBP_per_MW: float                  = 265_000.0,
+        capex_GBP_per_MW: float                  = 150_000.0,
         reference: str                          = "",
     ):
         self.name        = name

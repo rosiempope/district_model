@@ -473,7 +473,25 @@ class ASHPArray:
                               scalar override, or an 8760-length array.
                               See economics/tariffs.py.
     capex_GBP_per_MW        : capital cost per MW installed (for reporting —
-                              actual CAPEX calcs live in economics/CAPEX.py)
+                              actual CAPEX calcs live in economics/CAPEX.py).
+                              Default £770,000/MW — real sourcing: Vannoni
+                              et al. (2023), "Large size heat pumps advanced
+                              cost functions introducing the impact of design
+                              COP on capital costs", Energy 284, 129204 (DOI
+                              10.1016/j.energy.2023.129204) — gives a fitted
+                              capital-cost function for large (multi-MW)
+                              heat pumps by source; the air-sourced case
+                              gives ≈€906/kW, converted at ≈0.846 EUR/GBP
+                              (mid-2026) = ≈£766,500/MW, rounded to £770,000.
+                              Cross-checked against the Danish Energy Agency's
+                              "Technology Data for Generation of Electricity
+                              and District Heating" (2024 update, ens.dk):
+                              its "Medium Temperature Heat Pump" entry gives
+                              $1.08-1.26M/MWth (2022 USD) — a similar order of
+                              magnitude, on the high side, reinforcing that
+                              the previous £600,000/MW default (which had no
+                              citation at all) was understating real
+                              utility-scale ASHP cost.
     availability_factor    : fleet-average fraction of time each UNIT is
                               available (not in maintenance). Default 0.97
                               (~11 days/year service per unit — a typical
@@ -510,7 +528,7 @@ class ASHPArray:
         apply_defrost: bool                      = True,
         cop_calibration_factor: float             = 1.0,
         electricity_price_GBP_per_MWh            = None,
-        capex_GBP_per_MW: float                  = 600_000.0,
+        capex_GBP_per_MW: float                  = 770_000.0,
         availability_factor: float               = 0.97,
         seed: int                                = 7,
         reference: str                           = "",

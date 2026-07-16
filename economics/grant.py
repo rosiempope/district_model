@@ -5,11 +5,16 @@ Green Heat Network Fund (GHNF) grant modelling.
 
 The GHNF (Green Heat Network Fund) is the UK government's main capital
 subsidy for new and expanding heat networks. It replaced the HNIP
-(Heat Networks Investment Project) in April 2022 and runs through to
-March 2028.
+(Heat Networks Investment Project), opening to applications on 14 March
+2022, and funding can be drawn down through the 2029-30 financial year
+(corrected — a previous version of this note said "March 2028", which
+understated the scheme's confirmed remaining life by around two years).
 
-Key public parameters (from DESNZ published guidance, last updated
-September 2025 — GOV.UK "Green Heat Network Fund: guidance"):
+Key public parameters (from DESNZ published guidance — GHNF Scheme
+Overview, February 2026, assets.publishing.service.gov.uk/media/
+698c8e34bb6023ea0f7123ac/GHNF-scheme-overview-feb-2026.pdf, and GOV.UK
+"Green Heat Network Fund: guidance on how to apply"; Round 12 is open
+for applications until 25 September 2026):
 
   - Available to new district heat networks in England
   - Covers CAPEX gap funding (the difference between project CAPEX and

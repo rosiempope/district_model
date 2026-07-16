@@ -255,15 +255,24 @@ class BoosterHeatPump:
                   tariff), an ElectricityTariff object, a flat scalar,
                   or an 8760-length array — identical contract to
                   ASHPArray/AirCooledChiller
-    capex_GBP_per_MW         : capital cost per MW installed. No real
-                  project-specific figure sourced yet for this
-                  component (see module docstring) — defaulted to
-                  ASHPArray's own £600,000/MW as a placeholder
-                  (water-to-water units are mechanically simpler than
-                  cold-climate ASHPs in some respects but this hasn't
-                  been independently verified for this component, so
-                  borrowing the ASHP figure is flagged as a known
-                  placeholder, not a researched value).
+    capex_GBP_per_MW         : capital cost per MW installed. Kept at
+                  £600,000/MW — originally borrowed from ASHPArray's
+                  old default as an unresearched placeholder, but an
+                  independent check now shows this actually sits
+                  squarely inside the real published range for
+                  water-to-water / excess-heat-source large heat
+                  pumps: Vannoni et al. (2023), "Large size heat pumps
+                  advanced cost functions..." (Energy 284, 129204)
+                  gives water-sourced ≈€779/kW (≈£660/kW) and
+                  excess-heat-sourced ≈€689/kW (≈£586/kW) — i.e.
+                  £586,000-660,000/MW, bracketing this module's
+                  £600,000/MW closely. Deliberately NOT changed to
+                  match ASHPArray's revised £770,000/MW (that figure
+                  is specifically for AIR-sourced units, a different,
+                  costlier category — see Vannoni et al.'s own
+                  source-type breakdown) — this value now has its own
+                  independent real-data support, not a borrowed
+                  number.
     availability_factor     : fleet-average fraction of time each unit
                   is available — default 0.97, same as ASHPArray,
                   reusing the same real per-unit outage model directly.

@@ -331,7 +331,7 @@ class DataCentre:
                                  controls, metering) — midpoint
                                  EUR550,000/MW, converted at ~0.84 EUR/GBP.
                                  Deliberately a DIFFERENT figure from
-                                 ASHPArray's £600,000/MW or
+                                 ASHPArray's £770,000/MW or
                                  BoosterHeatPump's £600,000/MW — this is
                                  genuinely cheaper, lower-grade equipment
                                  (a heat exchanger tapping an existing

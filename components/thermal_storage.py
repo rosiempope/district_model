@@ -31,13 +31,34 @@ Costing
 -------
 Thermal storage tank capex (£/kWh or £/m³) falls as the store gets bigger
 — costs are dominated by fixed elements (controls, foundations, pumps)
-that don't scale linearly with tank volume. Reference: DECC Evidence
-Gathering: Thermal Energy Storage Technologies (Delta-EE / DECC, 2016),
-and Danish large-scale tank storage data point of €0.4-0.6/kWh capex at
-scale (Seasonal Thermal Energy Storage, citing Danish DH systems).
-We model this as a simple power-law cost curve, calibrated to roughly
-match published figures at both small and large scale — treat the
-constant as a sensitivity input, not gospel.
+that don't scale linearly with tank volume. This is modelled as a
+power-law cost curve, fitted (not just "calibrated to roughly match")
+against four REAL data points from DECC/Delta-EE, "Evidence Gathering:
+Thermal Energy Storage (TES) Technologies" (2016, assets.publishing.
+service.gov.uk/government/uploads/system/uploads/attachment_data/file/
+545249/DELTA_EE_DECC_TES_Final__1_.pdf), Table 10 — specifically its
+TTES (Tank Thermal Energy Storage) figures, i.e. hot-water TANKS, which
+is genuinely the same technology this class models:
+    domestic tanks:  ~£3,400/m³  (<0.5 m³, ≈£73/kWh)
+    300 m³ tank:       £360/m³  (medium DH-scale,  ≈£7.7/kWh)
+    4,300 m³ tank:      £114/m³  (large DH-scale,   ≈£2.5/kWh)
+    12,000 m³ tank:      £91/m³  (very large DH-scale, ≈£2.0/kWh)
+(£/kWh conversions use the same 46.5 kWh/m³ at 40K delta-T used
+throughout this module — see mwh_to_m3()/m3_to_mwh() below.) A log-log
+least-squares fit across these four real points gives a reference cost
+of ≈£18,050/MWh at a 1 MWh reference scale and a scale exponent of
+≈-0.357 — reproducing all four real points to within ~10%.
+
+This REPLACES an earlier version of this curve, which blended in a
+€0.4-0.6/kWh "Danish large-scale tank storage" figure as its large-scale
+anchor. That figure was actually for PTES (Pit Thermal Energy Storage —
+a lined earth pit, e.g. Marstal/Dronninglund), a genuinely CHEAPER,
+DIFFERENT technology from TTES — the same DECC report states explicitly
+that "PTES costs are lower than tank costs." Anchoring a tank-storage
+curve on pit-storage data overstated how cheap this class's own
+technology (hot water TANKS) gets at large scale. The fit above uses
+only real TTES data points, so it should track this module's own
+physics correctly at every scale, not just at the two ends.
  
 Physics
 -------
@@ -93,13 +114,17 @@ N_HOURS = 8760
 WATER_DENSITY_KG_M3   = 1000.0
 WATER_SPECIFIC_HEAT_WH_KGK = 1.163   # Wh per kg per Kelvin
  
-# Cost curve calibration — power-law fit roughly bridging:
-#   small scale (domestic/commercial buffer, ~£2-4/litre installed)
-#   large scale (Danish DH-scale tanks, €0.4-0.6/kWh ≈ £0.35-0.50/kWh)
-# Treat as a sensitivity input — flag clearly in any economics output.
+# Cost curve — log-log least-squares fit to four REAL DECC/Delta-EE (2016)
+# TTES (tank) data points spanning domestic buffer tanks to 12,000 m³
+# district-heating-scale tanks — see module docstring "Costing" section
+# for the full real sourcing, the four data points, and why this
+# replaced an earlier curve that incorrectly anchored on PTES (pit
+# storage) data, a cheaper and genuinely different technology.
+# Treat as a sensitivity input, not a quoted price — get a real quote
+# before using this for an investment decision.
 STORAGE_COST_REFERENCE_MWH   = 1.0      # Reference scale point (MWh)
-STORAGE_COST_GBP_PER_MWH_AT_REF = 45_000.0   # Cost at the reference scale
-STORAGE_COST_SCALE_EXPONENT  = -0.25    # Cost per MWh falls as scale grows
+STORAGE_COST_GBP_PER_MWH_AT_REF = 18_050.0   # Cost at the reference scale
+STORAGE_COST_SCALE_EXPONENT  = -0.357   # Cost per MWh falls as scale grows
  
  
 # ── Storage cost model ─────────────────────────────────────────────────────────
@@ -110,10 +135,11 @@ def estimate_storage_capex(capacity_MWh: float) -> float:
     using a power-law cost curve (cost per MWh falls as scale increases).
  
     This is a ROUGH ESTIMATE for feasibility-stage screening — get a real
-    quote before using this for an investment decision. Calibrated to be
-    broadly consistent with published small-scale (£/litre buffer tanks)
-    and large-scale (Danish DH tank, €0.4-0.6/kWh) data points, but the
-    exponent and reference cost are sensitivity inputs, not certainties.
+    quote before using this for an investment decision. Fitted to four
+    real DECC/Delta-EE (2016) TTES (tank storage) data points spanning
+    domestic buffer tanks to 12,000 m³ district-heating-scale tanks —
+    see module docstring "Costing" section — but the exponent and
+    reference cost remain sensitivity inputs, not certainties.
     """
     if capacity_MWh <= 0:
         return 0.0
