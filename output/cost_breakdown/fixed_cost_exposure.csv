@@ -1,0 +1,6 @@
+scenario,connections,size_independent_capex_GBP,size_independent_opex_discounted_GBP,size_independent_lifetime_GBP,pct_of_gross_capex,size_independent_per_connection_GBP,size_independent_p_per_kWh
+A1 — Gas district reference (not low-carbon),564,4650000.0,3178419.0,7828419.0,24.1,13880.0,5.93
+A3 — ASHP plus gas peak/backup,564,4650000.0,3178419.0,7828419.0,22.1,13880.0,5.93
+A4 — Data-centre heat plus booster and backup,564,4650000.0,3178419.0,7828419.0,20.1,13880.0,5.93
+A5 — EfW export plus ASHP and backup,564,4650000.0,3178419.0,7828419.0,19.5,13880.0,5.93
+A6 — Four-pipe heating and cooling,564,4650000.0,3178419.0,7828419.0,15.8,13880.0,5.23
