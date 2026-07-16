@@ -32,3 +32,5 @@ output/**
 # WSL alternate-data-stream artifacts. Windows writes one of these next to
 # every file downloaded/copied through Explorer; 86 of them had been committed.
 *:Zone.Identifier
+# Generated workbook — rebuild with `python -m reports.excel_export`
+output/*.xlsx
