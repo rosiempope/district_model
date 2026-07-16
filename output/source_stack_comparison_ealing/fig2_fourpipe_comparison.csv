@@ -1,0 +1,4 @@
+Technology,CAPEX (£m),GHNF grant (£m),Carbon intensity (gCO2e/kWh),Carbon threshold (gCO2e/kWh),Carbon gate,Investor NPV (£m),Discounted payback (yrs),Payback extrapolated beyond 40y?,Screening decision
+ASHP + gas backup,29.64,6.44,64.5,100.0,PASS,-33.86,,True,FAIL
+EfW + ASHP (no gas),31.29,6.94,61.3,100.0,PASS,-26.32,,True,FAIL
+Data centre + booster + electric backup,26.56,5.51,77.9,100.0,PASS,-33.07,,True,FAIL

@@ -1,0 +1,7 @@
+Technology,Duty,Best required tariff in sweep (p/kWh),...at density (MWh/m/yr),Modelled parity tariff (p/kWh),"Still x parity tariff, even at best density"
+ASHP + gas backup,Heating only,33.65,44.51,7.95,4.2
+ASHP + gas backup,Heating + cooling,36.96,49.08,7.95,4.6
+EfW + ASHP (no gas),Heating only,27.56,44.51,7.95,3.5
+EfW + ASHP (no gas),Heating + cooling,30.84,49.08,7.95,3.9
+Data centre + booster + electric backup,Heating only,31.89,44.51,7.95,4.0
+Data centre + booster + electric backup,Heating + cooling,35.22,49.08,7.95,4.4

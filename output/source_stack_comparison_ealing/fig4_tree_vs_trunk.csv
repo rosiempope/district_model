@@ -1,0 +1,55 @@
+Technology,Shape,Length multiplier,Total route (m),Network CAPEX (£m),Total CAPEX (£m),Investor NPV (£m)
+ASHP + gas backup,Tree (branched),0.25,791.0,1.12,16.38,-21.06
+ASHP + gas backup,Single trunk,0.25,791.0,1.231,16.52,-21.14
+ASHP + gas backup,Tree (branched),0.5,1582.0,2.239,17.87,-22.49
+ASHP + gas backup,Single trunk,0.5,1582.0,2.462,18.16,-22.67
+ASHP + gas backup,Tree (branched),0.75,2374.0,3.359,19.35,-23.93
+ASHP + gas backup,Single trunk,0.75,2374.0,3.693,19.8,-24.2
+ASHP + gas backup,Tree (branched),1.0,3165.0,4.479,20.84,-25.37
+ASHP + gas backup,Single trunk,1.0,3165.0,4.924,21.44,-25.73
+ASHP + gas backup,Tree (branched),1.5,4748.0,6.718,23.82,-28.25
+ASHP + gas backup,Single trunk,1.5,4748.0,7.386,24.71,-28.79
+ASHP + gas backup,Tree (branched),2.0,6330.0,8.957,26.8,-31.13
+ASHP + gas backup,Single trunk,2.0,6330.0,9.848,27.98,-31.86
+ASHP + gas backup,Tree (branched),3.0,9495.0,13.436,32.76,-37.9
+ASHP + gas backup,Single trunk,3.0,9495.0,14.772,34.53,-39.56
+ASHP + gas backup,Tree (branched),4.0,12660.0,17.914,38.71,-45.49
+ASHP + gas backup,Single trunk,4.0,12660.0,19.696,41.08,-47.74
+ASHP + gas backup,Tree (branched),5.0,15825.0,22.393,44.67,-59.95
+ASHP + gas backup,Single trunk,5.0,15825.0,24.62,47.63,-55.96
+EfW + ASHP (no gas),Tree (branched),0.25,791.0,1.12,18.02,-14.18
+EfW + ASHP (no gas),Single trunk,0.25,791.0,1.231,18.17,-14.3
+EfW + ASHP (no gas),Tree (branched),0.5,1582.0,2.239,19.51,-15.41
+EfW + ASHP (no gas),Single trunk,0.5,1582.0,2.462,19.8,-15.65
+EfW + ASHP (no gas),Tree (branched),0.75,2374.0,3.359,21.0,-16.63
+EfW + ASHP (no gas),Single trunk,0.75,2374.0,3.693,21.44,-17.0
+EfW + ASHP (no gas),Tree (branched),1.0,3165.0,4.479,22.49,-17.86
+EfW + ASHP (no gas),Single trunk,1.0,3165.0,4.924,23.08,-18.35
+EfW + ASHP (no gas),Tree (branched),1.5,4748.0,6.718,25.46,-20.32
+EfW + ASHP (no gas),Single trunk,1.5,4748.0,7.386,26.35,-21.06
+EfW + ASHP (no gas),Tree (branched),2.0,6330.0,8.957,28.44,-22.79
+EfW + ASHP (no gas),Single trunk,2.0,6330.0,9.848,29.63,-23.83
+EfW + ASHP (no gas),Tree (branched),3.0,9495.0,13.436,34.4,-29.24
+EfW + ASHP (no gas),Single trunk,3.0,9495.0,14.772,36.18,-31.27
+EfW + ASHP (no gas),Tree (branched),4.0,12660.0,17.914,40.35,-36.02
+EfW + ASHP (no gas),Single trunk,4.0,12660.0,19.696,42.72,-38.75
+EfW + ASHP (no gas),Tree (branched),5.0,15825.0,22.393,46.31,-42.84
+EfW + ASHP (no gas),Single trunk,5.0,15825.0,24.62,49.27,-46.27
+Data centre + booster + electric backup,Tree (branched),0.25,791.0,1.12,13.29,-19.96
+Data centre + booster + electric backup,Single trunk,0.25,791.0,1.231,13.44,-20.03
+Data centre + booster + electric backup,Tree (branched),0.5,1582.0,2.239,14.78,-21.49
+Data centre + booster + electric backup,Single trunk,0.5,1582.0,2.462,15.08,-21.64
+Data centre + booster + electric backup,Tree (branched),0.75,2374.0,3.359,16.27,-23.03
+Data centre + booster + electric backup,Single trunk,0.75,2374.0,3.693,16.72,-23.25
+Data centre + booster + electric backup,Tree (branched),1.0,3165.0,4.479,17.76,-24.56
+Data centre + booster + electric backup,Single trunk,1.0,3165.0,4.924,18.35,-24.86
+Data centre + booster + electric backup,Tree (branched),1.5,4748.0,6.718,20.74,-27.64
+Data centre + booster + electric backup,Single trunk,1.5,4748.0,7.386,21.63,-28.09
+Data centre + booster + electric backup,Tree (branched),2.0,6330.0,8.957,23.72,-30.73
+Data centre + booster + electric backup,Single trunk,2.0,6330.0,9.848,24.9,-31.33
+Data centre + booster + electric backup,Tree (branched),3.0,9495.0,13.436,29.68,-43.86
+Data centre + booster + electric backup,Single trunk,3.0,9495.0,14.772,31.45,-45.32
+Data centre + booster + electric backup,Tree (branched),4.0,12660.0,17.914,35.63,-51.9
+Data centre + booster + electric backup,Single trunk,4.0,12660.0,19.696,38.0,-53.87
+Data centre + booster + electric backup,Tree (branched),5.0,15825.0,22.393,41.59,-59.98
+Data centre + booster + electric backup,Single trunk,5.0,15825.0,24.62,44.55,-62.48

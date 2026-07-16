@@ -1,0 +1,10 @@
+Climate,Technology,Annual heat demand (MWh),Annual cooling demand (MWh),CAPEX (£m),Carbon intensity (gCO2e/kWh),Investor NPV (£m)
+baseline,ASHP + gas backup,11127.5,1141.2,35.32,66.7,-40.53
+baseline,EfW + ASHP (no gas),11127.5,1141.2,38.58,63.2,-34.21
+baseline,Data centre + booster + electric backup,11127.5,1141.2,31.56,80.7,-39.24
+2050_central,ASHP + gas backup,9430.9,3415.1,40.57,60.2,-47.04
+2050_central,EfW + ASHP (no gas),9430.9,3415.1,43.46,58.3,-42.01
+2050_central,Data centre + booster + electric backup,9430.9,3415.1,36.26,73.2,-45.13
+2050_high,ASHP + gas backup,7917.3,24956.0,57.87,41.6,-71.69
+2050_high,EfW + ASHP (no gas),7917.3,24956.0,60.2,41.4,-66.47
+2050_high,Data centre + booster + electric backup,7917.3,24956.0,53.61,46.2,-69.55

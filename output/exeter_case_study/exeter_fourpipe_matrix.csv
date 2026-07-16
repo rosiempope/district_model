@@ -1,5 +1,5 @@
 Technology,CAPEX (£m),Carbon gate,Heat NPV component basis,Investor NPV (£m),Cooling bill ratio vs AC (%),Screening decision
-Gas-only reference,37.88,FAIL,combined heating+cooling investor cash flow,-41.76,100.0,FAIL
-ASHP + gas peak,42.27,FAIL,combined heating+cooling investor cash flow,-54.13,100.0,FAIL
-Data-centre waste heat + booster + gas peak,41.22,FAIL,combined heating+cooling investor cash flow,-52.96,100.0,FAIL
-EfW heat export + ASHP + gas peak,43.0,PASS,combined heating+cooling investor cash flow,-41.02,100.0,FAIL
+Gas-only reference,38.12,FAIL,combined heating+cooling investor cash flow,-42.45,100.0,FAIL
+ASHP + gas peak,44.09,PASS,combined heating+cooling investor cash flow,-49.85,100.0,FAIL
+Data-centre waste heat + booster + gas peak,41.46,PASS,combined heating+cooling investor cash flow,-46.64,100.0,FAIL
+EfW heat export + ASHP + gas peak,44.03,PASS,combined heating+cooling investor cash flow,-42.36,100.0,FAIL
