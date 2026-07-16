@@ -10,10 +10,10 @@ The strongest tested data-centre case is **DC3 - Compact liquid-cooled baseload 
 
 | Scenario | Route (m) | Heat demand (GWh) | Gross CAPEX (£m) | Grant (£m) | Connection contributions (£m) | Annual OPEX (£m) | Unmet heat (MWh) | Carbon (gCO2e/kWh) | NPV (£m) | IRR (%) | Required tariff (p/kWh) | Service gate | Carbon gate | Outcome |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DC1 - Data-centre-only service stress test | 1200.00 | 14.16 | 18.89 | 6.31 | 8.34 | 1.31 | 314.19 | 35.10 | -7.89 | None | 13.72 | FAIL | PASS | DO NOT PROGRESS |
-| DC2 - Typical air-cooled data centre plus reserve | 1800.00 | 14.16 | 21.55 | 7.61 | 8.34 | 1.71 | 0.00 | 55.50 | -12.94 | None | 17.53 | PASS | PASS | DO NOT PROGRESS |
-| DC3 - Compact liquid-cooled baseload hybrid | 1200.00 | 14.16 | 15.73 | 4.76 | 8.34 | 1.25 | 0.00 | 53.60 | -5.26 | None | 11.73 | PASS | PASS | DO NOT PROGRESS |
-| DC4 - Same compact hybrid without grant or contributions | 1200.00 | 14.16 | 15.73 | 0.00 | 0.00 | 1.25 | 0.00 | 53.60 | -17.57 | None | 21.03 | PASS | PASS | DO NOT PROGRESS |
+| DC1 - Data-centre-only service stress test | 1200.00 | 14.16 | 18.89 | 6.31 | 8.34 | 1.31 | 314.19 | 35.10 | -7.89 | None | 8.81 | FAIL | PASS | DO NOT PROGRESS |
+| DC2 - Typical air-cooled data centre plus reserve | 1800.00 | 14.16 | 21.55 | 7.61 | 8.34 | 1.71 | 0.00 | 55.50 | -12.94 | None | 12.62 | PASS | PASS | DO NOT PROGRESS |
+| DC3 - Compact liquid-cooled baseload hybrid | 1200.00 | 14.16 | 15.73 | 4.76 | 8.34 | 1.25 | 0.00 | 53.60 | -5.26 | None | 6.82 | PASS | PASS | DO NOT PROGRESS |
+| DC4 - Same compact hybrid without grant or contributions | 1200.00 | 14.16 | 15.73 | 0.00 | 0.00 | 1.25 | 0.00 | 53.60 | -17.57 | None | 16.12 | PASS | PASS | DO NOT PROGRESS |
 
 ## What moves feasibility
 

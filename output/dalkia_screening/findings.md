@@ -34,20 +34,20 @@ Four technology options x three archetypes, each auto-sized from the archetype's
 
 | Archetype                 | Technology                                  | Carbon gate   | Service gate   |   Equivalent year-1 heat tariff (p/kWh) |   Investor NPV (£m) | Screening decision   |
 |:--------------------------|:--------------------------------------------|:--------------|:---------------|----------------------------------------:|--------------------:|:---------------------|
-| Dense (town centre)       | Gas-only reference                          | FAIL          | PASS           |                                   8.314 |              -16.19 | FAIL                 |
-| Dense (town centre)       | ASHP + gas peak                             | PASS          | PASS           |                                   8.314 |              -34.2  | FAIL                 |
-| Dense (town centre)       | Data-centre waste heat + booster + gas peak | PASS          | PASS           |                                   8.314 |              -29.44 | FAIL                 |
-| Dense (town centre)       | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.314 |              -22.47 | FAIL                 |
-| Middle (suburban mixed)   | Gas-only reference                          | FAIL          | PASS           |                                   8.326 |              -16.84 | FAIL                 |
-| Middle (suburban mixed)   | ASHP + gas peak                             | PASS          | PASS           |                                   8.326 |              -29.59 | FAIL                 |
-| Middle (suburban mixed)   | Data-centre waste heat + booster + gas peak | PASS          | PASS           |                                   8.326 |              -26.54 | FAIL                 |
-| Middle (suburban mixed)   | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.326 |              -21.99 | FAIL                 |
-| Scarce (low-density edge) | Gas-only reference                          | FAIL          | PASS           |                                   8.538 |              -17.73 | FAIL                 |
-| Scarce (low-density edge) | ASHP + gas peak                             | PASS          | PASS           |                                   8.538 |              -22.97 | FAIL                 |
-| Scarce (low-density edge) | Data-centre waste heat + booster + gas peak | FAIL          | PASS           |                                   8.538 |              -21.77 | FAIL                 |
-| Scarce (low-density edge) | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.538 |              -19.76 | FAIL                 |
+| Dense (town centre)       | Gas-only reference                          | FAIL          | PASS           |                                   8.314 |              -14.03 | FAIL                 |
+| Dense (town centre)       | ASHP + gas peak                             | PASS          | PASS           |                                   8.314 |              -32.04 | FAIL                 |
+| Dense (town centre)       | Data-centre waste heat + booster + gas peak | PASS          | PASS           |                                   8.314 |              -27.28 | FAIL                 |
+| Dense (town centre)       | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.314 |              -20.31 | FAIL                 |
+| Middle (suburban mixed)   | Gas-only reference                          | FAIL          | PASS           |                                   8.326 |              -15.42 | FAIL                 |
+| Middle (suburban mixed)   | ASHP + gas peak                             | PASS          | PASS           |                                   8.326 |              -28.17 | FAIL                 |
+| Middle (suburban mixed)   | Data-centre waste heat + booster + gas peak | PASS          | PASS           |                                   8.326 |              -25.12 | FAIL                 |
+| Middle (suburban mixed)   | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.326 |              -20.58 | FAIL                 |
+| Scarce (low-density edge) | Gas-only reference                          | FAIL          | PASS           |                                   8.538 |              -16.63 | FAIL                 |
+| Scarce (low-density edge) | ASHP + gas peak                             | PASS          | PASS           |                                   8.538 |              -21.87 | FAIL                 |
+| Scarce (low-density edge) | Data-centre waste heat + booster + gas peak | FAIL          | PASS           |                                   8.538 |              -20.67 | FAIL                 |
+| Scarce (low-density edge) | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.538 |              -18.66 | FAIL                 |
 
-- **Best NPV among carbon-compliant (viable) options: Scarce (low-density edge) — EfW heat export + ASHP + gas peak** (NPV £-19.76m, nan% IRR, screening: FAIL).
+- **Best NPV among carbon-compliant (viable) options: Scarce (low-density edge) — EfW heat export + ASHP + gas peak** (NPV £-18.66m, nan% IRR, screening: FAIL).
 - The gas-only reference case has a less-negative NPV than every low-carbon option in every archetype (it has no ASHP/EfW CAPEX to recover) but **fails the carbon gate everywhere** — it is retained deliberately as the counterfactual baseline, not as a candidate design. Do not read "best NPV overall" as "best option" without checking the carbon gate first.
 - Data-centre and EfW capacities here are generic (sized as a fraction of local demand); treat as "if a source of about this size existed nearby", not a confirmed offtake agreement.
 
@@ -61,18 +61,18 @@ The obvious next screening question — does UK Green Heat Network Fund capital 
 
 | Archetype                 | Technology                        |   Grant awarded (£m) |   NPV without grant (£m) |   NPV with 40% GHNF grant (£m) | Screening decision with grant   |
 |:--------------------------|:----------------------------------|---------------------:|-------------------------:|-------------------------------:|:--------------------------------|
-| Dense (town centre)       | ASHP + gas peak                   |                 3.48 |                   -34.2  |                         -30.71 | FAIL                            |
-| Dense (town centre)       | EfW heat export + ASHP + gas peak |                 3.31 |                   -22.47 |                         -19.16 | FAIL                            |
-| Middle (suburban mixed)   | ASHP + gas peak                   |                 3.91 |                   -29.59 |                         -25.68 | FAIL                            |
-| Middle (suburban mixed)   | EfW heat export + ASHP + gas peak |                 3.82 |                   -21.99 |                         -18.17 | FAIL                            |
-| Scarce (low-density edge) | ASHP + gas peak                   |                 2.85 |                   -22.97 |                         -20.12 | FAIL                            |
-| Scarce (low-density edge) | EfW heat export + ASHP + gas peak |                 2.85 |                   -19.76 |                         -16.91 | FAIL                            |
+| Dense (town centre)       | ASHP + gas peak                   |                 3.48 |                   -32.04 |                         -28.55 | FAIL                            |
+| Dense (town centre)       | EfW heat export + ASHP + gas peak |                 3.31 |                   -20.31 |                         -16.99 | FAIL                            |
+| Middle (suburban mixed)   | ASHP + gas peak                   |                 3.91 |                   -28.17 |                         -24.26 | FAIL                            |
+| Middle (suburban mixed)   | EfW heat export + ASHP + gas peak |                 3.82 |                   -20.58 |                         -16.75 | FAIL                            |
+| Scarce (low-density edge) | ASHP + gas peak                   |                 2.85 |                   -21.87 |                         -19.02 | FAIL                            |
+| Scarce (low-density edge) | EfW heat export + ASHP + gas peak |                 2.85 |                   -18.66 |                         -15.81 | FAIL                            |
 
 Grant support materially narrows the NPV gap everywhere but does not flip any case to positive NPV on its own at this connection count — confirming that scale (connection count / linear density), not technology choice, is the binding constraint for these archetype sizes. See chart 07.
 
 ## 5. Four-pipe (heating + cooling) check
 
-- Dense archetype with AC-office/supermarket cooling load added: NPV £-43.33m, screening decision **FAIL**.
+- Dense archetype with AC-office/supermarket cooling load added: NPV £-41.13m, screening decision **FAIL**.
 - Cooling bill ratio vs individual air-conditioning: 100.0% (parity constraint: must stay <= 100%).
 
 ## 6. What this means for an initial screening tool layout
