@@ -67,9 +67,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, field
 from typing import Optional
-import warnings
 
 # Make sure the project root is on sys.path — same pattern as the other
 # source modules, lets `from components.peak_demand_option import ...`
@@ -489,11 +487,3 @@ class DataCentre:
             f"T_supply={self.supply_temp_nominal_C}°C, "
             f"availability={self.availability_factor:.0%})"
         )
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_datacentre_source.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_datacentre_source.py\n"
-    )

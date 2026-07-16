@@ -27,7 +27,6 @@ from __future__ import annotations
 from pathlib import Path
 from copy import deepcopy
 
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,7 +37,7 @@ from profiles.demand_synthesis import synthesise_network
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from analysis.exeter_case_study import (
-    SOWTON_BUILDINGS, SOWTON_SEGMENTS, PRESET_FOR_TYPE, _map_sources, weather, scaled_economics as _scaled_economics_base,
+    SOWTON_BUILDINGS, SOWTON_SEGMENTS, _map_sources, weather, scaled_economics as _scaled_economics_base,
 )
 
 

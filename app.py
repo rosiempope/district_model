@@ -9,7 +9,6 @@ can later be submitted by a React/FastAPI application to `run_scenario()`.
 from __future__ import annotations
 
 import copy
-import io
 import json
 from typing import Any
 
@@ -25,7 +24,7 @@ from components.booster_heat_pump import BOOSTER_PRESETS
 from components.peak_demand_option import GAS_BOILER_PRESETS, ELECTRIC_BOILER_PRESETS
 from components.chiller import CHILLER_PRESETS
 from scenarios.scenario_runner import run_scenario
-from optimisation.auto_size import recommend_sizing, DIVERSITY_FACTORS
+from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_schema import apply_defaults, validate_scenario
 from scenarios.worked_scenarios import WORKED_SCENARIOS
 from scenarios.ealing_report_validation import EALING_PHASE1_VALIDATION, REPORT_PHASE1_TARGETS

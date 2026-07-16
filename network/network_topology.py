@@ -145,7 +145,6 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
-import numpy as np
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
@@ -155,8 +154,7 @@ _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
 
-from pipe_catalog import PipeSpec  # re-exported below for backward compatibility
-
+from pipe_catalog import PipeSpec
 from topology_tree import TopologyNode, TopologyTreeMixin
 from topology_sizing import SegmentPipeResult, TopologySizingMixin
 from topology_thermal import (
@@ -169,6 +167,29 @@ from topology_thermal import (
     GROUND_TEMP_PHASE_LAG_HOURS,
     MIN_DELIVERED_TEMP_C,
 )
+
+# This module is the assembly point for the three-way topology split (see the
+# docstring above). Everything below is imported purely so that the pre-split
+# `from network.network_topology import X` call sites keep resolving — they are
+# re-exports, not usages. __all__ states that explicitly, so linters don't read
+# them as dead imports and strip them (autoflake did exactly that once, silently
+# breaking the backward-compatibility contract this file exists to honour).
+__all__ = [
+    "NetworkTopology",
+    "TopologyNode",
+    "SegmentPipeResult",
+    "PipeSpec",
+    "segment_outlet_temp_C",
+    "seasonal_ground_temp_C",
+    "DEFAULT_GROUND_TEMP_C",
+    "GROUND_TEMP_MEAN_C",
+    "GROUND_TEMP_SEASONAL_AMPLITUDE_C",
+    "GROUND_TEMP_PHASE_LAG_HOURS",
+    "MIN_DELIVERED_TEMP_C",
+    "EALING_SEGMENTS",
+    "BUILDING_NAME_MAP",
+    "ealing_town_centre_topology",
+]
 
 
 # ── NetworkTopology — the assembly point ────────────────────────────────────────
@@ -306,11 +327,3 @@ def ealing_town_centre_topology(
 
     topo.validate()
     return topo
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_network_topology.py "
-        "(see this file's module docstring for why) -- run:\n"
-        "    python3 tests/test_network_topology.py\n"
-    )

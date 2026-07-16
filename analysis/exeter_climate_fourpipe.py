@@ -26,11 +26,11 @@ OUT = ROOT / "output" / "exeter_case_study"
 OUT.mkdir(parents=True, exist_ok=True)
 
 from profiles.demand_synthesis import synthesise_network, compute_climate_reference
-from profiles.climate_scenarios import apply_climate_scenario, SCENARIOS
+from profiles.climate_scenarios import apply_climate_scenario
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from analysis.exeter_case_study import (
-    SOWTON_BUILDINGS, SOWTON_SEGMENTS, PRESET_FOR_TYPE, _map_sources, weather as raw_weather, scaled_economics,
+    SOWTON_BUILDINGS, SOWTON_SEGMENTS, _map_sources, weather as raw_weather, scaled_economics,
 )
 
 TECH_TYPES = ["efw_chp", "ashp", "gas_boiler"]

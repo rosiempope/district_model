@@ -441,10 +441,3 @@ class EfWChp:
             f"availability={self.availability_factor:.0%})"
         )
  
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_efw.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_efw.py\n"
-    )

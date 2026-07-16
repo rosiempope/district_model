@@ -3,22 +3,34 @@
 #But for pipe diameter and peak load on the network we must use the extreme ends for design. So a seperate data set: 'Design Summer Year (DSY) or Design Winter Year — CIBSE
 #will be used for this.
 
-import sys
 import os
+import sys
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 
 #Parse the EPW file for London, UK
 
-#INCLUDE THE FILE HERE (single use) ----- DEFAULT_EPW_PATH = ''
+# The source EPW ships alongside this script, so the weather pipeline is
+# reproducible without hunting for the input. This constant was previously
+# commented out ("INCLUDE THE FILE HERE (single use)"), which left main()
+# referencing an undefined name — i.e. this script could not run at all, and
+# profiles/weather_data.csv could not be regenerated from its source. Pass a
+# different EPW as argv[1] to rebuild for another site.
+DEFAULT_EPW_PATH = str(
+    Path(__file__).resolve().parent
+    / "GBR_ENG_London-Heathrow.Intl.AP.037720_TMYx.2011-2025.epw"
+)
 
 # HDD/CDD base temperatures (degrees C)
 HEATING_BASE_TEMP = 18.0   # UK standard
 COOLING_BASE_TEMP = 21.0   # Reasonable for UK commercial
 
-# Output file paths
-OUTPUT_HOURLY_CSV  = "weather_data.csv"
-OUTPUT_SUMMARY_CSV = "weather_summary.csv"
+# Output file paths — written next to this script, i.e. profiles/, which is
+# where scenario_runner.load_weather() reads weather_data.csv from.
+OUTPUT_HOURLY_CSV  = str(Path(__file__).resolve().parent / "weather_data.csv")
+OUTPUT_SUMMARY_CSV = str(Path(__file__).resolve().parent / "weather_summary.csv")
 
 EPW_COLUMNS = {
     # (column_index, output_name, description, unit)

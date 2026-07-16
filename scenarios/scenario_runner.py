@@ -13,7 +13,6 @@ from network.network import size_network_from_demand
 from network.network_pumping import annual_pumping_electricity_MWh
 from network.pipe_catalog import water_properties
 from economics.CAPEX import aggregate_capex
-from economics.OPEX import annual_om_cost_GBP
 from economics.metrics import (aggregate_counterfactual,
                                counterfactual_gas_boiler_dispatch, counterfactual_individual_ac_dispatch,
                                )
@@ -655,7 +654,6 @@ def run_scenario(scenario):
         **percentage_capex_items,
     }
     total_capex = sum(project_capex_items.values())
-    n_buildings = len(demand["nodes"])
     # Per-technology O&M (replaces the flat CHDU 1% of total CAPEX)
     from economics.om_rates import total_annual_om_GBP as _tech_om
     om_detail = _tech_om(all_sources, network_capex)

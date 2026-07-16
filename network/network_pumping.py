@@ -209,13 +209,3 @@ def annual_pumping_electricity_MWh(
         "annual_pumping_MWh": float(P_electrical_MW_hourly.sum()),
         "critical_path_info": critical_path,
     }
-
-
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test lives in tests/test_network_pumping.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_network_pumping.py\n"
-    )

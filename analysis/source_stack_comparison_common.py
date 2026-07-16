@@ -61,7 +61,7 @@ from profiles.demand_synthesis import synthesise_network, compute_climate_refere
 from profiles.climate_scenarios import apply_climate_scenario
 from optimisation.auto_size import recommend_sizing, ASHP_DESIGN_DAY_DERATING, _sensible_ashp_unit_size
 from scenarios.scenario_runner import run_scenario
-from analysis.exeter_case_study import PRESET_FOR_TYPE, _map_sources, weather, scaled_economics
+from analysis.exeter_case_study import _map_sources, weather, scaled_economics
 
 # ── Palette — same validated set used throughout the Exeter/Dalkia scripts ──
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (

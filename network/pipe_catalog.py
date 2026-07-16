@@ -713,11 +713,3 @@ def size_pipe_for_peak(
     volumetric_flow_m3_s = mass_flow_kg_s / props["density_kg_m3"]
 
     return select_pipe(volumetric_flow_m3_s, flow_temp_C, **kwargs)
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_pipe_catalog.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_pipe_catalog.py\n"
-    )

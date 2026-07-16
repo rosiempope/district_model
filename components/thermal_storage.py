@@ -103,7 +103,6 @@ Usage
 """
  
 import numpy as np
-import pandas as pd
 from typing import Optional
  
  
@@ -441,10 +440,3 @@ class ThermalStorage:
             f"max_charge={self.max_charge_MW:.1f} MW, max_discharge={self.max_discharge_MW:.1f} MW)"
         )
  
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_thermal_storage.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_thermal_storage.py\n"
-    )

@@ -30,12 +30,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from copy import deepcopy
-import json
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "dalkia_screening"

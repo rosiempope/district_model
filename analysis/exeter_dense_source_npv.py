@@ -22,7 +22,7 @@ from profiles.demand_synthesis import synthesise_network
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from analysis.exeter_case_study import (
-    CENTRAL_BUILDINGS, CENTRAL_SEGMENTS, PRESET_FOR_TYPE, _map_sources, weather, scaled_economics,
+    CENTRAL_BUILDINGS, CENTRAL_SEGMENTS, _map_sources, weather, scaled_economics,
 )
 
 C_BLUE, C_AQUA, C_VIOLET, C_RED = "#2a78d6", "#1baf7a", "#4a3aa7", "#e34948"

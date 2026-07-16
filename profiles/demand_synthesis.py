@@ -883,11 +883,3 @@ def to_dataframe(network_result: dict) -> pd.DataFrame:
         df[f"{safe}_dhw_kW"]  = node["dhw_kW"]
  
     return df
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_demand_synthesis.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_demand_synthesis.py\n"
-    )

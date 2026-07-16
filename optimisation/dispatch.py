@@ -104,7 +104,7 @@ import copy
 
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -678,11 +678,3 @@ def run_n1_stress_test(
         }
 
     return results
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_dispatch.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_dispatch.py\n"
-    )

@@ -135,11 +135,3 @@ def find_required_capacity(
         "required_capacity_MW": required["capacity_MW"],
         "sweep_df":             df,
     }
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_sizing.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_sizing.py\n"
-    )

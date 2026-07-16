@@ -97,7 +97,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 from typing import Optional
 
 # Make sure the project root (one level up from this file's own folder,
@@ -802,11 +801,3 @@ class ElectricBoiler:
             f"ElectricBoiler(name='{self.name}', {self.n_units}x{self.unit_capacity_MW:.2f}MW "
             f"= {self.capacity_MW:.1f} MW, η={self.efficiency:.1%})"
         )
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_peak_demand_option.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_peak_demand_option.py\n"
-    )

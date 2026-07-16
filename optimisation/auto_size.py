@@ -269,8 +269,9 @@ def recommend_sizing(
                 })
 
     # --- Peak/backup sizing ---
-    # Peak plant covers everything baseload can't reach at the design peak
-    total_baseload_MW = sum(s["capacity_MW"] for s in sources if s["role"] == "baseload")
+    # Peak plant covers everything baseload can't reach at the design peak.
+    # Note this uses the DERATED baseload output below, not nameplate: what
+    # matters at the design day is what the plant can actually deliver.
     # For ASHP, the peak-day real output is derated
     ashp_sources = [s for s in sources if s["type"] == "ashp"]
     ashp_derated_MW = sum(s["capacity_MW"] * ASHP_DESIGN_DAY_DERATING for s in ashp_sources)
@@ -312,7 +313,7 @@ def recommend_sizing(
                 "type": ptype,
                 "capacity_MW": round(cap, 2),
                 "role": "peak",
-                "rationale": f"Peak/backup — covers shortfall above baseload output at design day",
+                "rationale": "Peak/backup — covers shortfall above baseload output at design day",
             })
 
     total_installed_MW = sum(s["capacity_MW"] for s in sources)

@@ -32,7 +32,7 @@ from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from analysis.exeter_case_study import (
     CENTRAL_BUILDINGS, CENTRAL_SEGMENTS, SOWTON_BUILDINGS, SOWTON_SEGMENTS,
-    PRESET_FOR_TYPE, _map_sources, weather as raw_weather, scaled_economics,
+    _map_sources, weather as raw_weather, scaled_economics,
 )
 
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (
@@ -253,7 +253,7 @@ print("\n=== Q3: Climate warming ===")
 print(q3_df.to_string(index=False))
 print("\n=== Q4: Four-pipe ===")
 print(q4_df.to_string(index=False))
-print(f"\nChiller capacity check — cooling peak demand at each climate (properly climate-scaled now):")
+print("\nChiller capacity check — cooling peak demand at each climate (properly climate-scaled now):")
 for climate in ["baseline", "2050_central"]:
     cw = apply_climate_scenario(raw_weather, climate)
     d = synthesise_network(cw, {"demand_nodes": deepcopy(SOWTON_BUILDINGS)}, climate_reference=BASELINE_REF)

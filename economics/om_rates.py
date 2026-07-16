@@ -65,6 +65,18 @@ a single unverifiable citation:
     confirmed verbatim on communityheat.org.uk/techno-economic-model/
     financial-modelling/ — this is the one rate in this module with a
     directly confirmed live citation.
+
+Counterfactual O&M — the one flat rate that survives
+-----------------------------------------------------
+The per-technology rates above apply to SCHEME plant. The individual-system
+counterfactual (one domestic boiler/ASHP/AC per building) keeps the original
+single CHDU/DECC rate instead: "The CHDU heat network financial model assumes
+that the annual O&M costs of the Energy Centre are 1% of its CAPEX, as suggested
+by the DECC report on cost characteristics of UK heat networks."
+(communityheat.org.uk/techno-economic-model/financial-modelling/). Applying a
+utility-scale per-technology split to a domestic boiler would be reading more
+into that figure than it supports, so the counterfactual stays on the flat rate
+it was actually sourced for. See INDIVIDUAL_SYSTEM_OM_RATE below.
 """
 
 # Per-source-type annual O&M as a fraction of that source's own CAPEX
@@ -83,6 +95,23 @@ NETWORK_OM_RATE = 0.01   # CHDU/DECC original figure, applied to network CAPEX o
 
 # Fallback for any source type not in the table above
 DEFAULT_SOURCE_OM_RATE = 0.01
+
+# Flat CHDU/DECC rate, used for the INDIVIDUAL-SYSTEM counterfactual only —
+# see the module docstring's "Counterfactual O&M" note. Previously lived in
+# economics/OPEX.py, which had shrunk to this constant plus one function and
+# whose docstring still claimed a per-technology split "doesn't exist" long
+# after this module implemented exactly that.
+INDIVIDUAL_SYSTEM_OM_RATE = 0.01
+
+
+def annual_om_cost_GBP(capex_GBP: float, om_rate: float = INDIVIDUAL_SYSTEM_OM_RATE) -> float:
+    """Annual O&M (£/yr) as a flat fraction of CAPEX.
+
+    Used for the individual-system counterfactual, where the flat CHDU/DECC
+    rate is the right basis. Scheme plant uses the per-technology rates via
+    total_annual_om_GBP() instead.
+    """
+    return capex_GBP * om_rate
 
 
 def source_annual_om_GBP(source) -> float:

@@ -131,8 +131,7 @@ scenario config / UI menu without touching the component classes:
 """
 
 import numpy as np
-import pandas as pd
-from typing import Optional, Union
+from typing import Union
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -545,66 +544,3 @@ def resolve_gas_price(
             f"elements; got {len(arr)}."
         )
     return arr
-
-
-def customer_heat_revenue_GBP(
-    annual_heat_delivered_kWh: float,
-    n_connected_buildings: int,
-    unit_rate_p_per_kWh: float = OFGEM_GAS_CAP_P_PER_KWH,
-    standing_charge_p_per_day: float = OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY,
-) -> dict:
-    """
-    Real customer-facing revenue for heat delivered, using the Ofgem
-    price cap as the basis — "charge what a household would otherwise
-    be charged for the equivalent gas heating" (see OFGEM_GAS_CAP_*
-    constants above for the real, dated sourcing). This is NOT a
-    proxy or an invented number — it's the actual regulated rate a
-    real customer pays today, used directly as this project's revenue
-    mechanism, per this project's own explicit design decision.
-
-    Two real components of a household energy bill, both included:
-      1. Unit rate x energy delivered (the variable component)
-      2. Standing charge x days x number of CONNECTED BUILDINGS (the
-         fixed component — every real customer pays a standing charge
-         regardless of how much they use, and a district scheme bills
-         EACH connected building separately, so this scales with
-         n_connected_buildings, not just total energy)
-
-    Parameters
-    ----------
-    annual_heat_delivered_kWh : total heat delivered to customers over
-                  the year (kWh) — e.g. dispatch_result.summary()'s
-                  "annual_demand_MWh" * 1000, or the building-level
-                  total_heat_kW.sum() for a per-building view
-    n_connected_buildings        : number of buildings billed (each pays
-                  its own standing charge — a real district scheme
-                  bills per connection, not once for the whole network)
-    unit_rate_p_per_kWh           : default OFGEM_GAS_CAP_P_PER_KWH (the
-                  live cap as of this project's current date — see that
-                  constant's docstring note for the review period this
-                  applies to)
-    standing_charge_p_per_day      : default OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY
-
-    Returns
-    -------
-    dict: {
-        "unit_rate_revenue_GBP", "standing_charge_revenue_GBP", "total_revenue_GBP"
-    }
-    """
-    unit_rate_revenue_GBP = annual_heat_delivered_kWh * unit_rate_p_per_kWh / 100.0
-    standing_charge_revenue_GBP = (
-        standing_charge_p_per_day * 365.0 * n_connected_buildings / 100.0
-    )
-    return {
-        "unit_rate_revenue_GBP": round(unit_rate_revenue_GBP, 0),
-        "standing_charge_revenue_GBP": round(standing_charge_revenue_GBP, 0),
-        "total_revenue_GBP": round(unit_rate_revenue_GBP + standing_charge_revenue_GBP, 0),
-    }
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_tariffs.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_tariffs.py\n"
-    )

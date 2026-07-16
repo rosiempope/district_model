@@ -44,7 +44,6 @@ This is a calibration choice, not a precise forecast — treat the UHI
 magnitude (2.5°C peak, summer-weighted) as a sensitivity input you can
 revisit, not gospel.
 """
-import numpy as np
 import pandas as pd
 
 N_HOURS = 8760
@@ -153,11 +152,3 @@ def apply_climate_scenario(weather_df: pd.DataFrame, scenario: str) -> pd.DataFr
     df['temp_drybulb_C'] = df['temp_drybulb_C'] + delta + uhi
 
     return df
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_climate_scenarios.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_climate_scenarios.py\n"
-    )

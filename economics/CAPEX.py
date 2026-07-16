@@ -201,13 +201,3 @@ def individual_system_capex_GBP(peak_kW: float, system_type: str) -> float:
             f"Available: {list(INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW.keys())}"
         )
     return peak_kW * INDIVIDUAL_SYSTEM_CAPEX_GBP_PER_KW[system_type]
-
-
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test lives in tests/test_economics.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_economics.py\n"
-    )

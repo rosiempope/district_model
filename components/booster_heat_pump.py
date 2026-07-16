@@ -124,14 +124,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 from typing import Optional
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from economics.tariffs import resolve_electricity_price, ElectricityTariff
+from economics.tariffs import resolve_electricity_price
 from components.peak_demand_option import CARBON_INTENSITY
 
 # Reuse ASHP.py's real, tested per-unit outage model directly — the

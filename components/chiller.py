@@ -575,11 +575,3 @@ class AirCooledChiller:
             f"T_chw={self.chilled_water_temp_C:.0f}°C, "
             f"mean COP={self.cop_hourly.mean():.2f})"
         )
-
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_chiller.py "
-        "(see this project's file-restructuring decision) -- run:\n"
-        "    python3 tests/test_chiller.py\n"
-    )

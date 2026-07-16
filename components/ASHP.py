@@ -219,12 +219,8 @@ ASHP_PRESETS = {
 # similar) call site keeps resolving unchanged.
 from components.ashp_weather_compensation import (
     weather_compensated_flow_temp_C,
-    check_compensation_floor_against_network,
-    COMPENSATION_FLOW_TEMP_AT_COLD_C,
     COMPENSATION_FLOW_TEMP_AT_MILD_C,
-    COMPENSATION_COLD_ANCHOR_AMBIENT_C,
     COMPENSATION_MILD_ANCHOR_AMBIENT_C,
-    COMPENSATION_RETURN_TEMP_C,
 )
 
 
@@ -816,13 +812,3 @@ class ASHPArray:
             f"{flow_desc}, "
             f"mean COP={self.cop_hourly.mean():.2f})"
         )
-
-
-# ── Self-test ──────────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    print(
-        "\nThis file's self-test has moved to tests/test_ashp.py "
-        "(see this file's module docstring for why) -- run:\n"
-        "    python3 tests/test_ashp.py\n"
-    )

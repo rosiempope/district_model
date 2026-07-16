@@ -8,7 +8,6 @@ import pandas as pd
 from scenarios.data_centre_feasibility import (
     DATA_CENTRE_SCENARIOS,
     LIFETIME_COMPARISON_SCENARIOS,
-    OPTIMISED_LIQUID_COOLED_HYBRID,
     data_centre_case,
 )
 from scenarios.scenario_runner import run_scenario
