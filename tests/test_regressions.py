@@ -16,6 +16,73 @@ from scenarios.worked_scenarios import DATACENTRE_PLUS_BOOSTER, GAS_ONLY, WORKED
 from scenarios.ealing_report_validation import scenario_copy as ealing_scenario
 
 
+class CapexAdderBaseTests(unittest.TestCase):
+    """The design/commissioning/contingency base.
+
+    These adders used to apply to plant + network only, silently exempting the
+    energy centre, utility connections, controls, customer connections and
+    metering — the majority of the fixed scope. See EXCLUDED_FROM_CAPEX_ADDERS
+    and the adder_base_capex note in scenario_runner.run_scenario().
+    """
+
+    def _scenario(self):
+        scenario = copy.deepcopy(GAS_ONLY)
+        scenario["economics"]["capex_items"] = {
+            "energy_centre_building_GBP": 1_000_000.0,
+            "land_and_enabling_GBP": 500_000.0,
+            "electricity_connection_GBP": 0.0,
+            "gas_connection_GBP": 0.0,
+            "controls_and_scada_GBP": 0.0,
+            "customer_connection_GBP_per_connection": 0.0,
+            "metering_GBP_per_connection": 0.0,
+            "development_and_design_pct": 0.0,
+            "commissioning_pct": 0.0,
+            "contingency_pct": 0.10,
+        }
+        return scenario
+
+    def test_contingency_covers_fixed_build_items_not_only_plant_and_network(self):
+        breakdown = run_scenario(self._scenario())["headline"]["capex_breakdown_GBP"]
+        plant_and_network = breakdown["sources_GBP"] + breakdown["network_GBP"]
+        # The energy centre building must be inside the contingency base.
+        self.assertAlmostEqual(
+            breakdown["contingency_GBP"],
+            0.10 * (plant_and_network + 1_000_000.0),
+            delta=1.0,
+        )
+        self.assertGreater(breakdown["contingency_GBP"], 0.10 * plant_and_network)
+
+    def test_land_is_excluded_from_the_adders(self):
+        """Land is a transaction, not a designed/constructed scope — a tenfold
+        land price must not move contingency by a penny."""
+        breakdown = run_scenario(self._scenario())["headline"]["capex_breakdown_GBP"]
+        richer = self._scenario()
+        richer["economics"]["capex_items"]["land_and_enabling_GBP"] = 5_000_000.0
+        richer_breakdown = run_scenario(richer)["headline"]["capex_breakdown_GBP"]
+        self.assertAlmostEqual(
+            richer_breakdown["contingency_GBP"], breakdown["contingency_GBP"], delta=1.0
+        )
+
+    def test_adders_scale_with_connection_count(self):
+        """Customer connections are the biggest fixed line and the likeliest to
+        overrun; contingency must track them."""
+        scenario = self._scenario()
+        scenario["economics"]["capex_items"]["customer_connection_GBP_per_connection"] = 8_000.0
+        breakdown = run_scenario(scenario)["headline"]["capex_breakdown_GBP"]
+        baseline = run_scenario(self._scenario())["headline"]["capex_breakdown_GBP"]
+        self.assertAlmostEqual(
+            breakdown["contingency_GBP"] - baseline["contingency_GBP"],
+            0.10 * breakdown["customer_connections_GBP"],
+            delta=1.0,
+        )
+
+    def test_capex_total_still_equals_sum_of_breakdown(self):
+        result = run_scenario(self._scenario())["headline"]
+        self.assertAlmostEqual(
+            result["capex_total_GBP"], sum(result["capex_breakdown_GBP"].values()), delta=1.0
+        )
+
+
 class FinanceRegressionTests(unittest.TestCase):
     def test_npv_is_final_discounted_cash_position(self):
         result = build_cashflow(

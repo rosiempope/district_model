@@ -71,6 +71,14 @@ PRESETS_BY_TYPE = {
 ELECTRIC_SOURCE_TYPES = {
     "ashp", "booster_heat_pump", "air_cooled_chiller", "electric_boiler"
 }
+
+# CAPEX lines that the development/design, commissioning and contingency
+# percentages are NOT applied to. Land and enabling is a transaction, not a
+# designed and constructed scope — a design fee and a build contingency on top
+# of a land price would be double-counting. Everything else in the delivered
+# scope does carry the adders; see the note at adder_base_capex in
+# run_scenario() for why this is not just plant and network.
+EXCLUDED_FROM_CAPEX_ADDERS = {"land_and_enabling_GBP"}
 REPLACEMENT_DEFAULTS = {
     "ashp": (15, 0.60),
     "booster_heat_pump": (15, 0.60),
@@ -624,7 +632,6 @@ def run_scenario(scenario):
     # directly to the network.
     all_sources = heat_assets + cooling_sources
     capex = aggregate_capex(sources=all_sources, storage=thermal_storage)
-    base_capex = capex["grand_total_GBP"] + network_capex
     econ_cfg = cfg["economics"]
     capex_cfg = econ_cfg.get("capex_items", {})
     total_connections = sum(_connection_count(b) for b in cfg["demand"]["buildings"])
@@ -641,10 +648,32 @@ def run_scenario(scenario):
         float(capex_cfg.get("metering_GBP_per_connection", 0.0))
         * total_connections
     )
+
+    # Design, commissioning and contingency apply to the whole delivered scope,
+    # not just plant and network.
+    #
+    # This previously used base_capex = sources + storage + network only, which
+    # left every fixed and per-connection item carrying ZERO contingency: the
+    # energy-centre building, the electrical/gas connections, controls/SCADA,
+    # customer connections and metering. On the worked scenarios that is ~£9.4m
+    # of a ~£21m scheme — and customer connections (the single largest line at
+    # £4.5m) are precisely the sort of scope that overruns, since they depend on
+    # what is found inside each building. Excluding them understated CAPEX by
+    # roughly 14% and flattered every NPV in the study pack.
+    #
+    # Land is the one deliberate exclusion (EXCLUDED_FROM_CAPEX_ADDERS below): a
+    # land purchase or enabling payment is a transaction, not a designed,
+    # commissioned or buildable scope, so a design fee and a construction
+    # contingency on top of it would be double-counting.
+    adder_base_capex = (
+        capex["grand_total_GBP"]
+        + network_capex
+        + sum(v for k, v in fixed_capex_items.items() if k not in EXCLUDED_FROM_CAPEX_ADDERS)
+    )
     percentage_capex_items = {
-        "development_and_design_GBP": base_capex * float(capex_cfg.get("development_and_design_pct", 0.0)),
-        "commissioning_GBP": base_capex * float(capex_cfg.get("commissioning_pct", 0.0)),
-        "contingency_GBP": base_capex * float(capex_cfg.get("contingency_pct", 0.0)),
+        "development_and_design_GBP": adder_base_capex * float(capex_cfg.get("development_and_design_pct", 0.0)),
+        "commissioning_GBP": adder_base_capex * float(capex_cfg.get("commissioning_pct", 0.0)),
+        "contingency_GBP": adder_base_capex * float(capex_cfg.get("contingency_pct", 0.0)),
     }
     project_capex_items = {
         "sources_GBP": float(capex["by_category"]["sources_GBP"]),
