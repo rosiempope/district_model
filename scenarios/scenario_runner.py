@@ -593,7 +593,7 @@ def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate
         {**node, "connections": _connection_count(building)}
         for node, building in zip(nodes, buildings)
     ]
-    if counterfactual == "individual_ashp":
+    if counterfactual in {"individual_ashp", "individual_ashp_and_ac"}:
         from functools import partial
         # Every building installs its own heat pump instead. This is the
         # comparison heat network zoning actually rests on — the Energy Act 2023

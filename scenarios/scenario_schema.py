@@ -15,7 +15,8 @@ CLIMATE_SCENARIOS = {"baseline", "2050_central", "2050_high"}
 # heat pumps are the alternative that is actually legal long-term and the one
 # heat network zoning is explicitly judged against ("the lowest-cost solution
 # for decarbonising heating"). See economics/metrics.py.
-COUNTERFACTUALS = {"none", "individual_gas", "individual_gas_and_ac", "individual_ashp"}
+COUNTERFACTUALS = {"none", "individual_gas", "individual_gas_and_ac",
+                   "individual_ashp", "individual_ashp_and_ac"}
 DEFAULTS = {
     "climate_scenario": "baseline",
     "screening": {
@@ -363,8 +364,11 @@ def validate_scenario(scenario: dict) -> list[str]:
         or not 0 <= grant.get("rate", 0.40) < 0.50
     ):
         errors.append("economics.ghnf_grant.rate: must be at least 0 and strictly below 0.50")
-    if cooling and econ.get("counterfactual") == "individual_gas":
-        errors.append("economics.counterfactual: use 'individual_gas_and_ac' for a 4-pipe comparison")
+    if cooling and econ.get("counterfactual") in {"individual_gas", "individual_ashp"}:
+        errors.append(
+            "economics.counterfactual: a 4-pipe scenario needs a cooling counterfactual too — "
+            "use 'individual_gas_and_ac' or 'individual_ashp_and_ac'"
+        )
     tariff_mode = econ.get("tariffs", {}).get("heat_tariff_mode", "counterfactual_bill_parity")
     if tariff_mode not in {"counterfactual_bill_parity", "manual"}:
         errors.append("economics.tariffs.heat_tariff_mode: choose counterfactual_bill_parity or manual")
@@ -373,8 +377,8 @@ def validate_scenario(scenario: dict) -> list[str]:
     cooling_tariff_mode = econ.get("tariffs", {}).get("cooling_tariff_mode", "counterfactual_bill_parity")
     if cooling_tariff_mode not in {"counterfactual_bill_parity", "manual"}:
         errors.append("economics.tariffs.cooling_tariff_mode: choose counterfactual_bill_parity or manual")
-    if cooling and cooling_tariff_mode == "counterfactual_bill_parity" and econ.get("counterfactual") != "individual_gas_and_ac":
-        errors.append("economics.tariffs.cooling_tariff_mode: cooling-bill parity requires individual_gas_and_ac")
+    if cooling and cooling_tariff_mode == "counterfactual_bill_parity" and econ.get("counterfactual") not in {"individual_gas_and_ac", "individual_ashp_and_ac"}:
+        errors.append("economics.tariffs.cooling_tariff_mode: cooling-bill parity requires a cooling counterfactual")
     screening = cfg.get("screening", {})
     if (not isinstance(screening.get("maximum_unmet_energy_fraction"), (int, float))
             or screening["maximum_unmet_energy_fraction"] < 0):
