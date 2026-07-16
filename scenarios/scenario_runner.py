@@ -511,6 +511,46 @@ def _build_tree_topology(segments, demand, include_cooling):
     return topo, detail_rows
 
 
+def _delivered_temperature_check(topo, sized_heat, net_cfg):
+    """Does heat arrive hot enough to make DHW, after real route loss?
+
+    Only meaningful in tree mode: generic_length has no route to propagate a
+    temperature along, so there is nothing to check and this is not called.
+
+    Returns a UI/audit-ready dict, or None when the network serves no building
+    with a heating peak (in which case there is genuinely nothing to check —
+    see check_minimum_delivered_temperature()'s note on vacuous truth).
+    """
+    from network.design_temperature_limits import (
+        check_flow_temp_against_cp1,
+        check_return_temp_against_cp1,
+        delivered_temp_basis,
+        minimum_delivered_temp_C,
+    )
+
+    dhw_system = net_cfg.get("dhw_system", "instantaneous_hiu")
+    floor_C = minimum_delivered_temp_C(dhw_system)
+    flow_C = float(net_cfg["heat_flow_temp_C"])
+    result = topo.check_minimum_delivered_temperature(
+        sized_heat, source_flow_temp_C=flow_C, min_temp_C=floor_C,
+    )
+    if result["all_compliant"] is None:
+        return None
+    return {
+        "dhw_system": dhw_system,
+        "minimum_delivered_temp_C": floor_C,
+        "basis": delivered_temp_basis(dhw_system),
+        "worst_case_building": result["worst_case_building"],
+        "worst_case_delivered_temp_C": result["worst_case_delivered_temp_C"],
+        "margin_C": round(float(result["worst_case_delivered_temp_C"]) - floor_C, 2),
+        "buildings_checked": result["buildings_checked"],
+        "compliant": bool(result["all_compliant"]),
+        "by_building": result["by_building"],
+        "cp1_flow": check_flow_temp_against_cp1(flow_C),
+        "cp1_return": check_return_temp_against_cp1(float(net_cfg["heat_return_temp_C"])),
+    }
+
+
 def _fill_segment_detail(detail_rows, sized_segments, duty):
     """Attach the sized pipe results for one duty onto the UI detail rows."""
     label = "Heat" if duty == "heat" else "Cooling"
@@ -558,6 +598,7 @@ def run_scenario(scenario):
 
     network = None
     network_detail = None            # per-segment breakdown for tree mode (UI table)
+    delivered_temperature = None     # tree mode only — generic_length has no route to propagate along
     heat_loss_MWh = cool_gain_MWh = 0.0
     heat_loss_kW_hourly = cool_gain_kW_hourly = 0.0   # scalar 0 broadcasts fine
     network_capex = 0.0
@@ -584,6 +625,15 @@ def run_scenario(scenario):
         topo, network_detail = _build_tree_topology(net_cfg["segments"], demand, include_cooling)
         sized_heat = topo.size_all_segments(net_cfg["heat_flow_temp_C"], net_cfg["heat_return_temp_C"], duty="heat")
         network_capex = topo.total_capex_GBP(sized_heat)
+        # Does the heat actually ARRIVE hot enough? Until now nothing in the
+        # engine asked. check_minimum_delivered_temperature() and
+        # minimum_safe_flow_temp_C() existed, were sophisticated, and were called
+        # by nothing except a dormant module — so a scenario could drop its flow
+        # temperature, collect the resulting heat-pump COP gain and a better NPV,
+        # and never be told its customers were not getting hot water.
+        delivered_temperature = _delivered_temperature_check(
+            topo, sized_heat, net_cfg,
+        )
         heat_losses = topo.network_heat_loss_kW_hourly(sized_heat, net_cfg["heat_flow_temp_C"])
         heat_loss_kW_hourly = heat_losses["total_kW_hourly"]
         heat_loss_MWh = heat_losses["annual_total_MWh"]
@@ -1072,6 +1122,30 @@ def run_scenario(scenario):
         "n_minus_one_basis": "Peak-hour capacity after the largest credible source/unit outage; excludes repair duration, network outages and storage autonomy.",
     })
 
+    # Delivered temperature. None in generic_length mode (no route to propagate a
+    # temperature along) — reported as None rather than True, so "not assessed"
+    # never reads as "passed".
+    headline["dhw_system"] = net_cfg.get("dhw_system", "instantaneous_hiu")
+    if delivered_temperature is not None:
+        headline.update({
+            "minimum_delivered_temp_C": delivered_temperature["minimum_delivered_temp_C"],
+            "worst_case_delivered_temp_C": delivered_temperature["worst_case_delivered_temp_C"],
+            "delivered_temp_margin_C": delivered_temperature["margin_C"],
+            "delivered_temp_compliant": delivered_temperature["compliant"],
+            "delivered_temp_basis": delivered_temperature["basis"],
+        })
+    else:
+        headline.update({
+            "minimum_delivered_temp_C": None,
+            "worst_case_delivered_temp_C": None,
+            "delivered_temp_margin_C": None,
+            "delivered_temp_compliant": None,
+            "delivered_temp_basis": (
+                "Not assessed: delivered temperature requires tree mode, which has real "
+                "route lengths to propagate a temperature along. Generic-length mode does not."
+            ),
+        })
+
     warnings = []
     if net_cfg["mode"] == "generic_length":
         warnings.append("Generic-length mode is an equivalent single trunk with high network CAPEX/pumping uncertainty; use tree mode for investment screening.")
@@ -1093,6 +1167,36 @@ def run_scenario(scenario):
         )
     if not headline["carbon_compliant"]:
         warnings.append(f"Design exceeds the {carbon_threshold_g:g} gCO2e/kWh screening carbon threshold.")
+    if delivered_temperature is not None:
+        if not delivered_temperature["compliant"]:
+            warnings.append(
+                f"Heat does not arrive hot enough: {delivered_temperature['worst_case_building']} "
+                f"receives {delivered_temperature['worst_case_delivered_temp_C']:.1f}°C against a "
+                f"{delivered_temperature['minimum_delivered_temp_C']:.0f}°C floor "
+                f"({delivered_temperature['basis']})."
+            )
+        if not delivered_temperature["cp1_flow"]["within_cp1_envelope"]:
+            warnings.append(
+                f"Flow temperature {net_cfg['heat_flow_temp_C']:.0f}°C is outside CP1 2020's "
+                f"{delivered_temperature['cp1_flow']['cp1_min_C']:.0f}-"
+                f"{delivered_temperature['cp1_flow']['cp1_max_new_scheme_C']:.0f}°C envelope for new schemes."
+            )
+        elif delivered_temperature["cp1_flow"]["at_cp1_ceiling"]:
+            warnings.append(
+                f"Flow temperature {net_cfg['heat_flow_temp_C']:.0f}°C sits at CP1 2020's maximum for new "
+                "schemes. CP1's direction of travel is downward; a lower flow temperature would raise "
+                "heat-pump COP at no pipe-sizing cost (pipe size follows delta-T, not absolute temperature)."
+            )
+        if not delivered_temperature["cp1_return"]["meets_best_practice"]:
+            warnings.append(
+                f"Return temperature {net_cfg['heat_return_temp_C']:.0f}°C is "
+                f"{delivered_temperature['cp1_return']['excess_over_best_practice_K']:.0f}K above CP1 2020's "
+                f"<{delivered_temperature['cp1_return']['cp1_best_practice_vwart_C']:.0f}°C VWART best practice."
+            )
+    elif net_cfg["mode"] == "tree":
+        warnings.append(
+            "Delivered temperature was not assessed: no building on this network carries a heating peak."
+        )
     warnings.append("Long-term grid-carbon, demand and climate trajectories are not yet applied year by year; the annual operating case is repeated in the 40-year cash flow.")
     warnings.append("Screening results remain unassured until independently reconciled and reviewed by engineering and project-finance specialists.")
 
@@ -1110,6 +1214,7 @@ def run_scenario(scenario):
               "grant": grant_result, "om_detail": om_detail,
               "audit": audit,
               "network_detail": network_detail,
+              "delivered_temperature": delivered_temperature,
               "counterfactual": counterfactual, "demand": demand, "weather": weather, "network": network,
               "heat_sources": heat_sources, "cooling_sources": cooling_sources,
               "heat_dispatch": heat_dispatch, "cooling_dispatch": cooling_dispatch,

@@ -120,18 +120,22 @@ def seasonal_ground_temp_C(hour_of_year: np.ndarray, n_hours: int = 8760) -> np.
     )
 
 
-# Minimum temperature that must arrive at the customer (building) end of
-# the network — NOT the source/design flow temperature. Set per the
-# user's own stated requirement: even though some guidance allows 50°C
-# where no DHW cylinder is present, HIU pressure-drop/heat-exchanger
-# resistance means the actual temperature reaching taps is meaningfully
-# below the network-side figure in practice, so 60°C is used as the
-# uniform minimum regardless of cylinder presence -- this is the
-# standard headline figure cited for Legionella control (CIBSE/HSE
-# guidance: hot water should be stored/distributed at >=60°C, with
-# return/outlet temperatures not allowed to drift into the 20-45°C
-# bacterial growth range for extended periods).
-MIN_DELIVERED_TEMP_C = 60.0
+# Minimum temperature that must arrive at the customer (building) end of the
+# network — NOT the source/design flow temperature.
+#
+# This was a single uniform 60°C "regardless of cylinder presence". That fused
+# two different rules: the 60°C figure is the STORAGE requirement (HSG274),
+# while the heat-exchanger approach argument is the real reason a network-side
+# minimum exists at all. The floors are now derived per DHW system type, each
+# with its own citation, in network/design_temperature_limits.py — see that
+# module's docstring for why the single figure was wrong in BOTH directions
+# (too conservative for instantaneous HIUs, too permissive for stored cylinders).
+#
+# Retained at the instantaneous-HIU floor as the module default, because that is
+# the system type CP1 2020's own low-temperature guidance assumes.
+from design_temperature_limits import MIN_DELIVERED_TEMP_INSTANTANEOUS_C   # noqa: E402
+
+MIN_DELIVERED_TEMP_C = MIN_DELIVERED_TEMP_INSTANTANEOUS_C   # 55.0
 
 # NOTE on the COOLING-duty equivalent of MIN_DELIVERED_TEMP_C: unlike
 # heating, there is no separate universal constant here. The maximum
@@ -373,12 +377,20 @@ class TopologyThermalMixin:
                 "margin_C": round(margin, 2),
             }
 
-        all_compliant = all(r["compliant"] for r in results.values()) if results else True
+        # `all([])` is True, so a topology where NOTHING matched the filter above
+        # (every node has building_name=None, or every peak_kW is 0 — e.g. the
+        # route-geometry-only fixtures) used to report all_compliant=True having
+        # checked precisely zero buildings. That is a silent pass on a question
+        # nobody actually asked, and it is exactly the kind of vacuous truth a
+        # compliance gate must not return. Report the count and make emptiness
+        # explicit so a caller can tell "everyone is fine" from "I checked nobody".
+        all_compliant = all(r["compliant"] for r in results.values()) if results else None
         worst_case = min(results, key=lambda k: results[k]["delivered_temp_C"]) if results else None
 
         return {
             "by_building": results,
-            "all_compliant": all_compliant,
+            "buildings_checked": len(results),
+            "all_compliant": all_compliant,   # None == nothing to check, NOT a pass
             "worst_case_building": worst_case,
             "worst_case_delivered_temp_C": results[worst_case]["delivered_temp_C"] if worst_case else None,
             "min_required_temp_C": min_temp_C,
@@ -569,6 +581,19 @@ class TopologyThermalMixin:
                 sized, source_flow_temp_C=flow_temp_C,
                 ground_temp_C=ground_temp_C, min_temp_C=min_temp_C,
             )
+            if compliance["all_compliant"] is None:
+                # Nothing to check — see check_minimum_delivered_temperature()'s
+                # note on vacuous truth. Refuse rather than binary-search on it:
+                # "the lowest safe flow temp for a network serving nobody" is not
+                # a question with a meaningful answer, and returning search_low_C
+                # would look like a real, very attractive result.
+                raise ValueError(
+                    "This topology has no buildings with nonzero heating peak, so "
+                    "there is no delivered-temperature constraint to solve against. "
+                    "Attach real per-building peaks before searching for a minimum "
+                    "safe flow temperature (route-geometry-only fixtures such as "
+                    "ealing_town_centre_topology() carry zero peaks by design)."
+                )
             return compliance["all_compliant"]
 
         if not is_safe(hi):

@@ -1,6 +1,7 @@
 """UI-facing validation for JSON-compatible 2-pipe and 4-pipe scenarios."""
 from __future__ import annotations
 from copy import deepcopy
+from network.design_temperature_limits import DHW_SYSTEM_TYPES
 from profiles.demand_synthesis import BUILDING_TYPES
 
 HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre", "booster_heat_pump", "efw_chp"}
@@ -22,6 +23,13 @@ DEFAULTS = {
     "network": {"mode":"generic_length", "length_m":3000.0, "include_cooling":False,
                 "heat_flow_temp_C":70.0, "heat_return_temp_C":40.0,
                 "cool_flow_temp_C":6.0, "cool_return_temp_C":12.0,
+                # How customers make domestic hot water. This is NOT a detail: it
+                # sets the delivered-temperature floor, which sets the achievable
+                # flow temperature, which sets heat-pump COP. An instantaneous HIU
+                # is an HSE 'low risk' system needing 50C at the outlet; a stored
+                # cylinder needs 60C stored plus a daily disinfection cycle. See
+                # network/design_temperature_limits.py for the citations.
+                "dhw_system":"instantaneous_hiu",
                 "segments":[]},
     "cooling_sources": [],
     "thermal_storage": {"enabled": False},
@@ -231,6 +239,13 @@ def validate_scenario(scenario: dict) -> list[str]:
         errors.append("network.length_m: must be positive for generic_length")
     if network.get("mode") == "tree":
         _validate_tree_segments(network.get("segments"), demand.get("buildings", []), errors)
+
+    if network.get("dhw_system") not in DHW_SYSTEM_TYPES:
+        errors.append(
+            f"network.dhw_system: choose one of {sorted(DHW_SYSTEM_TYPES)} — this sets the "
+            "delivered-temperature floor (instantaneous HIUs are HSE 'low risk' and need 50°C "
+            "at the outlet; a stored cylinder needs 60°C stored)"
+        )
 
     # Design temperatures must give a usable delta-T for pipe sizing —
     # without this, an equal (or inverted) flow/return pair reaches

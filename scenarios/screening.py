@@ -80,6 +80,15 @@ def evaluate_screening(result: dict[str, Any]) -> dict[str, Any]:
             "Peak-hour available capacity after the largest credible source/unit outage.",
             required=require_n1,
         ),
+        # Delivered temperature. `passed` is None in generic_length mode (no route
+        # to propagate a temperature along) and the gate is not required there —
+        # "not assessed" must never read as "passed".
+        _gate(
+            "Delivered temperature", h.get("delivered_temp_compliant"),
+            h.get("worst_case_delivered_temp_C"), h.get("minimum_delivered_temp_C"), "°C at the building",
+            h.get("delivered_temp_basis") or "Heat must arrive hot enough to make domestic hot water.",
+            required=cfg["network"].get("mode") == "tree",
+        ),
     ]
     if max_tariff is not None:
         gates.append(_gate(
@@ -102,6 +111,11 @@ def evaluate_screening(result: dict[str, Any]) -> dict[str, Any]:
         evidence_flags.append("One or more cooling demands are archetype-derived rather than measured.")
     if not require_n1:
         evidence_flags.append("N-1 is reported but is not a mandatory gate in this scenario.")
+    if cfg["network"].get("mode") != "tree":
+        evidence_flags.append(
+            "Delivered temperature is not assessed in generic-length mode; a real route is "
+            "needed to know whether heat arrives hot enough to make domestic hot water."
+        )
 
     if failed:
         status = "FAIL"
