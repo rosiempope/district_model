@@ -372,7 +372,6 @@ def _cooling_profile(
     cool_full_C: float  = 26.0,
     internal_gains_fraction: float = 0.65,
     reference_annual_CDD_h: Optional[float] = None,
-    reference_annual_ramp: Optional[float]  = None,
 ) -> np.ndarray:
     """
     THREE-part cooling demand model. Parts 1 and 2 are ADDITIVE (not max()'d)
@@ -445,18 +444,30 @@ def _cooling_profile(
 
     Degree-day normalisation (climate scenario adjustment)
     -------------------------------------------------------
-    Same mechanism as before: reference_annual_CDD_h / reference_annual_ramp
-    let the caller supply the annual CDD-hour sum and ramp-incidence sum
-    from a reference (typically baseline) weather year, so a hotter
-    climate scenario shows MORE annual cooling (from Part 2's CDD share),
-    not just a reshaped version of the same fixed total. If None
-    (default), this year's own signal is used as its own reference
-    (scaling factor 1.0) — identical to a standalone, no-climate-
-    comparison run. Part 1 (internal gains) deliberately does NOT scale
-    with climate — internal gains are driven by occupancy and equipment,
-    not outdoor temperature, so they should stay constant across climate
-    scenarios; only Part 2's weather-driven share should grow in a
-    hotter scenario.
+    reference_annual_CDD_h lets the caller supply the annual CDD-hour sum
+    from a reference (typically baseline) weather year, so a hotter climate
+    scenario shows MORE annual cooling (from Part 2's CDD share), not just a
+    reshaped version of the same fixed total. If None (default), this year's
+    own signal is used as its own reference (scaling factor 1.0) —
+    identical to a standalone, no-climate-comparison run. Part 1 (internal
+    gains) deliberately does NOT scale with climate — internal gains are
+    driven by occupancy and equipment, not outdoor temperature, so they
+    should stay constant across climate scenarios; only Part 2's
+    weather-driven share should grow in a hotter scenario.
+
+    Part 3's PEAK does not get a second, independent climate multiplier.
+    A previous version multiplied comfort_floor by ramp_annual /
+    reference_annual_ramp — the ratio of how many hours this year cross
+    cool_onset_C against the reference year. Since base_total (Part 1+2) is
+    already climate-responsive through Part 2's CDD ratio, that second
+    multiplication double-counted the climate response: on a single test
+    office building, peak cooling went 1,441 -> 4,253 -> 15,599 kW across
+    baseline / 2050_central / 2050_high, a ~10.8x jump the underlying CDD
+    growth does not remotely justify, and large enough on a real archetype
+    to blow the pipe catalogue's DN600 ceiling. Fixed by anchoring the floor
+    to base_total.max() alone — exactly what the line above already promised
+    ("the SAME peak magnitude base_total would already be producing on its
+    hottest hours") before the multiplier was added on top of it.
 
     Parameters
     ----------
@@ -496,8 +507,7 @@ def _cooling_profile(
         # higher cool_base_C) gives reference_A == 0, so a scenario year that
         # DOES have cooling degree-hours divided by zero and produced inf ->
         # NaN, which then propagated silently through cooling demand, dispatch,
-        # OPEX and NPV. The sibling ramp_scale below was already guarded this
-        # way; this branch was not.
+        # OPEX and NPV.
         #
         # When the reference year has no cooling signal at all, there is no
         # meaningful ratio to form ("infinitely more cooling than a baseline
@@ -523,20 +533,19 @@ def _cooling_profile(
     # using the SAME peak magnitude base_total would already be producing
     # on its hottest hours, scaled by the comfort ramp shape -- i.e. it
     # reshapes WHEN load is high, rather than adding a new pot of energy.
+    #
+    # base_total.max() is used UNSCALED. A previous version multiplied it by
+    # ramp_annual / reference_annual_ramp (this year's vs the reference
+    # year's count of hours crossing cool_onset_C) — but base_total is
+    # already climate-responsive via Part 2's CDD ratio, so that second
+    # multiplication double-counted the climate response onto the PEAK, not
+    # just the annual total. See the "Degree-day normalisation" note above
+    # for the magnitude of what that produced.
     ramp = np.clip(
         (T_air - cool_onset_C) / (cool_full_C - cool_onset_C),
         0.0, 1.0
     )
-    if reference_annual_ramp is not None:
-        # The shared climate reference is weather-only. Including a
-        # building-specific occupancy mask here makes even the baseline case
-        # fail to normalise to 1 and gives different climate multipliers to
-        # identical weather solely because schedules differ.
-        ramp_annual = ramp.sum()
-        ramp_scale = ramp_annual / reference_annual_ramp if reference_annual_ramp > 0 else 1.0
-    else:
-        ramp_scale = 1.0
-    comfort_floor = ramp * occupancy * base_total.max() * ramp_scale if base_total.max() > 0 else np.zeros(n)
+    comfort_floor = ramp * occupancy * base_total.max() if base_total.max() > 0 else np.zeros(n)
 
     return np.maximum(base_total, comfort_floor)  # kW
 
@@ -656,8 +665,6 @@ def compute_climate_reference(
     weather_df: pd.DataFrame,
     heat_base_C: float  = 15.5,
     cool_base_C: float  = 20.0,
-    cool_onset_C: float = 22.0,
-    cool_full_C: float  = 26.0,
 ) -> dict:
     """
     Compute the reference degree-hour signals needed to compare annual
@@ -686,8 +693,10 @@ def compute_climate_reference(
 
     Returns
     -------
-    dict with keys 'annual_HDD_h', 'annual_CDD_h', 'annual_ramp' — pass
-    straight through as the climate_reference argument.
+    dict with keys 'annual_HDD_h', 'annual_CDD_h' — pass straight through as
+    the climate_reference argument. (No longer returns 'annual_ramp' — see
+    _cooling_profile()'s "Degree-day normalisation" note for why an
+    hours-crossing-threshold ratio was removed from the comfort-floor peak.)
     """
     if len(weather_df) != 8760:
         raise ValueError(f"weather_df must have 8760 rows; got {len(weather_df)}.")
@@ -696,12 +705,10 @@ def compute_climate_reference(
 
     HDD_h = np.clip(heat_base_C - T_air, 0, None)
     CDD_h = np.clip(T_air - cool_base_C, 0, None)
-    ramp  = np.clip((T_air - cool_onset_C) / (cool_full_C - cool_onset_C), 0.0, 1.0)
 
     return {
         "annual_HDD_h": float(HDD_h.sum()),
         "annual_CDD_h": float(CDD_h.sum()),
-        "annual_ramp":  float(ramp.sum()),
     }
 
 
@@ -732,7 +739,7 @@ def synthesise_building(
                    used only by the comfort urgency ramp (Part B).
     cool_full_C  : temperature where comfort cooling demand saturates (°C)
     climate_reference : optional dict from compute_climate_reference(), with
-                   keys 'annual_HDD_h', 'annual_CDD_h', 'annual_ramp'.
+                   keys 'annual_HDD_h', 'annual_CDD_h'.
                    Pass the SAME reference (computed once from your baseline
                    weather year) into every climate scenario you're
                    comparing, so annual heating/cooling totals genuinely
@@ -768,8 +775,7 @@ def synthesise_building(
                                   cool_onset_C=cool_onset_C,
                                   cool_full_C=cool_full_C,
                                   internal_gains_fraction=bm.get("internal_gains_fraction", DEFAULT_INTERNAL_GAINS_FRACTION),
-                                  reference_annual_CDD_h=ref.get("annual_CDD_h"),
-                                  reference_annual_ramp=ref.get("annual_ramp"))
+                                  reference_annual_CDD_h=ref.get("annual_CDD_h"))
     dhw_kW     = _dhw_profile(dhw_kWh, occupancy=occupancy)
 
     measured_peak = building.get("peak_total_heat_kW")

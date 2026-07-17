@@ -1,6 +1,6 @@
 # District Heating & Cooling Screening Model — Capability Summary
 
-**Version 2.7.1** · ~19,000 lines Python · 211 tests passing · Prepared for Dalkia review
+**Version 2.7.1** · ~19,000 lines Python · 212 tests passing · Prepared for Dalkia review
 
 ---
 
@@ -328,7 +328,9 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Source & density frontier** | `analysis/source_frontier.py` | 8 source stacks × 3 archetypes on NPV-vs-carbon axes with the GHNF boundary; route-length density sweep; EfW price and distance break-evens |
 | **Anchor/BUS customer-mix sweep** | `analysis/anchor_bus_sweep.py` | Anchor heat share 0–95% × {BUS, no BUS, social housing, gas parity}; what BUS costs the owner under HP-parity billing |
 | **Dalkia roles & civils risk** | `analysis/dalkia_roles.py` | Five commercial roles under 0–51% civils overruns; break-even overrun; packaged-vs-separate civils procurement |
-| **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit |
+| **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit; plus capturing the customer's avoided AC-purchase capex via connection charge, 0-100% |
+| **Climate scenario sweep** | `analysis/climate_scenario_sweep.py` | Heating and cooling investor NPV across baseline/2050 central/2050 high, 3 archetypes, 2-pipe vs 4-pipe |
+| **Archetype reference table** | `analysis/archetype_reference_table.py` | Presentation-ready table of the three density archetypes' building composition and connection assumptions (canonical definitions in `analysis/archetypes.py`) |
 
 ### Headline findings
 
@@ -377,7 +379,7 @@ gas-bill and AC-bill parity modes · hourly pumping-electricity pricing · expli
 a zero residual · design/commissioning/contingency applied to the whole delivered scope · fixed
 CAPEX/OPEX scaled to scheme peak with the factor recorded in the audit hash.
 
-**211 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
+**212 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
 hydraulics/sizing/cost, demand synthesis and all three COP curves, written against the cited sources
 (Ruhnau's coefficients, REHVA's EER 4.0 at 35 °C, the SEAI cost curve, EN 253 Table 7).
 
@@ -396,6 +398,17 @@ Be ready for "what did the review turn up" — the honest answer is stronger tha
   its own findings recorded. Scarce archetype improves £22.15m → £17.73m once applied.
 - **A parallel financial stack.** `metrics.py` carried an unused second NPV/IRR/payback/LCOH
   implementation on a 25-year flat-annuity basis, contradicting the live 40-year table. Removed.
+- **Double-counted climate warming in cooling peak sizing.** The comfort-urgency floor
+  (`_cooling_profile()` Part 3) multiplied its peak by a second, independent climate ratio
+  (hours crossing the comfort threshold vs a reference year) on top of the climate response
+  Part 2 already applies to the annual total via the CDD ratio. On real weather data this
+  inflated a single office building's peak cooling demand ~10.8x from baseline to 2050-high
+  RCP8.5 — for a ~4°C summer / 2°C winter shift — and pushed a full archetype's chiller/network
+  capacity past the pipe catalogue's largest standard main, crashing sizing outright. Found
+  while building the climate-scenario sweep for the Dalkia pack. Fixed by anchoring the floor
+  to the already-climate-responsive `base_total.max()` alone; regression-tested against real
+  weather (`tests/test_regressions.py::test_cooling_peak_does_not_double_count_climate_warming`).
+  A no-op at baseline climate — the Ealing validation (§9) still reconciles 13/13 at ~0% variance.
 
 ---
 
@@ -453,7 +466,7 @@ Be ready for "what did the review turn up" — the honest answer is stronger tha
 | Demand, weather, climate, dispatch, sizing | Complete |
 | Network — tree + generic-length modes | Complete |
 | Economics, tariffs, grant, cash flow, screening | Complete |
-| Test suite (211 tests) | Passing — integration + physics units |
+| Test suite (212 tests) | Passing — integration + physics units |
 | Physics unit coverage | Broad: pipe/demand/COP/dispatch/Shukhov/auto-size covered; pumping, storage, tariff shapes not yet |
 | Validation vs published report | Passing, 13/13 metrics |
 | 8 case studies with figures + CSV exports | Complete |

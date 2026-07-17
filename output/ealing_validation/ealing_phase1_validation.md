@@ -25,4 +25,4 @@ The model was calibrated to the June 2025 feasibility report using Tables 11, 14
 - GBP143,465/year is retained as a visible calibration residual for OPEX categories named but not quantified in the public PDF (staff, insurance, monitoring and maintenance).
 - This is a validation of the calculation chain, not evidence that generic model presets reproduce Ealing without the report-specific inputs.
 
-Scenario hash: `26a63aa7fbbbd5265bcf9ed8206d9f0638dd807e364162af2e9b01a7ff9a1bc3`
+Scenario hash: `4690f0e830254c67de6cc26e0c39f8b29d94e651c46cda10e639a271df66f31c`

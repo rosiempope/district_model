@@ -44,6 +44,7 @@ from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from scenarios.fixed_cost_scaling import scaled_economics
 from economics.tariffs import OFGEM_GAS_CAP_P_PER_KWH
+from analysis.archetypes import ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (
@@ -76,65 +77,11 @@ assert len(weather) == 8760, f"expected 8760 hourly rows, got {len(weather)}"
 weather.index = pd.date_range("2023-01-01", periods=8760, freq="h")
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 2. Three density archetypes — building mix + illustrative route length
+# 2. Three density archetypes — building mix + illustrative route length.
+#    Canonical definitions live in analysis/archetypes.py (imported above),
+#    shared with every other study in this pack, and rendered in
+#    analysis/archetype_reference_table.py for the presentation deck.
 # ═══════════════════════════════════════════════════════════════════════════
-
-ARCHETYPES = {
-    "Dense (town centre)": {
-        "buildings": [
-            {"name": "Dense residential block A", "type": "residential_existing",
-             "floor_area_m2": 30000, "units": 400, "connections": 400,
-             "connection_year": 1, "connection_probability": 0.92},
-            {"name": "Dense residential block B", "type": "residential_existing",
-             "floor_area_m2": 24000, "units": 320, "connections": 320,
-             "connection_year": 1, "connection_probability": 0.90},
-            {"name": "Town centre offices", "type": "office",
-             "floor_area_m2": 15000, "connections": 1,
-             "connection_year": 1, "connection_probability": 1.0},
-            {"name": "High street retail", "type": "retail",
-             "floor_area_m2": 8000, "connections": 1,
-             "connection_year": 1, "connection_probability": 0.90},
-            {"name": "Hotel", "type": "hotel",
-             "floor_area_m2": 6000, "connections": 1,
-             "connection_year": 1, "connection_probability": 1.0},
-        ],
-        "route_m": 900,
-        "note": "Tight urban grid; short closely-packed connections.",
-    },
-    "Middle (suburban mixed)": {
-        "buildings": [
-            {"name": "Suburban residential estate", "type": "residential_existing",
-             "floor_area_m2": 36000, "units": 480, "connections": 480,
-             "connection_year": 1, "connection_probability": 0.85},
-            {"name": "Secondary school", "type": "school",
-             "floor_area_m2": 9000, "connections": 1,
-             "connection_year": 1, "connection_probability": 1.0},
-            {"name": "District retail parade", "type": "retail",
-             "floor_area_m2": 4000, "connections": 1,
-             "connection_year": 1, "connection_probability": 0.85},
-            {"name": "Health centre", "type": "hospital",
-             "floor_area_m2": 3000, "connections": 1,
-             "connection_year": 1, "connection_probability": 1.0},
-        ],
-        "route_m": 2800,
-        "note": "Estate-scale spacing; moderate branch lengths.",
-    },
-    "Scarce (low-density edge)": {
-        "buildings": [
-            {"name": "Dispersed housing cluster A", "type": "residential_existing",
-             "floor_area_m2": 15000, "units": 200, "connections": 200,
-             "connection_year": 1, "connection_probability": 0.75},
-            {"name": "Dispersed housing cluster B", "type": "residential_existing",
-             "floor_area_m2": 9000, "units": 120, "connections": 120,
-             "connection_year": 2, "connection_probability": 0.70},
-            {"name": "Village hall / community retail", "type": "retail",
-             "floor_area_m2": 1500, "connections": 1,
-             "connection_year": 1, "connection_probability": 0.80},
-        ],
-        "route_m": 6500,
-        "note": "Spread housing clusters; long branch runs to reach few connections.",
-    },
-}
 
 archetype_demand_rows = []
 archetype_demand_cache = {}

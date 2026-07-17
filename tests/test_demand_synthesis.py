@@ -200,7 +200,6 @@ class CoolingAnnualTotalTests(unittest.TestCase):
         p = _cooling_profile(
             warmer["temp_drybulb_C"].values, 540_000.0, occ, 0.15,
             reference_annual_CDD_h=ref["annual_CDD_h"],
-            reference_annual_ramp=ref["annual_ramp"],
         )
         self.assertTrue(np.all(np.isfinite(p)), "cooling profile contains NaN/inf")
         self.assertGreater(p.sum(), 0.0)
@@ -213,12 +212,10 @@ class CoolingAnnualTotalTests(unittest.TestCase):
         cool_year = _cooling_profile(
             baseline["temp_drybulb_C"].values, 540_000.0, occ, 0.15,
             reference_annual_CDD_h=ref["annual_CDD_h"],
-            reference_annual_ramp=ref["annual_ramp"],
         )
         hot_year = _cooling_profile(
             hotter["temp_drybulb_C"].values, 540_000.0, occ, 0.15,
             reference_annual_CDD_h=ref["annual_CDD_h"],
-            reference_annual_ramp=ref["annual_ramp"],
         )
         self.assertGreater(hot_year.sum(), cool_year.sum())
 

@@ -368,6 +368,39 @@ class EngineeringRegressionTests(unittest.TestCase):
         )
         self.assertLess(future["annual_heat_MWh"], today["annual_heat_MWh"])
 
+    def test_cooling_peak_does_not_double_count_climate_warming(self):
+        """Regression: the comfort-urgency floor (Part 3 of _cooling_profile)
+        used to multiply its peak by ramp_annual/reference_annual_ramp — an
+        independent climate-driven ratio stacked ON TOP of the climate
+        response Part 2 already applies via the CDD ratio. On this exact real
+        weather file, that double-counting took a single office building's
+        peak cooling demand from 1,441 kW (baseline) to 15,599 kW (2050_high)
+        — a ~10.8x jump for a ~4C summer / 2C winter shift — and on a
+        multi-building archetype it inflated cooling capacity past the pipe
+        catalogue's largest standard main (DN600), crashing network sizing
+        outright. Fixed by anchoring the floor to the already-climate-
+        responsive base_total.max() alone. Peak should still grow with a
+        warmer climate, just nowhere near that fast."""
+        baseline = apply_climate_scenario(self.raw_weather, "baseline")
+        reference = compute_climate_reference(baseline)
+        building = {"name": "Office", "type": "office", "floor_area_m2": 15000}
+        today = synthesise_network(
+            baseline, {"demand_nodes": [building]}, climate_reference=reference,
+        )
+        future = synthesise_network(
+            apply_climate_scenario(self.raw_weather, "2050_high"),
+            {"demand_nodes": [building]}, climate_reference=reference,
+        )
+        peak_ratio = future["peak_cool_kW"] / today["peak_cool_kW"]
+        annual_ratio = future["annual_cool_MWh"] / today["annual_cool_MWh"]
+        # Real numbers post-fix: peak grows ~1.7x, annual grows ~4.2x — peak
+        # tracks well BELOW annual growth (more hours cross the threshold,
+        # not a taller single hour). The double-counted version produced a
+        # ~10.8x peak jump; 3x is a generous ceiling that only a reintroduced
+        # double-count could plausibly breach.
+        self.assertLess(peak_ratio, 3.0)
+        self.assertLess(peak_ratio, annual_ratio)
+
     def test_auto_size_does_not_double_apply_diversity(self):
         demand = np.ones(8760) * 1000
         rec = recommend_sizing(
