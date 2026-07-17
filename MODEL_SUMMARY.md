@@ -1,6 +1,6 @@
 # District Heating & Cooling Screening Model — Capability Summary
 
-**Version 2.7.1** · ~19,000 lines Python · 142 tests passing · Prepared for Dalkia review
+**Version 2.7.1** · ~19,000 lines Python · 209 tests passing · Prepared for Dalkia review
 
 ---
 
@@ -15,8 +15,8 @@ explicit gates (service, carbon, NPV, IRR, N-1, tariff).
 
 **What it is not:** a bankable financial model. It is deliberately positioned as a
 *screening* tool — every run carries a warnings log, model version, run timestamp and a
-SHA-256 scenario hash for auditability. `MODEL_ASSURANCE.md` states the remaining
-limitations honestly and lists what must happen before investor circulation.
+SHA-256 scenario hash for auditability. §12 below states the remaining limitations
+honestly and lists what must happen before investor circulation.
 
 **The single most important design decision:** customer revenue is capped at what the
 customer would otherwise pay. Heat is billed at the customer's own modelled
@@ -43,9 +43,11 @@ individual-gas bill; cooling at their modelled individual-AC running cost. This 
 - Design temperatures: heat flow/return (default 70/40 °C), cooling flow/return (default 6/12 °C)
 
 ### Sources
-6 heat source types (`ashp`, `gas_boiler`, `electric_boiler`, `data_centre`,
+8 heat source types (`ashp`, `wshp`, `gshp`, `gas_boiler`, `electric_boiler`, `data_centre`,
 `booster_heat_pump`, `efw_chp`) + 1 cooling type (`air_cooled_chiller`), each with named
-presets. Total installed capacity and unit count entered separately. Optional thermal storage.
+presets. WSHP/GSHP run on their own source temperature and COP curve, not as a substituted
+ASHP — a 10 °C river or 12 °C ground source is a smaller, far more stable lift than UK winter
+air. Total installed capacity and unit count entered separately. Optional thermal storage.
 
 ### Economics
 40-year life, 10.5% investor discount rate, 3.5% social discount rate, base/price year 2026,
@@ -345,8 +347,11 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
    grid electricity. It earns its keep only where a genuinely large confirmed source displaces *more*
    gas-peak running.
 7. **Cooling makes NPV worse in every tested case** at Sowton/Airport (−£12m to −£19m delta).
-8. **The model catches infeasible designs.** ASHP-only stress tests produce genuine unmet demand and a
-   failed service gate — it does not silently paper over under-sizing.
+8. **The model fails designs on economics, including our own** — every base case above is failed by the
+   screen on its own gates. Do **not** claim it is demonstrated to catch under-sizing: the ASHP-only
+   stress test in `analysis/dalkia_screening_study.py` returns 0 MWh unmet and a service-gate PASS,
+   because auto-sizing sizes the ASHP against the cold-weather-derated design peak, so it meets demand
+   without backup. The service gate is untested by that run.
 
 ---
 
@@ -362,7 +367,7 @@ gas-bill and AC-bill parity modes · hourly pumping-electricity pricing · expli
 a zero residual · design/commissioning/contingency applied to the whole delivered scope · fixed
 CAPEX/OPEX scaled to scheme peak with the factor recorded in the audit hash.
 
-**142 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
+**209 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
 hydraulics/sizing/cost, demand synthesis and all three COP curves, written against the cited sources
 (Ruhnau's coefficients, REHVA's EER 4.0 at 35 °C, the SEAI cost curve, EN 253 Table 7).
 
@@ -390,10 +395,11 @@ Be ready for "what did the review turn up" — the honest answer is stronger tha
   `max()` on top of an already fully-allocated budget. The docstring claimed it summed "EXACTLY"; that
   was false and is corrected. Conservative in direction, and far better than the ~47% over-allocation it
   replaced — but an overshoot, not an identity.
-- **Physics unit coverage is new and partial.** Dispatch, topology thermal (Shukhov), pumping, storage,
-  tariff shapes and auto-sizing are still exercised only through `run_scenario()`. The first three
-  modules to get unit tests immediately surfaced two real defects; assume the untested ones carry
-  comparable risk.
+- **Physics unit coverage is now broad but not complete.** Pipe hydraulics/sizing/cost, demand
+  synthesis, all three COP curves, dispatch, topology thermal (Shukhov) and auto-sizing have unit
+  tests. **Pumping, thermal storage and tariff shapes are still exercised only through
+  `run_scenario()`.** Every module that has gained unit tests so far surfaced at least one real
+  defect on the way in; assume the three untested ones carry comparable risk.
 - Auto-sizing is a transparent load-duration heuristic, **not a constrained unit-combination optimiser**.
 - **N-1 is a peak-capacity screen only** — it does not prove outage duration, storage autonomy or network
   resilience.
@@ -437,8 +443,8 @@ Be ready for "what did the review turn up" — the honest answer is stronger tha
 | Demand, weather, climate, dispatch, sizing | Complete |
 | Network — tree + generic-length modes | Complete |
 | Economics, tariffs, grant, cash flow, screening | Complete |
-| Test suite (142 tests) | Passing — integration + physics units |
-| Physics unit coverage | Partial: pipe/demand/COP covered; dispatch, Shukhov, auto-size not yet |
+| Test suite (209 tests) | Passing — integration + physics units |
+| Physics unit coverage | Broad: pipe/demand/COP/dispatch/Shukhov/auto-size covered; pumping, storage, tariff shapes not yet |
 | Validation vs published report | Passing, 13/13 metrics |
 | 8 case studies with figures + CSV exports | Complete |
 | **Streamlit UI (`app.py`, 1,110 lines)** | **Runs; 21/21 templates match direct runs. Polish next sprint** |

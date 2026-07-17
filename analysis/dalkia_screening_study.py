@@ -342,10 +342,14 @@ print("\n=== GHNF 40% capital-grant sensitivity (carbon-compliant technologies o
 print(grant_df.to_string(index=False))
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 4. Deliberate stress test — ASHP with NO backup on the dense archetype.
-#    This is the model's own accuracy check: an under-designed system
-#    should be CAUGHT (unmet demand, failed service gate), not silently
-#    passed.
+# 4. ASHP with NO backup on the dense archetype.
+#    Intended as a stress test — an under-designed system should be caught by
+#    the service gate rather than silently passed. It does NOT test that:
+#    auto_size sizes the ASHP against the cold-weather-derated design peak, so
+#    removing the backup leaves a system that still meets demand (0 unmet, service
+#    PASS). Kept because "no backup is survivable when the ASHP is sized for the
+#    design day" is itself worth reporting — but it is not evidence that the
+#    service gate bites. That needs plant forced below the design peak.
 # ═══════════════════════════════════════════════════════════════════════════
 
 dense_cfg = ARCHETYPES["Dense (town centre)"]
@@ -591,18 +595,25 @@ lines = [
     "",
     "## 1. Is the model accurate / trustworthy for a first screen?",
     "",
-    "- The engine is unit-tested, but more importantly here: it **actively catches infeasible designs** "
-    "rather than always returning a positive answer. The ASHP-only stress test below (dense archetype, "
-    "no gas/electric backup) produces genuine unmet demand and a FAILED service gate — the model does not "
-    "silently paper over an under-sized system.",
-    f"  - Unmet heat: **{sh['annual_unmet_demand_MWh']:.1f} MWh/yr** "
-    f"({sh['unmet_heat_fraction']*100:.2f}% of demand); screening decision: **{stress_result['screening']['status']}**; "
+    "- The engine does not always return a positive answer: every one of the base cases below is "
+    "failed by the screen, on the model's own gates, against revenue the model itself caps at the "
+    "customer's gas bill.",
+    f"  - ASHP-only stress test (dense archetype, no gas/electric backup): unmet heat "
+    f"**{sh['annual_unmet_demand_MWh']:.1f} MWh/yr** ({sh['unmet_heat_fraction']*100:.2f}% of demand); "
+    f"service gate: **{'PASS' if sh['service_compliant'] else 'FAIL'}**; screening decision: "
+    f"**{stress_result['screening']['status']}**; "
     f"failed gates: {', '.join(stress_result['screening']['failed_gate_names']) or 'none'}.",
+    "  - Read that result honestly: the ASHP-only design is **not** caught by the service gate, because "
+    "`optimisation.auto_size` sizes the ASHP against the cold-weather-derated design peak, so it meets "
+    "demand without backup. The service gate is therefore **not** exercised by this test, and this study "
+    "provides no evidence either way on whether the model catches an under-sized system. What fails here "
+    "is NPV/IRR — an economic result, not a physical one. A genuine service-gate test needs plant "
+    "deliberately sized below the design peak; it has not been run.",
     "- Every scenario carries an explicit warnings/assumptions log, a scenario hash and a model version "
     "in its audit trail (`result['audit']`) — findings below are reproducible from the same script.",
-    "- See `MODEL_ASSURANCE.md` in the repo root for the full, honestly-stated list of what the model does "
-    "and does not yet prove (e.g. generic-length route mode is an equivalent-trunk approximation, not GIS "
-    "routing; N-1 is a peak-capacity screen, not a dynamic outage simulation). This is a **screening tool**, "
+    "- `MODEL_SUMMARY.md` §12 carries the full, honestly-stated list of what the model does and does not "
+    "yet prove (e.g. generic-length route mode is an equivalent-trunk approximation, not GIS routing; "
+    "N-1 is a peak-capacity screen, not a dynamic outage simulation). This is a **screening tool**, "
     "not a bankable investment model — present it as that.",
     "",
     "## 2. Gas-parity tariff pricing",

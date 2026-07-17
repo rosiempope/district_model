@@ -58,21 +58,26 @@ Hospital IZO, at less than half the cost per metre, "utilises the existing heat
 network pipes serving the Queen Elizabeth Hospital Heritage heat network and the
 University of Birmingham's low temperature hot water network branch".
 
-A known modelling gap: WSHP and GSHP
--------------------------------------
+Source mix: ASHP, WSHP and GSHP
+--------------------------------
 Birmingham Central's identified supply is "ASHPs and WSHPs" (Table 3). Of the
-~23 MWth identified in Table 5, 14.8 MWth is ASHP — which this model can
-represent — while 5 MWth of river WSHP and 1.2+ MWth of GSHP CANNOT be: the
-model's HEAT_SOURCE_TYPES has no water- or ground-source heat pump. They are not
-substitutable for an ASHP, because a 10C river or 12C ground source is a far
-smaller and far more stable lift than UK winter air. Modelling them as ASHPs
+~23 MWth identified in Table 5, these scenarios carry 21.0 MWth: 14.8 MWth of
+ASHP, 5.0 MWth of river WSHP and 1.2 MWth of GSHP. Each runs on its own source
+temperature and COP curve (components/water_ground_source_hp.py) rather than
+being substituted for an ASHP — a 10C river or 12C ground source is a far
+smaller and far more stable lift than UK winter air, so modelling them as ASHPs
 would understate their COP and overstate their carbon.
 
-So these scenarios carry the report's real 14.8 MW of ASHP and leave the
-6.2+ MW of WSHP/GSHP out, with gas peak covering the balance. That makes the
-carbon and OPEX figures CONSERVATIVE (worse than the report's intent), and it is
-the single biggest reason not to read these NPVs as a verdict on Birmingham's
-actual plan. Adding a water/ground-source type is the obvious next step.
+The remaining ~2 MWth is the Birmingham Children's Hospital GSHP, for which
+Table 5 gives no capacity; gas peak covers that balance. Carbon and OPEX are
+therefore still marginally CONSERVATIVE against the report's intent, but the
+gap is now small.
+
+The reason not to read these NPVs as a verdict on Birmingham's actual plan is
+no longer the source mix — it is that the report contains no tariffs, no
+discount rate and no operating costs, so those inputs are this model's
+assumptions and the NPVs inherit them. See the provenance table in
+reports/birmingham_study.py.
 """
 from __future__ import annotations
 

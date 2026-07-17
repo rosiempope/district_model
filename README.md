@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 python main.py                          # the five worked scenarios, side by side
 streamlit run app.py                    # the UI, on http://localhost:8501
-python -m unittest discover -s tests    # 142 tests
+python -m unittest discover -s tests    # 209 tests
 ```
 
 ## What's in the folder
@@ -31,7 +31,7 @@ python -m unittest discover -s tests    # 142 tests
 | `economics/` | CAPEX, O&M rates, tariffs, cash flow, GHNF grant, individual-system counterfactuals |
 | `reports/` | Study runners that write to `output/` |
 | `analysis/` | Site case studies (Exeter, Dalkia archetypes, source-stack comparisons) |
-| `tests/` | 142 tests — integration through `run_scenario()`, plus physics units |
+| `tests/` | 209 tests — integration through `run_scenario()`, plus physics units |
 | `output/` | Generated figures and tables. Regenerable; only the `.md` findings are tracked in git |
 
 ## The studies
@@ -138,8 +138,9 @@ project assumptions and complete independent engineering and project-finance
 reconciliation.
 
 The Ealing Town Centre Phase 1 validation reconciles 13 of 13 metrics against the
-published June 2025 SEL report. See `MODEL_SUMMARY.md` for the full limitations
-list and the pre-circulation checklist — in particular, note that dispatch,
-topology thermal physics and auto-sizing still have no unit coverage, and that
-the delivered-temperature checks in `network/topology_thermal.py` are **not** yet
-wired into `run_scenario()`.
+published June 2025 SEL report. See `MODEL_SUMMARY.md` §12 for the full
+limitations list and the pre-circulation checklist. The largest remaining gaps to
+state openly: the cooling model overshoots its own benchmark by ~9-10%; annual
+physical performance is repeated across all 40 years, with no year-by-year grid
+carbon trajectory; four-pipe costs each duty at full trenched £/m, so shared
+civils are not credited; and the ambient loop (5GDH) is not implemented.

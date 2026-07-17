@@ -41,8 +41,11 @@ from network.pipe_catalog import estimate_pipe_cost_GBP_per_m, size_pipe_for_pea
 from scenarios.birmingham_zoning import (
     BDEC_GROWTH_SCENARIOS,
     CENTRAL_ASHP_TOTAL_MW,
+    CENTRAL_GSHP_TOTAL_MW,
     CENTRAL_HEAT_SOURCES,
+    CENTRAL_REPRESENTABLE_MW,
     CENTRAL_TOTAL_IDENTIFIED_SUPPLY_MW,
+    CENTRAL_WSHP_TOTAL_MW,
     IZO_NETWORK,
     REPORT_CITATION,
     REPORT_DESIGN_LHD_TARGET_MWh_per_m,
@@ -370,10 +373,13 @@ def main() -> None:
         "",
         sources_df.to_markdown(index=False),
         "",
-        f"Report identifies ~{CENTRAL_TOTAL_IDENTIFIED_SUPPLY_MW} MWth total. This model can represent "
-        f"**{CENTRAL_ASHP_TOTAL_MW:.1f} MW of ASHP only** — it has no water- or ground-source heat pump "
-        "type, so the 5 MW river WSHP and 1.2+ MW of GSHP are omitted and gas peak covers the balance. "
-        "Carbon and OPEX here are therefore **conservative**, and worse than the report's intent.",
+        f"Report identifies ~{CENTRAL_TOTAL_IDENTIFIED_SUPPLY_MW} MWth total. This model represents "
+        f"**{CENTRAL_REPRESENTABLE_MW:.1f} MW** of it: {CENTRAL_ASHP_TOTAL_MW:.1f} MW of ASHP, "
+        f"{CENTRAL_WSHP_TOTAL_MW:.1f} MW of river WSHP and {CENTRAL_GSHP_TOTAL_MW:.1f} MW of GSHP, "
+        "each on its own source temperature and COP curve rather than substituted for an ASHP. "
+        "The balance is the Birmingham Children's Hospital GSHP, for which Table 5 gives no capacity, "
+        "plus gas peak. Carbon and OPEX therefore remain slightly **conservative** against the report's "
+        "intent, but no longer materially so.",
         "",
         "## Provenance — which numbers are the report's and which are the model's",
         "",

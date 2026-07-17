@@ -5,73 +5,73 @@ scales, because the scaling basis — not the total — is what decides these sc
 
 ## 1. CAPEX by scenario and line item
 
-| scenario                                      | capex_item             |              GBP |   pct_of_capex | scaling_basis   | note                                 |
-|:----------------------------------------------|:-----------------------|-----------------:|---------------:|:----------------|:-------------------------------------|
-| A1 — Gas district reference (not low-carbon)  | network                |      5.13278e+06 |          24.73 | network         | Route length x sized pipe diameter   |
-| A1 — Gas district reference (not low-carbon)  | customer connections   |      3.69664e+06 |          17.81 | per-connection  | Connection count x £/connection      |
-| A1 — Gas district reference (not low-carbon)  | contingency            |      3.04588e+06 |          14.68 | % adder         | % of plant + network ONLY (see note) |
-| A1 — Gas district reference (not low-carbon)  | sources                |      2.25e+06    |          10.84 | plant           | Installed MW of generating plant     |
-| A1 — Gas district reference (not low-carbon)  | energy centre building |      2e+06       |           9.64 | fixed           | Entered as a flat £ — does not scale |
-| A1 — Gas district reference (not low-carbon)  | development and design |      1.52294e+06 |           7.34 | % adder         | % of plant + network ONLY (see note) |
-| A1 — Gas district reference (not low-carbon)  | electricity connection |      1.5e+06     |           7.23 | fixed           | Entered as a flat £ — does not scale |
-| A1 — Gas district reference (not low-carbon)  | land and enabling      | 500000           |           2.41 | fixed           | Entered as a flat £ — does not scale |
-| A1 — Gas district reference (not low-carbon)  | commissioning          | 456883           |           2.2  | % adder         | % of plant + network ONLY (see note) |
-| A1 — Gas district reference (not low-carbon)  | controls and scada     | 400000           |           1.93 | fixed           | Entered as a flat £ — does not scale |
-| A1 — Gas district reference (not low-carbon)  | gas connection         | 250000           |           1.2  | fixed           | Entered as a flat £ — does not scale |
-| A1 — Gas district reference (not low-carbon)  | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                 |
-| A1 — Gas district reference (not low-carbon)  | metering               |      0           |           0    | per-connection  | Connection count x £/meter           |
-| A3 — ASHP plus gas peak/backup                | network                |      5.13278e+06 |          22.74 | network         | Route length x sized pipe diameter   |
-| A3 — ASHP plus gas peak/backup                | customer connections   |      3.69664e+06 |          16.37 | per-connection  | Connection count x £/connection      |
-| A3 — ASHP plus gas peak/backup                | sources                |      3.6185e+06  |          16.03 | plant           | Installed MW of generating plant     |
-| A3 — ASHP plus gas peak/backup                | contingency            |      3.31958e+06 |          14.7  | % adder         | % of plant + network ONLY (see note) |
-| A3 — ASHP plus gas peak/backup                | energy centre building |      2e+06       |           8.86 | fixed           | Entered as a flat £ — does not scale |
-| A3 — ASHP plus gas peak/backup                | development and design |      1.65979e+06 |           7.35 | % adder         | % of plant + network ONLY (see note) |
-| A3 — ASHP plus gas peak/backup                | electricity connection |      1.5e+06     |           6.64 | fixed           | Entered as a flat £ — does not scale |
-| A3 — ASHP plus gas peak/backup                | land and enabling      | 500000           |           2.21 | fixed           | Entered as a flat £ — does not scale |
-| A3 — ASHP plus gas peak/backup                | commissioning          | 497938           |           2.21 | % adder         | % of plant + network ONLY (see note) |
-| A3 — ASHP plus gas peak/backup                | controls and scada     | 400000           |           1.77 | fixed           | Entered as a flat £ — does not scale |
-| A3 — ASHP plus gas peak/backup                | gas connection         | 250000           |           1.11 | fixed           | Entered as a flat £ — does not scale |
-| A3 — ASHP plus gas peak/backup                | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                 |
-| A3 — ASHP plus gas peak/backup                | metering               |      0           |           0    | per-connection  | Connection count x £/meter           |
-| A4 — Data-centre heat plus booster and backup | sources                |      5.1507e+06  |          20.93 | plant           | Installed MW of generating plant     |
-| A4 — Data-centre heat plus booster and backup | network                |      5.13278e+06 |          20.85 | network         | Route length x sized pipe diameter   |
-| A4 — Data-centre heat plus booster and backup | customer connections   |      3.69664e+06 |          15.02 | per-connection  | Connection count x £/connection      |
-| A4 — Data-centre heat plus booster and backup | contingency            |      3.62602e+06 |          14.73 | % adder         | % of plant + network ONLY (see note) |
-| A4 — Data-centre heat plus booster and backup | energy centre building |      2e+06       |           8.13 | fixed           | Entered as a flat £ — does not scale |
-| A4 — Data-centre heat plus booster and backup | development and design |      1.81301e+06 |           7.37 | % adder         | % of plant + network ONLY (see note) |
-| A4 — Data-centre heat plus booster and backup | electricity connection |      1.5e+06     |           6.09 | fixed           | Entered as a flat £ — does not scale |
-| A4 — Data-centre heat plus booster and backup | commissioning          | 543904           |           2.21 | % adder         | % of plant + network ONLY (see note) |
-| A4 — Data-centre heat plus booster and backup | land and enabling      | 500000           |           2.03 | fixed           | Entered as a flat £ — does not scale |
-| A4 — Data-centre heat plus booster and backup | controls and scada     | 400000           |           1.63 | fixed           | Entered as a flat £ — does not scale |
-| A4 — Data-centre heat plus booster and backup | gas connection         | 250000           |           1.02 | fixed           | Entered as a flat £ — does not scale |
-| A4 — Data-centre heat plus booster and backup | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                 |
-| A4 — Data-centre heat plus booster and backup | metering               |      0           |           0    | per-connection  | Connection count x £/meter           |
-| A5 — EfW export plus ASHP and backup          | sources                |      5.7185e+06  |          22.54 | plant           | Installed MW of generating plant     |
-| A5 — EfW export plus ASHP and backup          | network                |      5.13278e+06 |          20.23 | network         | Route length x sized pipe diameter   |
-| A5 — EfW export plus ASHP and backup          | contingency            |      3.73958e+06 |          14.74 | % adder         | % of plant + network ONLY (see note) |
-| A5 — EfW export plus ASHP and backup          | customer connections   |      3.69664e+06 |          14.57 | per-connection  | Connection count x £/connection      |
-| A5 — EfW export plus ASHP and backup          | energy centre building |      2e+06       |           7.88 | fixed           | Entered as a flat £ — does not scale |
-| A5 — EfW export plus ASHP and backup          | development and design |      1.86979e+06 |           7.37 | % adder         | % of plant + network ONLY (see note) |
-| A5 — EfW export plus ASHP and backup          | electricity connection |      1.5e+06     |           5.91 | fixed           | Entered as a flat £ — does not scale |
-| A5 — EfW export plus ASHP and backup          | commissioning          | 560938           |           2.21 | % adder         | % of plant + network ONLY (see note) |
-| A5 — EfW export plus ASHP and backup          | land and enabling      | 500000           |           1.97 | fixed           | Entered as a flat £ — does not scale |
-| A5 — EfW export plus ASHP and backup          | controls and scada     | 400000           |           1.58 | fixed           | Entered as a flat £ — does not scale |
-| A5 — EfW export plus ASHP and backup          | gas connection         | 250000           |           0.99 | fixed           | Entered as a flat £ — does not scale |
-| A5 — EfW export plus ASHP and backup          | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                 |
-| A5 — EfW export plus ASHP and backup          | metering               |      0           |           0    | per-connection  | Connection count x £/meter           |
-| A6 — Four-pipe heating and cooling            | network                |      1.06801e+07 |          34.62 | network         | Route length x sized pipe diameter   |
-| A6 — Four-pipe heating and cooling            | contingency            |      4.56425e+06 |          14.79 | % adder         | % of plant + network ONLY (see note) |
-| A6 — Four-pipe heating and cooling            | sources                |      4.2945e+06  |          13.92 | plant           | Installed MW of generating plant     |
-| A6 — Four-pipe heating and cooling            | customer connections   |      3.69664e+06 |          11.98 | per-connection  | Connection count x £/connection      |
-| A6 — Four-pipe heating and cooling            | development and design |      2.28212e+06 |           7.4  | % adder         | % of plant + network ONLY (see note) |
-| A6 — Four-pipe heating and cooling            | energy centre building |      2e+06       |           6.48 | fixed           | Entered as a flat £ — does not scale |
-| A6 — Four-pipe heating and cooling            | electricity connection |      1.5e+06     |           4.86 | fixed           | Entered as a flat £ — does not scale |
-| A6 — Four-pipe heating and cooling            | commissioning          | 684637           |           2.22 | % adder         | % of plant + network ONLY (see note) |
-| A6 — Four-pipe heating and cooling            | land and enabling      | 500000           |           1.62 | fixed           | Entered as a flat £ — does not scale |
-| A6 — Four-pipe heating and cooling            | controls and scada     | 400000           |           1.3  | fixed           | Entered as a flat £ — does not scale |
-| A6 — Four-pipe heating and cooling            | gas connection         | 250000           |           0.81 | fixed           | Entered as a flat £ — does not scale |
-| A6 — Four-pipe heating and cooling            | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                 |
-| A6 — Four-pipe heating and cooling            | metering               |      0           |           0    | per-connection  | Connection count x £/meter           |
+| scenario                                      | capex_item             |              GBP |   pct_of_capex | scaling_basis   | note                                         |
+|:----------------------------------------------|:-----------------------|-----------------:|---------------:|:----------------|:---------------------------------------------|
+| A1 — Gas district reference (not low-carbon)  | network                |      5.13278e+06 |          24.73 | network         | Route length x sized pipe diameter           |
+| A1 — Gas district reference (not low-carbon)  | customer connections   |      3.69664e+06 |          17.81 | per-connection  | Connection count x £/connection              |
+| A1 — Gas district reference (not low-carbon)  | contingency            |      3.04588e+06 |          14.68 | % adder         | % of whole delivered scope except land       |
+| A1 — Gas district reference (not low-carbon)  | sources                |      2.25e+06    |          10.84 | plant           | Installed MW of generating plant             |
+| A1 — Gas district reference (not low-carbon)  | energy centre building |      2e+06       |           9.64 | fixed           | Flat £ as entered here — see note on scaling |
+| A1 — Gas district reference (not low-carbon)  | development and design |      1.52294e+06 |           7.34 | % adder         | % of whole delivered scope except land       |
+| A1 — Gas district reference (not low-carbon)  | electricity connection |      1.5e+06     |           7.23 | fixed           | Flat £ as entered here — see note on scaling |
+| A1 — Gas district reference (not low-carbon)  | land and enabling      | 500000           |           2.41 | fixed           | Flat £ as entered here — see note on scaling |
+| A1 — Gas district reference (not low-carbon)  | commissioning          | 456883           |           2.2  | % adder         | % of whole delivered scope except land       |
+| A1 — Gas district reference (not low-carbon)  | controls and scada     | 400000           |           1.93 | fixed           | Flat £ as entered here — see note on scaling |
+| A1 — Gas district reference (not low-carbon)  | gas connection         | 250000           |           1.2  | fixed           | Flat £ as entered here — see note on scaling |
+| A1 — Gas district reference (not low-carbon)  | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                         |
+| A1 — Gas district reference (not low-carbon)  | metering               |      0           |           0    | per-connection  | Connection count x £/meter                   |
+| A3 — ASHP plus gas peak/backup                | network                |      5.13278e+06 |          22.74 | network         | Route length x sized pipe diameter           |
+| A3 — ASHP plus gas peak/backup                | customer connections   |      3.69664e+06 |          16.37 | per-connection  | Connection count x £/connection              |
+| A3 — ASHP plus gas peak/backup                | sources                |      3.6185e+06  |          16.03 | plant           | Installed MW of generating plant             |
+| A3 — ASHP plus gas peak/backup                | contingency            |      3.31958e+06 |          14.7  | % adder         | % of whole delivered scope except land       |
+| A3 — ASHP plus gas peak/backup                | energy centre building |      2e+06       |           8.86 | fixed           | Flat £ as entered here — see note on scaling |
+| A3 — ASHP plus gas peak/backup                | development and design |      1.65979e+06 |           7.35 | % adder         | % of whole delivered scope except land       |
+| A3 — ASHP plus gas peak/backup                | electricity connection |      1.5e+06     |           6.64 | fixed           | Flat £ as entered here — see note on scaling |
+| A3 — ASHP plus gas peak/backup                | land and enabling      | 500000           |           2.21 | fixed           | Flat £ as entered here — see note on scaling |
+| A3 — ASHP plus gas peak/backup                | commissioning          | 497938           |           2.21 | % adder         | % of whole delivered scope except land       |
+| A3 — ASHP plus gas peak/backup                | controls and scada     | 400000           |           1.77 | fixed           | Flat £ as entered here — see note on scaling |
+| A3 — ASHP plus gas peak/backup                | gas connection         | 250000           |           1.11 | fixed           | Flat £ as entered here — see note on scaling |
+| A3 — ASHP plus gas peak/backup                | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                         |
+| A3 — ASHP plus gas peak/backup                | metering               |      0           |           0    | per-connection  | Connection count x £/meter                   |
+| A4 — Data-centre heat plus booster and backup | sources                |      5.1507e+06  |          20.93 | plant           | Installed MW of generating plant             |
+| A4 — Data-centre heat plus booster and backup | network                |      5.13278e+06 |          20.85 | network         | Route length x sized pipe diameter           |
+| A4 — Data-centre heat plus booster and backup | customer connections   |      3.69664e+06 |          15.02 | per-connection  | Connection count x £/connection              |
+| A4 — Data-centre heat plus booster and backup | contingency            |      3.62602e+06 |          14.73 | % adder         | % of whole delivered scope except land       |
+| A4 — Data-centre heat plus booster and backup | energy centre building |      2e+06       |           8.13 | fixed           | Flat £ as entered here — see note on scaling |
+| A4 — Data-centre heat plus booster and backup | development and design |      1.81301e+06 |           7.37 | % adder         | % of whole delivered scope except land       |
+| A4 — Data-centre heat plus booster and backup | electricity connection |      1.5e+06     |           6.09 | fixed           | Flat £ as entered here — see note on scaling |
+| A4 — Data-centre heat plus booster and backup | commissioning          | 543904           |           2.21 | % adder         | % of whole delivered scope except land       |
+| A4 — Data-centre heat plus booster and backup | land and enabling      | 500000           |           2.03 | fixed           | Flat £ as entered here — see note on scaling |
+| A4 — Data-centre heat plus booster and backup | controls and scada     | 400000           |           1.63 | fixed           | Flat £ as entered here — see note on scaling |
+| A4 — Data-centre heat plus booster and backup | gas connection         | 250000           |           1.02 | fixed           | Flat £ as entered here — see note on scaling |
+| A4 — Data-centre heat plus booster and backup | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                         |
+| A4 — Data-centre heat plus booster and backup | metering               |      0           |           0    | per-connection  | Connection count x £/meter                   |
+| A5 — EfW export plus ASHP and backup          | sources                |      5.7185e+06  |          22.54 | plant           | Installed MW of generating plant             |
+| A5 — EfW export plus ASHP and backup          | network                |      5.13278e+06 |          20.23 | network         | Route length x sized pipe diameter           |
+| A5 — EfW export plus ASHP and backup          | contingency            |      3.73958e+06 |          14.74 | % adder         | % of whole delivered scope except land       |
+| A5 — EfW export plus ASHP and backup          | customer connections   |      3.69664e+06 |          14.57 | per-connection  | Connection count x £/connection              |
+| A5 — EfW export plus ASHP and backup          | energy centre building |      2e+06       |           7.88 | fixed           | Flat £ as entered here — see note on scaling |
+| A5 — EfW export plus ASHP and backup          | development and design |      1.86979e+06 |           7.37 | % adder         | % of whole delivered scope except land       |
+| A5 — EfW export plus ASHP and backup          | electricity connection |      1.5e+06     |           5.91 | fixed           | Flat £ as entered here — see note on scaling |
+| A5 — EfW export plus ASHP and backup          | commissioning          | 560938           |           2.21 | % adder         | % of whole delivered scope except land       |
+| A5 — EfW export plus ASHP and backup          | land and enabling      | 500000           |           1.97 | fixed           | Flat £ as entered here — see note on scaling |
+| A5 — EfW export plus ASHP and backup          | controls and scada     | 400000           |           1.58 | fixed           | Flat £ as entered here — see note on scaling |
+| A5 — EfW export plus ASHP and backup          | gas connection         | 250000           |           0.99 | fixed           | Flat £ as entered here — see note on scaling |
+| A5 — EfW export plus ASHP and backup          | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                         |
+| A5 — EfW export plus ASHP and backup          | metering               |      0           |           0    | per-connection  | Connection count x £/meter                   |
+| A6 — Four-pipe heating and cooling            | network                |      1.06801e+07 |          34.62 | network         | Route length x sized pipe diameter           |
+| A6 — Four-pipe heating and cooling            | contingency            |      4.56425e+06 |          14.79 | % adder         | % of whole delivered scope except land       |
+| A6 — Four-pipe heating and cooling            | sources                |      4.2945e+06  |          13.92 | plant           | Installed MW of generating plant             |
+| A6 — Four-pipe heating and cooling            | customer connections   |      3.69664e+06 |          11.98 | per-connection  | Connection count x £/connection              |
+| A6 — Four-pipe heating and cooling            | development and design |      2.28212e+06 |           7.4  | % adder         | % of whole delivered scope except land       |
+| A6 — Four-pipe heating and cooling            | energy centre building |      2e+06       |           6.48 | fixed           | Flat £ as entered here — see note on scaling |
+| A6 — Four-pipe heating and cooling            | electricity connection |      1.5e+06     |           4.86 | fixed           | Flat £ as entered here — see note on scaling |
+| A6 — Four-pipe heating and cooling            | commissioning          | 684637           |           2.22 | % adder         | % of whole delivered scope except land       |
+| A6 — Four-pipe heating and cooling            | land and enabling      | 500000           |           1.62 | fixed           | Flat £ as entered here — see note on scaling |
+| A6 — Four-pipe heating and cooling            | controls and scada     | 400000           |           1.3  | fixed           | Flat £ as entered here — see note on scaling |
+| A6 — Four-pipe heating and cooling            | gas connection         | 250000           |           0.81 | fixed           | Flat £ as entered here — see note on scaling |
+| A6 — Four-pipe heating and cooling            | thermal storage        |      0           |           0    | plant           | Store capacity (MWh)                         |
+| A6 — Four-pipe heating and cooling            | metering               |      0           |           0    | per-connection  | Connection count x £/meter                   |
 
 ## 2. CAPEX grouped by scaling basis (£)
 
@@ -153,13 +153,17 @@ scales, because the scaling basis — not the total — is what decides these sc
 | A5 — EfW export plus ASHP and backup          |           564 |                14115 |      3000 |       2.53682e+07 |                      44979 |                   1797 |                    8456 |        931431           |                         1651 |                      29.119 |                         7.768 | -2.31333e+07 |
 | A6 — Four-pipe heating and cooling            |           564 |                16026 |      3000 |       3.08522e+07 |                      54703 |                   1925 |                   10284 |             2.05177e+06 |                         3638 |                      41.29  |                         7.768 | -3.71591e+07 |
 
-## 6. Size-independent cost exposure
+## 6. Cost that does not scale with route length or demand
 
-Discounted lifetime cost that does **not** move with scheme size. Read the
-`size_independent_p_per_kWh` column against the ~7.33 p/kWh Ofgem cap and the
-~8.3 p/kWh modelled gas-parity bill: this is what every connection must carry
-*before* a single kWh of heat is generated, a metre of pipe is laid, or a
+Discounted lifetime cost of the five flat CAPEX items and five flat overheads.
+Read the `size_independent_p_per_kWh` column against the ~7.33 p/kWh Ofgem cap
+and the ~8.3 p/kWh modelled gas-parity bill: this is what every connection must
+carry *before* a single kWh of heat is generated, a metre of pipe is laid, or a
 connection is made.
+
+**Read this as scale-sensitivity, not as an immovable floor.** These items are
+flat *within* this report because it runs the worked scenarios exactly as
+entered. They are not physically size-independent: see the note below.
 
 | scenario                                      |   connections |   size_independent_capex_GBP |   size_independent_opex_discounted_GBP |   size_independent_lifetime_GBP |   pct_of_gross_capex |   size_independent_per_connection_GBP |   size_independent_p_per_kWh |
 |:----------------------------------------------|--------------:|-----------------------------:|---------------------------------------:|--------------------------------:|---------------------:|--------------------------------------:|-----------------------------:|
@@ -171,15 +175,23 @@ connection is made.
 
 ## Notes on method
 
-- **The % adders (design, commissioning, contingency) are applied to plant +
-  network only.** They exclude the energy-centre building, land, utility
-  connections, controls/SCADA, customer connections and metering. On the worked
-  scenarios that leaves roughly £9m of real cost carrying zero contingency. This
-  is the engine's current behaviour (`scenario_runner.py`, `base_capex`), reported
-  here rather than corrected, so the effect is visible before it is decided on.
-- Fixed CAPEX/OPEX line items in `scenarios/worked_scenarios.py` are Ealing-calibrated
-  (~1,100-connection scheme) and are **not rescaled** for smaller schemes. They are
-  entered as flat £ values, so any scenario with fewer connections carries the same
-  absolute burden. This overstates the NPV gap for small schemes.
+- **The % adders (design, commissioning, contingency) apply to the whole
+  delivered scope except land** — plant, network, energy-centre building, utility
+  connections, controls/SCADA, customer connections and metering all carry them.
+  Land is the single exclusion (`EXCLUDED_FROM_CAPEX_ADDERS` in
+  `scenario_runner.py`): a land purchase is a transaction, not a designed and
+  constructed scope, so a design fee and a build contingency on top would be
+  double-counting. An earlier version applied the adders to plant + network only,
+  which left ~£9m of a ~£21m scheme — including the £4.5m of customer connections,
+  the line likeliest to overrun — carrying zero contingency.
+- **The flat CAPEX/OPEX items in `scenarios/worked_scenarios.py` are
+  Ealing-calibrated** (~564 connections, ~8.6 MW peak) and this report runs them
+  as entered, so every scenario above carries the same absolute burden. The engine
+  does not require that: `scenarios/fixed_cost_scaling.scaled_economics()` rescales
+  them by (scheme peak / reference peak) ^ 0.7, floored at 0.20, and the study
+  scripts that screen other scheme sizes apply it. This report deliberately does
+  not, so the unscaled burden is visible. The consequence: **do not read the
+  exposure above as fixed cost for a scheme of a different size** — at half this
+  peak it would be ~0.62x, not 1.0x.
 - OPEX is year 1. Energy lines are connection-weighted by the phased build-out;
   fixed O&M and overhead remain payable in full from year 1.

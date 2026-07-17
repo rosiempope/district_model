@@ -4,10 +4,11 @@ Run directly against the model engine (`scenarios.scenario_runner.run_scenario`,
 
 ## 1. Is the model accurate / trustworthy for a first screen?
 
-- The engine is unit-tested, but more importantly here: it **actively catches infeasible designs** rather than always returning a positive answer. The ASHP-only stress test below (dense archetype, no gas/electric backup) produces genuine unmet demand and a FAILED service gate — the model does not silently paper over an under-sized system.
-  - Unmet heat: **0.0 MWh/yr** (0.00% of demand); screening decision: **FAIL**; failed gates: Investor NPV, Investor IRR.
+- The engine does not always return a positive answer: every one of the base cases below is failed by the screen, on the model's own gates, against revenue the model itself caps at the customer's gas bill.
+  - ASHP-only stress test (dense archetype, no gas/electric backup): unmet heat **0.0 MWh/yr** (0.00% of demand); service gate: **PASS**; screening decision: **FAIL**; failed gates: Investor NPV, Investor IRR.
+  - Read that result honestly: the ASHP-only design is **not** caught by the service gate, because `optimisation.auto_size` sizes the ASHP against the cold-weather-derated design peak, so it meets demand without backup. The service gate is therefore **not** exercised by this test, and this study provides no evidence either way on whether the model catches an under-sized system. What fails here is NPV/IRR — an economic result, not a physical one. A genuine service-gate test needs plant deliberately sized below the design peak; it has not been run.
 - Every scenario carries an explicit warnings/assumptions log, a scenario hash and a model version in its audit trail (`result['audit']`) — findings below are reproducible from the same script.
-- See `MODEL_ASSURANCE.md` in the repo root for the full, honestly-stated list of what the model does and does not yet prove (e.g. generic-length route mode is an equivalent-trunk approximation, not GIS routing; N-1 is a peak-capacity screen, not a dynamic outage simulation). This is a **screening tool**, not a bankable investment model — present it as that.
+- `MODEL_SUMMARY.md` §12 carries the full, honestly-stated list of what the model does and does not yet prove (e.g. generic-length route mode is an equivalent-trunk approximation, not GIS routing; N-1 is a peak-capacity screen, not a dynamic outage simulation). This is a **screening tool**, not a bankable investment model — present it as that.
 
 ## 2. Gas-parity tariff pricing
 
