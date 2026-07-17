@@ -738,6 +738,12 @@ def run_scenario(scenario):
     )
     net_cfg = cfg["network"]
     include_cooling = bool(net_cfg["include_cooling"])
+    # What the ground is like — scales the pipe curve. The curve's own basis is
+    # Irish inner-city, which the Birmingham report shows is England's SUBURBAN
+    # case, not its urban one.
+    from network.route_difficulty import route_difficulty_basis, route_difficulty_factor
+    route_type = net_cfg.get("route_type", "suburban")
+    route_factor = route_difficulty_factor(route_type)
 
     network = None
     network_detail = None            # per-segment breakdown for tree mode (UI table)
@@ -750,7 +756,9 @@ def run_scenario(scenario):
     if net_cfg["mode"] == "generic_length":
         kwargs = {"heat_flow_temp_C": net_cfg["heat_flow_temp_C"], "heat_return_temp_C": net_cfg["heat_return_temp_C"],
                   "cool_flow_temp_C": net_cfg["cool_flow_temp_C"], "cool_return_temp_C": net_cfg["cool_return_temp_C"]} if include_cooling else {"flow_temp_C": net_cfg["heat_flow_temp_C"], "return_temp_C": net_cfg["heat_return_temp_C"]}
-        network = size_network_from_demand(demand, net_cfg["length_m"], include_cooling=include_cooling, **kwargs)
+        network = size_network_from_demand(
+            demand, net_cfg["length_m"], include_cooling=include_cooling,
+            route_difficulty_factor=route_factor, **kwargs)
         for duty in network.duties:
             if duty.duty_name == "heating": heat_loss_MWh = duty.annual_heat_loss_MWh
             if duty.duty_name == "cooling": cool_gain_MWh = abs(duty.annual_heat_loss_MWh)
@@ -766,7 +774,9 @@ def run_scenario(scenario):
 
     elif net_cfg["mode"] == "tree":
         topo, network_detail = _build_tree_topology(net_cfg["segments"], demand, include_cooling)
-        sized_heat = topo.size_all_segments(net_cfg["heat_flow_temp_C"], net_cfg["heat_return_temp_C"], duty="heat")
+        sized_heat = topo.size_all_segments(
+            net_cfg["heat_flow_temp_C"], net_cfg["heat_return_temp_C"], duty="heat",
+            route_difficulty_factor=route_factor)
         network_capex = topo.total_capex_GBP(sized_heat)
         # Does the heat actually ARRIVE hot enough? Until now nothing in the
         # engine asked. check_minimum_delivered_temperature() and
@@ -782,7 +792,9 @@ def run_scenario(scenario):
         heat_loss_MWh = heat_losses["annual_total_MWh"]
         _fill_segment_detail(network_detail, sized_heat, duty="heat")
         if include_cooling:
-            sized_cool = topo.size_all_segments(net_cfg["cool_flow_temp_C"], net_cfg["cool_return_temp_C"], duty="cool")
+            sized_cool = topo.size_all_segments(
+                net_cfg["cool_flow_temp_C"], net_cfg["cool_return_temp_C"], duty="cool",
+                route_difficulty_factor=route_factor)
             network_capex += topo.total_capex_GBP(sized_cool)
             cool_gains = topo.network_heat_loss_kW_hourly(sized_cool, net_cfg["cool_flow_temp_C"])
             cool_gain_kW_hourly = cool_gains["total_kW_hourly"]
@@ -1272,6 +1284,9 @@ def run_scenario(scenario):
     # temperature along) — reported as None rather than True, so "not assessed"
     # never reads as "passed".
     headline["dhw_system"] = net_cfg.get("dhw_system", "instantaneous_hiu")
+    headline["route_type"] = route_type
+    headline["route_difficulty_factor"] = route_factor
+    headline["route_difficulty_basis"] = route_difficulty_basis(route_type)
     headline["connection_cost_mode"] = capex_cfg.get("connection_cost_mode", "by_building_type")
     headline["connection_cost_case"] = capex_cfg.get("connection_cost_case", "base")
     if delivered_temperature is not None:

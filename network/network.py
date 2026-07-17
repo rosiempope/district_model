@@ -329,13 +329,24 @@ def size_network_from_demand(
     synthesise_network() result, instead of pulling out peak_heat_kW /
     peak_cool_kW yourself first.
     """
+    # size_4pipe_network takes its pipe options as two explicit dicts (one per
+    # duty) rather than **kwargs, so a pipe-level option passed here has to be
+    # routed into BOTH — otherwise it silently applies to the 2-pipe path and
+    # raises on the 4-pipe one.
+    route_factor = kwargs.pop("route_difficulty_factor", None)
     if include_cooling:
+        if route_factor is not None:
+            for key in ("heat_pipe_kwargs", "cool_pipe_kwargs"):
+                kwargs[key] = {**(kwargs.get(key) or {}),
+                               "route_difficulty_factor": route_factor}
         return size_4pipe_network(
             peak_heat_kW=network_result["peak_heat_kW"],
             peak_cool_kW=network_result["peak_cool_kW"],
             network_length_m=network_length_m,
             **kwargs,
         )
+    if route_factor is not None:
+        kwargs["route_difficulty_factor"] = route_factor
     return size_heating_network(
         peak_heat_kW=network_result["peak_heat_kW"],
         network_length_m=network_length_m,

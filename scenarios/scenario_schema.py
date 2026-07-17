@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from economics.connection_costs import SENSITIVITY_CASES
 from network.design_temperature_limits import DHW_SYSTEM_TYPES
+from network.route_difficulty import ROUTE_DIFFICULTY
 from profiles.demand_synthesis import BUILDING_TYPES
 
 HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre",
@@ -38,6 +39,11 @@ DEFAULTS = {
                 # cylinder needs 60C stored plus a daily disinfection cycle. See
                 # network/design_temperature_limits.py for the citations.
                 "dhw_system":"instantaneous_hiu",
+                # What the ground is like. The pipe curve alone treats a
+                # six-lane junction and a greenfield site as the same
+                # purchase; the DESNZ Birmingham report shows they differ by
+                # 2.5x. See network/route_difficulty.py.
+                "route_type":"suburban",
                 "segments":[]},
     "cooling_sources": [],
     "thermal_storage": {"enabled": False},
@@ -255,6 +261,11 @@ def validate_scenario(scenario: dict) -> list[str]:
     if network.get("mode") == "tree":
         _validate_tree_segments(network.get("segments"), demand.get("buildings", []), errors)
 
+    if network.get("route_type", "suburban") not in ROUTE_DIFFICULTY:
+        errors.append(
+            f"network.route_type: choose one of {sorted(ROUTE_DIFFICULTY)} — a "
+            "city-centre route costs about 2.5x a greenfield one for the same pipe"
+        )
     if network.get("dhw_system") not in DHW_SYSTEM_TYPES:
         errors.append(
             f"network.dhw_system: choose one of {sorted(DHW_SYSTEM_TYPES)} — this sets the "

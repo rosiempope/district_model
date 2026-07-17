@@ -400,13 +400,25 @@ PIPE_COST_SCALE_EXPONENT      = 0.426    # fitted; NOT the chemical-engineering
 def estimate_pipe_cost_GBP_per_m(
     DN: int,
     construction: str = "single",
+    route_difficulty_factor: float = 1.0,
 ) -> float:
     """
     Estimate installed cost (£/m) for a given DN, via the power-law cost
     curve. construction='twin' applies the twin-pipe cost premium.
+
+    route_difficulty_factor scales the whole curve for what the ground is like.
+    The curve's own basis is "2-pipe, inner-city, 2020 prices" (Irish inner-city),
+    which the DESNZ Birmingham report shows is the SUBURBAN case for England, not
+    the urban one: Birmingham Central's real £3,750/m is 1.51x this curve, while a
+    campus route reusing existing pipe is 0.76x. Diameter still matters, so this
+    scales the curve rather than replacing it. See network/route_difficulty.py.
     """
     if DN <= 0:
         raise ValueError(f"DN must be positive; got {DN}.")
+    if route_difficulty_factor <= 0:
+        raise ValueError(
+            f"route_difficulty_factor must be positive; got {route_difficulty_factor}"
+        )
     _validate_construction(DN, construction)
 
     cost = PIPE_COST_GBP_PER_M_AT_REF_DN * (
@@ -416,7 +428,10 @@ def estimate_pipe_cost_GBP_per_m(
     if construction == "twin":
         cost *= TWIN_PIPE_COST_PREMIUM_FACTOR
 
-    return cost
+    # What the ground is like. The curve alone treats a six-lane junction and a
+    # greenfield site as the same purchase; the DESNZ Birmingham report shows
+    # they differ by 2.5x. See network/route_difficulty.py.
+    return cost * route_difficulty_factor
 
 
 # ── Heat loss coefficient ───────────────────────────────────────────────────────
@@ -608,6 +623,7 @@ def select_pipe(
     construction: str = "single",
     insulation_series: str = DEFAULT_INSULATION_SERIES,
     dn_series: Optional[list] = None,
+    route_difficulty_factor: float = 1.0,
 ) -> PipeSpec:
     """
     Select the smallest standard DN that satisfies BOTH the velocity limit
@@ -654,7 +670,9 @@ def select_pipe(
                 heat_loss_coefficient_W_per_mK=heat_loss_coefficient_W_per_mK(
                     DN, construction, insulation_series
                 ),
-                cost_GBP_per_m=estimate_pipe_cost_GBP_per_m(DN, construction),
+                cost_GBP_per_m=estimate_pipe_cost_GBP_per_m(
+                    DN, construction, route_difficulty_factor=route_difficulty_factor
+                ),
                 construction=construction,
                 insulation_series=insulation_series,
                 fluid_temp_C=fluid_temp_C,
