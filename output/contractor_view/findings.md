@@ -42,14 +42,14 @@ back-to-back liability. Dalkia prices, builds and warrants its own scope only.
 | Design margin @ 12% | £259k |
 | O&M margin @ 10% | £32k/yr |
 | **Dalkia NPV @ 8%** | **£1.12m** |
-| Owner NPV @ 10.5% | £-25.57m |
+| Owner NPV @ 10.5% | £-21.77m |
 
-**Dalkia is positive on a scheme where the owner loses £25.6m.**
+**Dalkia is positive on a scheme where the owner loses £21.8m.**
 That is not a trick. Dalkia's margin is *already inside* the CAPEX and OPEX that
 make the owner's NPV negative — contractors are a cost line, paid first, and the
 owner holds the residual. Negative NPV is a statement about the residual.
 
-Dalkia's entire NPV is **4.4%** of the owner's loss.
+Dalkia's entire NPV is **5.2%** of the owner's loss.
 Worth saying out loud in the room: **Dalkia's margin is not why these schemes
 fail.** Cutting it to zero moves the owner's NPV by a rounding error.
 
@@ -59,7 +59,7 @@ fail.** Cutting it to zero moves the owner's NPV by a rounding error.
 |:-------------------|:---------------------|-----------------:|:---------------|-----------:|:----------------------------------------------------------|
 | Contractor (build) | Dalkia + civils sub  |                3 | CAPEX          |       0.8  | margin on built scope, one-off                            |
 | Operator (run)     | Dalkia               |               40 | OPEX           |       0.32 | margin on O&M fee, 40 yr, discounted at Dalkia's own WACC |
-| Owner (equity)     | council / ESCO / EDF |               40 | residual       |     -25.57 | pays CAPEX, collects tariff, holds what is left           |
+| Owner (equity)     | council / ESCO / EDF |               40 | residual       |     -21.77 | pays CAPEX, collects tariff, holds what is left           |
 | Funder (grant)     | GHNF                 |                0 | public capital |      -0    | no cash return; buys carbon + lower bills                 |
 
 The asymmetry that answers 'why would the civils contractor take a bad deal?':
@@ -78,21 +78,21 @@ over four decades.
 | Ealing-scale A3 (564 conns, mostly domestic)      | individual_gas   |           6   |           -31.2  |            -32.83 |
 | Ealing-scale A3 (564 conns, mostly domestic)      | individual_gas   |           8   |           -29.33 |            -32.83 |
 | Ealing-scale A3 (564 conns, mostly domestic)      | individual_gas   |          10.5 |           -27.79 |            -32.83 |
-| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           3.5 |           -29.9  |            -18.69 |
-| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           5   |           -28.37 |            -18.69 |
-| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           6   |           -27.6  |            -18.69 |
-| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           8   |           -26.48 |            -18.69 |
-| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |          10.5 |           -25.57 |            -18.69 |
+| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           3.5 |           -21.09 |            -10.3  |
+| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           5   |           -21.31 |            -10.3  |
+| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           6   |           -21.42 |            -10.3  |
+| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |           8   |           -21.6  |            -10.3  |
+| Ealing-scale A3 (564 conns, mostly domestic)      | individual_ashp  |          10.5 |           -21.77 |            -10.3  |
 | Birmingham Central (60 GWh, non-domestic anchors) | individual_gas   |           3.5 |           -97.26 |            -85.37 |
 | Birmingham Central (60 GWh, non-domestic anchors) | individual_gas   |           5   |           -95.96 |            -85.37 |
 | Birmingham Central (60 GWh, non-domestic anchors) | individual_gas   |           6   |           -95.38 |            -85.37 |
 | Birmingham Central (60 GWh, non-domestic anchors) | individual_gas   |           8   |           -94.63 |            -85.37 |
 | Birmingham Central (60 GWh, non-domestic anchors) | individual_gas   |          10.5 |           -94.16 |            -85.37 |
-| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           3.5 |           -56.22 |             66.99 |
-| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           5   |           -62.98 |             66.99 |
-| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           6   |           -66.46 |             66.99 |
-| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           8   |           -71.71 |             66.99 |
-| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |          10.5 |           -76.19 |             66.99 |
+| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           3.5 |            26.49 |            149.7  |
+| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           5   |             3.48 |            149.7  |
+| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           6   |            -8.18 |            149.7  |
+| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |           8   |           -25.53 |            149.7  |
+| Birmingham Central (60 GWh, non-domestic anchors) | individual_ashp  |          10.5 |           -39.98 |            149.7  |
 
 **The hurdle rate alone never fixes this, and it is important not to claim it
 does.** Birmingham against individual heat pumps: -£76.2m at 10.5%, still
@@ -119,16 +119,16 @@ At any capture below 100% they are strictly better off than their own alternativ
 
 |   capture_of_avoided_customer_capital |   hurdle_rate |   connection_charge_total_GBPm |   owner_NPV_GBPm |
 |--------------------------------------:|--------------:|-------------------------------:|-----------------:|
-|                                     0 |          10.5 |                           0    |           -76.19 |
-|                                     0 |           3.5 |                           0    |           -56.22 |
-|                                    25 |          10.5 |                          19.36 |           -58.67 |
-|                                    25 |           3.5 |                          19.36 |           -37.51 |
-|                                    50 |          10.5 |                          38.72 |           -41.15 |
-|                                    50 |           3.5 |                          38.72 |           -18.81 |
-|                                    75 |          10.5 |                          58.08 |           -23.63 |
-|                                    75 |           3.5 |                          58.08 |            -0.11 |
-|                                   100 |          10.5 |                          77.44 |            -6.11 |
-|                                   100 |           3.5 |                          77.44 |            18.6  |
+|                                     0 |          10.5 |                           0    |           -39.98 |
+|                                     0 |           3.5 |                           0    |            26.49 |
+|                                    25 |          10.5 |                          19.36 |           -22.46 |
+|                                    25 |           3.5 |                          19.36 |            45.2  |
+|                                    50 |          10.5 |                          38.72 |            -4.94 |
+|                                    50 |           3.5 |                          38.72 |            63.9  |
+|                                    75 |          10.5 |                          58.08 |            12.58 |
+|                                    75 |           3.5 |                          58.08 |            82.61 |
+|                                   100 |          10.5 |                          77.44 |            30.09 |
+|                                   100 |           3.5 |                          77.44 |           101.31 |
 
 Compare the two levers on the same £76.2m hole:
 
@@ -171,15 +171,15 @@ does M&E and FM on: hospitals, universities, stations, shopping centres.
 
 |   construction_margin |   om_margin |   dalkia_NPV_GBPm |   pct_of_owner_loss |
 |----------------------:|------------:|------------------:|--------------------:|
-|                  0.03 |        0.05 |              0.68 |                 2.7 |
-|                  0.03 |        0.1  |              0.87 |                 3.4 |
-|                  0.03 |        0.15 |              1.06 |                 4.2 |
-|                  0.06 |        0.05 |              0.93 |                 3.7 |
-|                  0.06 |        0.1  |              1.12 |                 4.4 |
-|                  0.06 |        0.15 |              1.31 |                 5.1 |
-|                  0.1  |        0.05 |              1.27 |                 5   |
-|                  0.1  |        0.1  |              1.46 |                 5.7 |
-|                  0.1  |        0.15 |              1.65 |                 6.5 |
+|                  0.03 |        0.05 |              0.68 |                 3.1 |
+|                  0.03 |        0.1  |              0.87 |                 4   |
+|                  0.03 |        0.15 |              1.06 |                 4.9 |
+|                  0.06 |        0.05 |              0.93 |                 4.3 |
+|                  0.06 |        0.1  |              1.12 |                 5.2 |
+|                  0.06 |        0.15 |              1.31 |                 6   |
+|                  0.1  |        0.05 |              1.27 |                 5.8 |
+|                  0.1  |        0.1  |              1.46 |                 6.7 |
+|                  0.1  |        0.15 |              1.65 |                 7.6 |
 
 Across the whole plausible margin range Dalkia stays positive and stays small
 relative to the owner's loss. The contractor answer is **not sensitive** to the

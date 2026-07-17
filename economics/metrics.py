@@ -158,9 +158,33 @@ def counterfactual_gas_boiler_dispatch(node: dict, include_boiler_lifecycle: boo
     }
 
 
+# What a heat pump costs its owner beyond the electricity bill — the exact
+# mirror of economics/boiler_lifecycle.py, and required by the same DECC
+# principle: the counterfactual "should include the purchase, replacement, and
+# costs of operation of the heat source". Without this term the heat-pump
+# parity bill was fuel + standing charge only, so the customer's single
+# largest avoided cost (the heat pump itself) — and therefore the BUS grant —
+# never reached the tariff comparison at all.
+#
+#   Annual service   £150 — UK ASHP service quotes run £150-300/yr
+#                    (checkatrade.com/blog/cost-guides/air-source-heat-pump-
+#                    maintenance-cost/); the LOW end is used, which understates
+#                    the alternative's cost, i.e. conservative for district heat.
+#   Life             20 years — the LONG end of the usual 15-20 quoted for
+#                    ASHPs, again the conservative direction (spreads the
+#                    replacement cost thinner).
+#   Replacement      the building's own modelled install cost, net of BUS where
+#                    eligible — assuming BUS (or a successor) recurs at every
+#                    replacement is generous to the individual-HP case, i.e.
+#                    conservative for district heat.
+HP_ANNUAL_SERVICE_GBP = 150.0
+HP_LIFE_YEARS = 20.0
+
+
 def counterfactual_individual_ashp_dispatch(
     node: dict, weather_df, apply_bus_grant: bool = True,
     electricity_price_p_per_kWh: float | None = None,
+    include_hp_lifecycle: bool = True,
 ) -> dict:
     """
     ONE air source heat pump, sized exactly to this building's own peak
@@ -222,23 +246,39 @@ def counterfactual_individual_ashp_dispatch(
     gross_capex_GBP = individual_system_capex_GBP(true_peak_kW, "individual_ashp")
 
     connections = max(1, int(node.get("connections", 1)))
-    grant = bus_grant_GBP(true_peak_kW, connections) if apply_bus_grant else 0.0
+    # Per-building eligibility override: BUS excludes social housing and most
+    # new-build homes regardless of capacity, so a building can be marked
+    # bus_eligible: false in the scenario. Default True preserves the existing
+    # capacity-cap-only behaviour (generous to the individual-HP case).
+    building_eligible = bool(node.get("bus_eligible", True))
+    grant = (
+        bus_grant_GBP(true_peak_kW, connections)
+        if (apply_bus_grant and building_eligible) else 0.0
+    )
     grant = min(grant, gross_capex_GBP)   # a grant cannot exceed the thing it buys
 
     standing_charge_GBP = (
         OFGEM_ELECTRICITY_CAP_STANDING_CHARGE_P_PER_DAY * 365.0 / 100.0 * connections
     )
     fuel_opex_GBP = result.summary()["total_annual_opex_GBP"]
+    # Service + annuitised replacement (net of BUS), mirroring the boiler
+    # lifecycle on the gas side. See HP_ANNUAL_SERVICE_GBP note above.
+    lifecycle_GBP = (
+        (gross_capex_GBP - grant) / HP_LIFE_YEARS
+        + HP_ANNUAL_SERVICE_GBP * connections
+    ) if include_hp_lifecycle else 0.0
+    bill = fuel_opex_GBP + standing_charge_GBP + lifecycle_GBP
     return {
         "capex_GBP": gross_capex_GBP - grant,
         "gross_capex_GBP": gross_capex_GBP,
         "bus_grant_GBP": round(grant, 0),
         "bus_eligible": grant > 0,
         "dispatch_result": result,
-        "annual_opex_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
-        "annual_customer_bill_GBP": round(fuel_opex_GBP + standing_charge_GBP, 0),
+        "annual_opex_GBP": round(bill, 0),
+        "annual_customer_bill_GBP": round(bill, 0),
         "annual_fuel_GBP": round(fuel_opex_GBP, 0),
         "annual_standing_charge_GBP": round(standing_charge_GBP, 0),
+        "annual_hp_lifecycle_GBP": round(lifecycle_GBP, 0),
         "connections": connections,
     }
 

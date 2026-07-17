@@ -253,6 +253,12 @@ def validate_scenario(scenario: dict) -> list[str]:
             probability = b.get("connection_probability", 1.0)
             if not isinstance(probability, (int, float)) or not 0 <= probability <= 1:
                 errors.append(f"{p}.connection_probability: must be between 0 and 1")
+            if "bus_eligible" in b and not isinstance(b["bus_eligible"], bool):
+                errors.append(
+                    f"{p}.bus_eligible: must be true or false — marks the building "
+                    "ineligible for the Boiler Upgrade Scheme (social housing and "
+                    "most new-build homes are excluded)"
+                )
     network = cfg["network"]
     if network.get("mode") not in NETWORK_MODES:
         errors.append(f"network.mode: choose one of {sorted(NETWORK_MODES)}")

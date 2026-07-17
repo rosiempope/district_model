@@ -5,7 +5,8 @@ import numpy as np
 
 from economics.cashflow import build_cashflow
 from economics.grant import apply_ghnf_grant
-from economics.metrics import counterfactual_gas_boiler_dispatch
+from economics.metrics import (counterfactual_gas_boiler_dispatch,
+                               counterfactual_individual_ashp_dispatch)
 from economics.tariffs import OFGEM_GAS_CAP_STANDING_CHARGE_P_PER_DAY
 from optimisation.auto_size import recommend_sizing
 from profiles.climate_scenarios import apply_climate_scenario
@@ -218,6 +219,60 @@ class FinanceRegressionTests(unittest.TestCase):
         big_p = big["annual_boiler_lifecycle_GBP"] / (2.5 * 8760) * 100
         small_p = small["annual_boiler_lifecycle_GBP"] / (0.9 * 8760) * 100
         self.assertGreater(small_p, big_p * 2.0)
+
+    def test_bus_grant_respects_per_building_eligibility_flag(self):
+        """Social housing and most new-build homes are excluded from BUS
+        regardless of capacity, so a building marked bus_eligible: false must
+        get no grant even when every installation is under the 45 kWth cap."""
+        weather = load_weather()
+        node = {
+            "name": "Social housing block", "connections": 10,
+            "total_heat_kW": np.ones(8760) * 20.0,   # 2 kW per installation
+        }
+        eligible = counterfactual_individual_ashp_dispatch(node, weather)
+        excluded = counterfactual_individual_ashp_dispatch(
+            {**node, "bus_eligible": False}, weather
+        )
+        self.assertGreater(eligible["bus_grant_GBP"], 0.0)
+        self.assertTrue(eligible["bus_eligible"])
+        self.assertEqual(excluded["bus_grant_GBP"], 0.0)
+        self.assertFalse(excluded["bus_eligible"])
+        self.assertAlmostEqual(
+            excluded["capex_GBP"] - eligible["capex_GBP"],
+            eligible["bus_grant_GBP"], delta=1.0,
+        )
+
+    def test_hp_lifecycle_and_bus_reach_the_parity_bill(self):
+        """The DECC principle applied to the heat-pump side: the parity bill
+        must include the heat pump's own service and (BUS-netted) replacement
+        cost, exactly as the gas bill includes the boiler lifecycle. Without
+        it, the customer's biggest avoided cost never touched the tariff."""
+        weather = load_weather()
+        node = {
+            "name": "Residential block", "connections": 10,
+            "total_heat_kW": np.ones(8760) * 20.0,
+        }
+        on = counterfactual_individual_ashp_dispatch(node, weather)
+        off = counterfactual_individual_ashp_dispatch(
+            node, weather, include_hp_lifecycle=False
+        )
+        self.assertEqual(off["annual_hp_lifecycle_GBP"], 0.0)
+        self.assertGreater(
+            on["annual_customer_bill_GBP"], off["annual_customer_bill_GBP"]
+        )
+        # BUS makes the customer's alternative cheaper, so the BUS-eligible
+        # bill must be LOWER than the social-housing (excluded) bill, by the
+        # grant spread over the heat pump's life.
+        no_bus = counterfactual_individual_ashp_dispatch(
+            {**node, "bus_eligible": False}, weather
+        )
+        self.assertLess(
+            on["annual_customer_bill_GBP"], no_bus["annual_customer_bill_GBP"]
+        )
+        self.assertAlmostEqual(
+            no_bus["annual_hp_lifecycle_GBP"] - on["annual_hp_lifecycle_GBP"],
+            on["bus_grant_GBP"] / 20.0, delta=1.0,
+        )
 
     def test_gas_bill_parity_uses_the_same_customer_counterfactual(self):
         result = run_scenario(GAS_ONLY)

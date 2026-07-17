@@ -1,6 +1,6 @@
 # District Heating & Cooling Screening Model — Capability Summary
 
-**Version 2.7.1** · ~19,000 lines Python · 209 tests passing · Prepared for Dalkia review
+**Version 2.7.1** · ~19,000 lines Python · 211 tests passing · Prepared for Dalkia review
 
 ---
 
@@ -208,8 +208,13 @@ Each carrier has an **isolated real escalation rate**.
 Aggregated from each component's own installed cost, plus user-entered building, land, utility
 connection, controls, per-connection customer connection/metering, and % design/commissioning/contingency.
 **Individual-system counterfactual costs** held separately and deliberately: gas boiler £111/kW,
-individual ASHP £1,150/kW (pre-BUS-grant — the grant is a policy subsidy, not a cost), individual AC
-£800/kW. The point being that going individual avoids all network CAPEX but pays *more* per kW for
+individual ASHP £1,150/kW, individual AC £800/kW. The £7,500 BUS grant is netted off the
+customer-facing ASHP counterfactual where eligible (45 kWth per-installation cap, per-building
+`bus_eligible: false` override for the social-housing exclusion) and excluded from the
+whole-system social case — the same transfer-vs-resource-cost treatment as GHNF. Both
+counterfactual bills carry the DECC-mandated heat-source lifecycle: boiler service/repairs +
+£4,000 replacement every 15 years on the gas side; £150/yr service + BUS-netted replacement
+over 20 years on the heat-pump side. The point being that going individual avoids all network CAPEX but pays *more* per kW for
 plant — that asymmetry is exactly what the comparison exists to surface.
 
 ### O&M (`economics/om_rates.py`)
@@ -319,6 +324,11 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Dalkia screening study** | `analysis/dalkia_screening_study.py` | 4 technologies × 3 density archetypes (dense/middle/scarce), auto-sized; GHNF grant sensitivity; gas-parity verification |
 | **Exeter case study** | `analysis/exeter_case_study.py` | **Real tree topology** from the DESNZ Heat Network Zoning Pilot "City Typologies" map — Central Exeter (5 zones, 254 connections, 3,900 m) and Sowton/Airport (2 zones, 601 connections, 5,800 m); linear-density sweep 250 m–19,000 m; 2-pipe vs 4-pipe |
 | **Source-stack comparison** | `analysis/source_stack_comparison{,_ealing}.py` | 3 tech stacks × duty × density × tree-vs-trunk × climate, on two fixed real networks (Exeter Central + Ealing) |
+| **GHNF affordability frontier** | `analysis/ghnf_affordability.py` | Required vs affordable tariff under gas AND heat-pump parity; GHNF 0/40/~50%; binding-cap audit; affordability waterfall; grant dependency |
+| **Source & density frontier** | `analysis/source_frontier.py` | 8 source stacks × 3 archetypes on NPV-vs-carbon axes with the GHNF boundary; route-length density sweep; EfW price and distance break-evens |
+| **Anchor/BUS customer-mix sweep** | `analysis/anchor_bus_sweep.py` | Anchor heat share 0–95% × {BUS, no BUS, social housing, gas parity}; what BUS costs the owner under HP-parity billing |
+| **Dalkia roles & civils risk** | `analysis/dalkia_roles.py` | Five commercial roles under 0–51% civils overruns; break-even overrun; packaged-vs-separate civils procurement |
+| **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit |
 
 ### Headline findings
 
@@ -367,7 +377,7 @@ gas-bill and AC-bill parity modes · hourly pumping-electricity pricing · expli
 a zero residual · design/commissioning/contingency applied to the whole delivered scope · fixed
 CAPEX/OPEX scaled to scheme peak with the factor recorded in the audit hash.
 
-**209 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
+**211 tests, all passing** — integration/regression through `run_scenario()`, plus unit tests for pipe
 hydraulics/sizing/cost, demand synthesis and all three COP curves, written against the cited sources
 (Ruhnau's coefficients, REHVA's EER 4.0 at 35 °C, the SEAI cost curve, EN 253 Table 7).
 
@@ -443,7 +453,7 @@ Be ready for "what did the review turn up" — the honest answer is stronger tha
 | Demand, weather, climate, dispatch, sizing | Complete |
 | Network — tree + generic-length modes | Complete |
 | Economics, tariffs, grant, cash flow, screening | Complete |
-| Test suite (209 tests) | Passing — integration + physics units |
+| Test suite (211 tests) | Passing — integration + physics units |
 | Physics unit coverage | Broad: pipe/demand/COP/dispatch/Shukhov/auto-size covered; pumping, storage, tariff shapes not yet |
 | Validation vs published report | Passing, 13/13 metrics |
 | 8 case studies with figures + CSV exports | Complete |

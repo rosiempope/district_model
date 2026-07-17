@@ -690,7 +690,8 @@ def _combined_counterfactual(nodes, buildings, weather, include_cooling, om_rate
                              counterfactual_electricity_price_p_per_kWh=None,
                              include_boiler_lifecycle=True):
     enriched_nodes = [
-        {**node, "connections": _connection_count(building)}
+        {**node, "connections": _connection_count(building),
+         "bus_eligible": building.get("bus_eligible", True)}
         for node, building in zip(nodes, buildings)
     ]
     if counterfactual in {"individual_ashp", "individual_ashp_and_ac"}:
