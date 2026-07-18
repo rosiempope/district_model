@@ -52,7 +52,49 @@ import pandas as pd
 from economics.cashflow import discount_factors
 from scenarios.birmingham_zoning import central_izo_scenario
 from scenarios.scenario_runner import run_scenario
-from scenarios.worked_scenarios import WORKED_SCENARIOS
+from analysis.archetypes import ARCHETYPES
+from optimisation.auto_size import recommend_sizing
+from profiles.demand_synthesis import synthesise_network
+from scenarios.fixed_cost_scaling import scaled_economics
+
+
+def _dense_scheme():
+    """The Dense town-centre archetype as a fully ITEMISED scenario.
+
+    The scope split needs a CAPEX build-up with separate source (M&E), network
+    (civils), building, connection, design and commissioning lines. The engine
+    produces exactly that for the archetypes. The real Birmingham report case
+    (used for the owner story in §4) instead lumps all non-network CAPEX into
+    one line, so it cannot carry the M&E-vs-civils split — hence a real,
+    itemised archetype is used here for the scope, and Birmingham for the owner.
+    """
+    import pandas as _pd
+    ROOT_ = Path(__file__).resolve().parents[1]
+    weather = _pd.read_csv(ROOT_ / "profiles" / "weather_data.csv")
+    weather.index = _pd.date_range("2023-01-01", periods=8760, freq="h")
+    cfg = ARCHETYPES["Dense (town centre)"]
+    demand = synthesise_network(weather, {"demand_nodes": deepcopy(cfg["buildings"])})
+    rec = recommend_sizing(
+        demand_kW=demand["total_heat_kW"], peak_demand_kW=demand["peak_heat_kW"],
+        technology_types=["ashp", "gas_boiler"], weather_df=weather,
+        network_flow_temp_C=70.0, n_buildings=len(cfg["buildings"]),
+        building_types=[b["type"] for b in cfg["buildings"]])
+    presets = {"ashp": "ealing_phase1", "gas_boiler": "ealing_phase1"}
+    sources = [{"type": s["type"], "preset": presets[s["type"]],
+                "name": f"{s['type']} ({s['role']})", "capacity_MW": float(s["capacity_MW"]),
+                **({"n_units": int(s["n_units"])} if "n_units" in s else {})}
+               for s in rec["sources"]]
+    econ, _ = scaled_economics(demand["peak_heat_kW"] / 1000.0)
+    econ["counterfactual"] = "individual_ashp"
+    return {
+        "name": "Dense town-centre archetype (ASHP + gas peak)",
+        "climate_scenario": "baseline",
+        "demand": {"buildings": deepcopy(cfg["buildings"])},
+        "network": {"mode": "generic_length", "length_m": float(cfg["route_m"]),
+                    "heat_flow_temp_C": 70.0, "heat_return_temp_C": 40.0},
+        "sources": sources,
+        "economics": econ,
+    }
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "contractor_view"
@@ -272,9 +314,23 @@ def owner_position(cfg: dict, hurdle_rates: list, counterfactuals: list) -> pd.D
 
 
 def main() -> None:
-    a3 = next(deepcopy(s) for s in WORKED_SCENARIOS if "A3" in s["name"])
-    a3["economics"]["counterfactual"] = "individual_ashp"
-    res = run_scenario(a3)
+    # Scope-split scheme: the Dense town-centre archetype, run through the engine's
+    # ITEMISED CAPEX build-up (separate source/network/building/connection/design
+    # lines) — which the M&E-vs-civils split needs. This replaces an earlier
+    # synthetic worked scenario ("A3", labelled "Ealing-scale") whose name
+    # misleadingly implied the validated Ealing Phase 1 report case; it was
+    # neither the report nor that case, just a generic model run.
+    #
+    # Owner story (§4, §4b): the REAL Birmingham Central IZO anchor core (DESNZ
+    # Heat Network Zoning report, Feb 2025; 10 named anchors, 60.2 GWh, report
+    # costs). Birmingham lumps its non-network CAPEX into one line, so it cannot
+    # carry the scope split — the two cases are used where each one's CAPEX
+    # structure supports the analysis. The domestic-vs-anchor BUS contrast is now
+    # made properly on real cases in analysis/anchor_bus_sweep.py and
+    # reports/counterfactual_and_levy_study.py.
+    res = run_scenario(_dense_scheme())
+    bham, _ = central_izo_scenario(heat_flow_temp_C=62.0, heat_return_temp_C=30.0)
+    bham["economics"]["counterfactual"] = "individual_ashp"
 
     # ── 1. Scope ──────────────────────────────────────────────────────────────
     split = split_capex(res)
@@ -310,16 +366,10 @@ def main() -> None:
     ])
     four.to_csv(OUT / "four_positions.csv", index=False)
 
-    # ── 4. Owner hurdle-rate / counterfactual grid, both cases ────────────────
+    # ── 4. Owner hurdle-rate / counterfactual grid ────────────────────────────
     rates = [0.035, 0.05, 0.06, 0.08, 0.105]
-    a3_grid = owner_position(a3, rates, ["individual_gas", "individual_ashp"])
-    a3_grid.insert(0, "case", "Ealing-scale A3 (564 conns, mostly domestic)")
-
-    bham, _ = central_izo_scenario(heat_flow_temp_C=62.0, heat_return_temp_C=30.0)
-    bham_grid = owner_position(bham, rates, ["individual_gas", "individual_ashp"])
-    bham_grid.insert(0, "case", "Birmingham Central (60 GWh, non-domestic anchors)")
-
-    grid = pd.concat([a3_grid, bham_grid], ignore_index=True)
+    grid = owner_position(bham, rates, ["individual_gas", "individual_ashp"])
+    grid.insert(0, "case", "Birmingham Central (60 GWh, non-domestic anchors)")
     grid.to_csv(OUT / "owner_hurdle_grid.csv", index=False)
 
     # ── 4b. The lever that actually moves the owner ───────────────────────────
@@ -378,12 +428,12 @@ def main() -> None:
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(9, 4.8))
-    for (case, cf), g in grid.groupby(["case", "counterfactual"]):
+    for cf, g in grid.groupby("counterfactual"):
         style = "-" if "ashp" in cf else "--"
-        colour = C_BLUE if "Birmingham" in case else C_YELLOW
+        colour = C_BLUE if "ashp" in cf else C_YELLOW
         ax.plot(g["hurdle_rate"] * 100, g["owner_NPV_GBPm"], style, color=colour,
                 marker="o", ms=4,
-                label=f"{'Birmingham' if 'Birmingham' in case else 'Ealing A3'} vs {'heat pumps' if 'ashp' in cf else 'gas'}")
+                label=f"Birmingham Central vs {'individual heat pumps' if 'ashp' in cf else 'individual gas'}")
     ax.axhline(0, color=INK, lw=1)
     ax.set_xlabel("Owner's hurdle rate (% real)")
     ax.set_ylabel("Owner NPV (£m)")
@@ -515,20 +565,22 @@ def main() -> None:
         "than the other two combined.",
         "",
         "**But the counterfactual flip is NOT universal, and this is the finding that",
-        "matters most.** Birmingham flips positive against individual heat pumps; the",
-        "Ealing-scale case does not. The mechanism is the Boiler Upgrade Scheme:",
+        "matters most.** Birmingham's anchor-led core flips positive against individual",
+        "heat pumps; a domestic-led scheme does not. The mechanism is the Boiler Upgrade",
+        "Scheme:",
         "",
-        "- BUS pays £7,500 per installation, capped at **45 kWth**.",
-        "- Ealing A3's *Residential block A* — 320 connections — has an individual-ASHP",
-        "  counterfactual CAPEX of **£75,327 total (~£235/connection)**. BUS pays for",
-        "  almost the entire alternative. A heat network cannot beat free.",
-        "- Birmingham's *Civic offices*-equivalent anchors are all above 45 kWth, so BUS",
-        "  pays **£0** and the individual alternative costs £77.4m.",
+        "- BUS pays £7,500 per installation, capped at **45 kWth**. For a small domestic",
+        "  dwelling that is most or all of the individual-heat-pump cost — a heat network",
+        "  cannot beat an alternative the state has made nearly free.",
+        "- Birmingham's anchors are all far above 45 kWth, so BUS pays **£0** and the",
+        "  individual alternative costs £77.4m — the network wins the comparison outright.",
         "",
         "So: **heat networks win against the legal counterfactual precisely where BUS does",
         "not reach — large non-domestic anchor loads.** Not domestic retrofit. That is the",
         "opposite of the intuition, and it happens to be exactly the estate Dalkia already",
-        "does M&E and FM on: hospitals, universities, stations, shopping centres.",
+        "does M&E and FM on: hospitals, universities, stations, shopping centres. The full",
+        "domestic-vs-anchor sweep is in `analysis/anchor_bus_sweep.py` and",
+        "`reports/counterfactual_and_levy_study.py`, on real cases.",
         "",
         "## 5. Sensitivity — the assumed margins",
         "",

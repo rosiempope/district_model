@@ -41,11 +41,10 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 from analysis.contractor_view import (
     BUILD_YEARS, CONSTRUCTION_MARGIN, DALKIA_WACC, DESIGN_MARGIN, OM_MARGIN,
-    _capex_items, dalkia_position, split_capex,
+    _capex_items, _dense_scheme, dalkia_position, split_capex,
 )
 from economics.cashflow import discount_factors
 from scenarios.scenario_runner import run_scenario
-from scenarios.worked_scenarios import WORKED_SCENARIOS
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED = (
@@ -68,12 +67,11 @@ def _save(fig, filename):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 1. The scheme — same A3 case as contractor_view, HP counterfactual
+# 1. The scheme — the same itemised Dense town-centre archetype used by
+#    contractor_view's scope split (HP counterfactual).
 # ═══════════════════════════════════════════════════════════════════════════
 
-a3 = next(deepcopy(s) for s in WORKED_SCENARIOS if "A3" in s["name"])
-a3["economics"]["counterfactual"] = "individual_ashp"
-res = run_scenario(a3)
+res = run_scenario(_dense_scheme())
 split = split_capex(res)
 pos = dalkia_position(res, split)
 owner_npv = res["financial"]["investor"]["npv_GBP"]
@@ -184,7 +182,7 @@ axes[1].set_xlabel("Civils cost overrun (%)")
 axes[1].set_ylabel("Owner NPV (£m, 10.5% hurdle)")
 axes[1].set_title("The owner: starts deep underwater, overrun digs deeper", fontsize=11)
 axes[1].legend(fontsize=8.5)
-fig.suptitle("Who loses when the trench costs more — Ealing-scale A3, HP counterfactual",
+fig.suptitle("Who loses when the trench costs more — Dense town-centre archetype, HP counterfactual",
              fontsize=12.5)
 _save(fig, "DR1_roles_under_overrun.png")
 

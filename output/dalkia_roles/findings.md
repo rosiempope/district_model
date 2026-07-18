@@ -8,18 +8,18 @@ honesty notes — every margin is an assumption to be replaced with real terms).
 
 | Role                              |   Turnover (£m) |   Base NPV (£m) |   Civils exposure (£m) | Exposure                                    |   NPV at 10% civils overrun (£m) |   NPV at 20% civils overrun (£m) |   NPV at 30% civils overrun (£m) |   NPV at 51% civils overrun (£m) |   Break-even overrun (%) |
 |:----------------------------------|----------------:|----------------:|-----------------------:|:--------------------------------------------|---------------------------------:|---------------------------------:|---------------------------------:|---------------------------------:|-------------------------:|
-| R1 Designer only                  |            2.16 |            0.26 |                   0    | design PI, to ~12 yr latent defects         |                             0.26 |                             0.26 |                             0.26 |                             0.26 |                    nan   |
-| R2 M&E/controls contractor        |           11.22 |            0.8  |                   0    | 3 yr build + commissioning                  |                             0.8  |                             0.8  |                             0.8  |                             0.8  |                    nan   |
-| R3 M&E + long-term O&M            |           11.22 |            1.18 |                   0    | 3 yr build + 40 yr availability/performance |                             1.18 |                             1.18 |                             1.18 |                             1.18 |                    nan   |
-| R4 Whole-scheme D&B (incl civils) |           22.08 |            1.32 |                   7.13 | 3 yr build incl trench + structure risk     |                             0.61 |                            -0.1  |                            -0.82 |                            -2.31 |                     18.6 |
-| R5 Owner/operator (equity)        |            0    |          -21.77 |                   7.13 | 40 yr residual — the whole business case    |                           -22.48 |                           -23.19 |                           -23.91 |                           -25.4  |                    nan   |
+| R1 Designer only                  |            2.23 |            0.27 |                   0    | design PI, to ~12 yr latent defects         |                             0.27 |                             0.27 |                             0.27 |                             0.27 |                    nan   |
+| R2 M&E/controls contractor        |           15.96 |            1.09 |                   0    | 3 yr build + commissioning                  |                             1.09 |                             1.09 |                             1.09 |                             1.09 |                    nan   |
+| R3 M&E + long-term O&M            |           15.96 |            1.53 |                   0    | 3 yr build + 40 yr availability/performance |                             1.53 |                             1.53 |                             1.53 |                             1.53 |                    nan   |
+| R4 Whole-scheme D&B (incl civils) |           22.79 |            1.37 |                   3.43 | 3 yr build incl trench + structure risk     |                             1.02 |                             0.68 |                             0.34 |                            -0.38 |                     39.9 |
+| R5 Owner/operator (equity)        |            0    |          -25.27 |                   3.43 | 40 yr residual — the whole business case    |                           -25.62 |                           -25.96 |                           -26.3  |                           -27.02 |                    nan   |
 
 ## What it says
 
 - **R2/R3 cannot lose money to a trench.** Civils sits in someone else's
   contract; Dalkia's downside is its own M&E performance. R3 is worth
-  ~£1.18m NPV on declared margins.
-- **R4's cushion is 18.6% of civils.** The observed overrun range
+  ~£1.53m NPV on declared margins.
+- **R4's cushion is 39.9% of civils.** The observed overrun range
   on real schemes is 9-51%, so the whole-scheme margin is wiped out INSIDE the
   observed range. Whole-scheme D&B including civils is a bet on ground
   conditions Dalkia has not surveyed, paid at an M&E margin.
