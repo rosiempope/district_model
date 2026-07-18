@@ -57,6 +57,7 @@ from optimisation.auto_size import recommend_sizing
 from profiles.demand_synthesis import synthesise_network
 from scenarios.fixed_cost_scaling import scaled_economics
 from scenarios.scenario_runner import run_scenario
+from analysis.archetypes import ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED = (
@@ -78,43 +79,32 @@ def _save(fig, filename):
     plt.close(fig)
 
 
-ROUTE_M = 900.0
-BASE_BUILDINGS = [
-    {"name": "Dense residential block A", "type": "residential_existing",
-     "floor_area_m2": 30000, "units": 400, "connections": 400,
-     "connection_year": 1, "connection_probability": 0.92},
-    {"name": "Dense residential block B", "type": "residential_existing",
-     "floor_area_m2": 24000, "units": 320, "connections": 320,
-     "connection_year": 1, "connection_probability": 0.90},
-    {"name": "Town centre offices", "type": "office",
-     "floor_area_m2": 15000, "connections": 1,
-     "connection_year": 1, "connection_probability": 1.0},
-    {"name": "High street retail", "type": "retail",
-     "floor_area_m2": 8000, "connections": 1,
-     "connection_year": 1, "connection_probability": 0.90},
-    {"name": "Hotel", "type": "hotel",
-     "floor_area_m2": 6000, "connections": 1,
-     "connection_year": 1, "connection_probability": 1.0},
-]
+# The Dense archetype is the canonical one (analysis/archetypes.py); this study
+# only adds cooling by air-conditioning its non-residential stock, so it derives
+# its base mix from that single source rather than re-declaring it.
+ROUTE_M = ARCHETYPES["Dense (town centre)"]["route_m"]
+BASE_BUILDINGS = deepcopy(ARCHETYPES["Dense (town centre)"]["buildings"])
+_OFFICE = "Town centre offices"
+_RETAIL = "Department store / retail complex"
 
 # Cooling-intensity steps: which non-residential stock is air-conditioned.
 MIXES = {
-    "low (offices AC)": {"Town centre offices": "office_ac"},
+    "low (offices AC)": {_OFFICE: "office_ac"},
     "medium (+ retail becomes supermarket)": {
-        "Town centre offices": "office_ac", "High street retail": "supermarket"},
+        _OFFICE: "office_ac", _RETAIL: "supermarket"},
     "high (+ second AC office block)": {
-        "Town centre offices": "office_ac", "High street retail": "supermarket",
+        _OFFICE: "office_ac", _RETAIL: "supermarket",
         "EXTRA": {"name": "Business park offices", "type": "office_ac",
                   "floor_area_m2": 12000, "connections": 1,
-                  "connection_year": 1, "connection_probability": 1.0}},
-    "very high (+ hospital wing)": {
-        "Town centre offices": "office_ac", "High street retail": "supermarket",
+                  "connection_year": 1, "connection_probability": 0.95}},
+    "very high (+ AC hospital wing)": {
+        _OFFICE: "office_ac", _RETAIL: "supermarket",
         "EXTRA": {"name": "Business park offices", "type": "office_ac",
                   "floor_area_m2": 12000, "connections": 1,
-                  "connection_year": 1, "connection_probability": 1.0},
+                  "connection_year": 1, "connection_probability": 0.95},
         "EXTRA2": {"name": "Hospital wing", "type": "hospital",
                    "floor_area_m2": 10000, "connections": 1,
-                   "connection_year": 1, "connection_probability": 1.0}},
+                   "connection_year": 1, "connection_probability": 0.95}},
 }
 CREDITS = [0.0, 0.25, 0.50, 0.75]
 

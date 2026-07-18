@@ -7,9 +7,22 @@ manufacture feasibility by charging customers more than their own alternative.
 
 Reference material for the deck: `python -m analysis.archetype_reference_table`
 renders the three density archetypes (Dense/Middle/Scarce) that every study
-below tests against — one slide-ready table of building mix, floor area,
+below tests against — slide-ready tables of building mix, floor area,
 connections and connection assumptions per archetype
-(`output/archetype_reference_table/AR1-2`), plus a per-building detail CSV.
+(`output/archetype_reference_table/AR1-3`), plus a per-building detail CSV.
+
+Scope and grounding: this pack assumes district heating is pursued **only inside
+designated zoning areas**. The archetypes were revised after external review to
+be defensible England/UK cases — dwelling sizes by settlement type (English
+Housing Survey 2023-24), corrected building typing, and **policy-aware connection
+probabilities** reflecting that DESNZ zoning can mandate communal and qualifying
+non-domestic buildings but treats existing individually-heated homes differently
+(anchors 0.95, dense communal blocks 0.85, existing individual suburban/dispersed
+homes 0.60/0.45/0.40 central, swept over a downside/upside band). The Dense
+archetype is **calibrated to the validated Ealing Phase 1 case** (13/13 metrics
+at ~0%, MODEL_SUMMARY §9): ~13 GWh / 7.9 MW sits right in real Ealing's envelope,
+and the three archetypes plus real Ealing (6.6 MWh/m/yr) span DESNZ's 4 / 8
+MWh/m/yr zoning thresholds — one clearly-viable density, one marginal, one not.
 
 **One structural fact drives everything else** (cost-decomposition study):
 ~£13,900 per connection — 5.9p/kWh — of scheme cost does not move with scheme
@@ -23,8 +36,9 @@ is trying to fill.
 `python -m analysis.ghnf_affordability` · figures `output/ghnf_affordability/AF1-3` 
 
 - Every archetype × stack × customer proposition **fails the 10.5% investor
-  test**, with GHNF at 40% and at the ~50% ceiling alike.
-- The grant needed for zero NPV is **159–341% of GHNF-eligible CAPEX** — three
+  test**, with GHNF at 40% and at the ~50% ceiling alike (best case, Dense /
+  EfW / heat-pump parity, is −£11.3m).
+- The grant needed for zero NPV is **177–340% of GHNF-eligible CAPEX** — three
   to seven times the legal maximum. This is not a "with a bit more grant" gap.
 - The Scarce archetype hits the **4.5p/kWh × 15yr output cap**: its grant
   freezes at £2.85m and *no* headline percentage can raise it. Low-demand
@@ -68,9 +82,9 @@ off than self-supply (`output/contractor_view/capture_avoided_capital.csv`).
 `python -m analysis.source_frontier` · figure `SF2_density_frontier.png`
 
 - NPV improves with density but **flattens far below zero**: even 29 MWh/m/yr
-  (a 450 m route — beyond-best-practice compact) is still −£13.8m.
+  (a 450 m route — beyond-best-practice compact) is still −£14.8m.
 - Required tariff **never approaches the 7.33p gas cap** at any density tested
-  (minimum ≈ 22p). Density fixes the pipe cost; it cannot fix the
+  (minimum ≈ 24p). Density fixes the pipe cost; it cannot fix the
   per-connection fixed cost.
 - Sprawl has a second, less obvious penalty: network losses backed by gas peak
   push carbon intensity over 100 g on long routes (Scarce ≥ 13 km), **killing
@@ -92,6 +106,14 @@ off than self-supply (`output/contractor_view/capture_avoided_capital.csv`).
 - **Social housing flips it back**: BUS excludes social housing, so
   social-housing-led zones bill as if BUS did not exist — the strongest
   domestic proposition available.
+
+**Domestic take-up risk** (`python -m analysis.connection_risk`, figure `CR1`):
+sweeping the residential connection probability across its downside/central/upside
+band moves owner NPV by **£1.8–2.6m** per archetype — biggest where the scheme
+leans hardest on the dispersed individual homes that zoning does *not* mandate.
+Every case stays negative across the whole band: take-up risk changes the size of
+the loss, not the sign, and the exposure is worst exactly where the owner has
+least control — another reason to anchor the customer base.
 - Under gas parity, anchors actually *hurt* slightly (their per-kWh gas
   alternative is cheaper). The anchor thesis is specifically a
   **heat-pump-era thesis** — which is the era the Energy Act 2023 zoning
@@ -123,7 +145,7 @@ off than self-supply (`output/contractor_view/capture_avoided_capital.csv`).
 
 `python -m analysis.fourpipe_threshold` · figures `FT1_fourpipe_threshold.png`, `FT2_avoided_ac_capex_capture.png`
 
-- Incremental NPV of adding cooling: **−£4.6m to −£8.8m in every mix tested**,
+- Incremental NPV of adding cooling: **−£4.4m to −£8.7m in every mix tested**,
   and it gets *worse* as cooling demand grows — chiller CAPEX, electricity and
   REPEX outrun AC-parity revenue at UK comfort-cooling load factors (~9–11%).
 - Even a 75% shared-civils credit moves the answer by only ~£1.3–1.5m: the
@@ -133,7 +155,7 @@ off than self-supply (`output/contractor_view/capture_avoided_capital.csv`).
   the heat-pump capture lever in §1: the customer still gets cooling-bill
   parity and pays up front only what they'd have spent on their own
   chiller/AC anyway. At 100% capture stacked with the 75% civils credit, the
-  best mix improves from −£8.8m to **−£1.4m** — real money, but individual-AC
+  best mix improves from −£8.7m to **−£1.5m** — real money, but individual-AC
   capex (£800/kW) is itself too modest next to centralised chiller CAPEX +
   REPEX + 40 years of parity-capped revenue to finish the job.
 - Honestly out of scope of the current engine (the strongest remaining upside
@@ -145,8 +167,8 @@ off than self-supply (`output/contractor_view/capture_avoided_capital.csv`).
 `python -m analysis.climate_scenario_sweep` · figures `output/climate_scenario_sweep/CS1-3`
 
 - Heating-only NPV barely moves across 2011–2025 baseline → 2050 central →
-  2050 high (RCP8.5 + urban heat island): **−£0.9m to −£1.4m worse** by 2050
-  high, across all three archetypes. Gas-parity revenue and CAPEX are both
+  2050 high (RCP8.5 + urban heat island): **roughly flat to −£1.2m worse** by
+  2050 high, across all three archetypes. Gas-parity revenue and CAPEX are both
   climate-insensitive; only demand volume shifts.
 - **A warmer climate makes 4-pipe cooling LESS attractive, not more**:
   incremental cooling NPV worsens by **£1.1–2.1m** from baseline to 2050
@@ -199,4 +221,9 @@ routes and EPC gating are not modelled (direction: slightly generous to the
 individual-HP case); the four-pipe study cannot see heat-recovery chillers;
 margins and scope splits in §5 are declared assumptions; connection-charge
 capture assumes customers accept paying their avoided capital, which is a
-commercial proposition to be tested, not a model output.
+commercial proposition to be tested, not a model output; and the archetype
+route lengths remain illustrative — the real Exeter tree-topology studies use
+measured geometry. Connection *costs* are already priced correctly by building
+type (residential per-dwelling HIU build-up, non-domestic per-kW substation —
+`economics/connection_costs.py`), so the connection assumptions are about
+demand and take-up realism, not a hidden cost error.

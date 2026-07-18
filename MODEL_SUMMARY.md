@@ -330,7 +330,17 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Dalkia roles & civils risk** | `analysis/dalkia_roles.py` | Five commercial roles under 0–51% civils overruns; break-even overrun; packaged-vs-separate civils procurement |
 | **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit; plus capturing the customer's avoided AC-purchase capex via connection charge, 0-100% |
 | **Climate scenario sweep** | `analysis/climate_scenario_sweep.py` | Heating and cooling investor NPV across baseline/2050 central/2050 high, 3 archetypes, 2-pipe vs 4-pipe |
-| **Archetype reference table** | `analysis/archetype_reference_table.py` | Presentation-ready table of the three density archetypes' building composition and connection assumptions (canonical definitions in `analysis/archetypes.py`) |
+| **Connection (take-up) risk** | `analysis/connection_risk.py` | Owner NPV across the downside/central/upside residential connection-probability band, 3 archetypes; anchors held at base |
+| **Archetype reference table** | `analysis/archetype_reference_table.py` | Presentation-ready tables of the three density archetypes' composition and connection assumptions, plus a density calibration against validated Ealing Phase 1 (canonical definitions in `analysis/archetypes.py`) |
+
+> The three density archetypes were revised after external review to be defensible England/UK cases:
+> dwelling floor areas vary by settlement type (English Housing Survey 2023-24), building typing was
+> corrected (health centre → `mixed_use`, village hall → `school`), and connection probabilities are
+> policy-aware — anchors 0.95, dense communal blocks 0.85, existing individually-heated homes on a
+> 0.60/0.45/0.40 central band, reflecting that DESNZ zoning can mandate communal and qualifying
+> non-domestic buildings but treats individual residential differently. The Dense archetype is
+> calibrated to the validated Ealing Phase 1 density envelope. Connection *costs* were already priced
+> per building type (`economics/connection_costs.py`), so this is a demand/take-up realism revision.
 
 ### Headline findings
 

@@ -9,27 +9,54 @@ Route lengths are illustrative placeholders reflecting typical relative spacing
 (dense/middle/scarce), not measured from a real map. The Exeter case studies
 (`analysis/exeter_*.py`) use real measured tree-topology route segments instead.
 
+Inputs were revised after external review: dwelling floor areas now vary by
+settlement type (dense flats 75, suburban 90, dispersed 105 m² — EHS 2023-24);
+the health centre is typed `mixed_use` (not `hospital`) and the village hall
+`school` (intermittent load), and connection probabilities are policy-aware —
+anchors 0.95, dense communal blocks 0.85, existing individual suburban/dispersed
+homes 0.60/0.45/0.40 central (swept in `analysis/connection_risk.py`). See the
+`analysis/archetypes.py` docstring for the DESNZ-zoning and GHNF basis.
+
+## Density calibration against the validated Ealing Phase 1 case
+
+The Dense archetype is grounded in the real, published Ealing Town Centre Phase 1
+scheme, which the engine reproduces to ~0% across 13 metrics (MODEL_SUMMARY §9).
+Dense's total demand (~13 GWh) and peak (~7.9 MW) sit right in Ealing's envelope
+(14.2 GWh, 7.19 MW) — confirming the archetype is realistically scaled to a real
+town-centre scheme. Dense uses a tighter illustrative route, so it reads as a
+compact best-case density; **real validated Ealing at 6.6 MWh/m/yr sits between
+our Dense (14.4) and Middle (3.0)** — the three archetypes plus the real scheme
+together span the credible density range, and all of them bracket DESNZ's zoning
+thresholds of 4 (pilot floor) and ~8 (generally attractive) MWh/m/yr.
+
+| Case                       |   Annual heat (GWh/yr) |   Peak heat (MW) |   Route length (m) |   Linear density (MWh/m/yr) |   Buildings | Character              |
+|:---------------------------|-----------------------:|-----------------:|-------------------:|----------------------------:|------------:|:-----------------------|
+| Dense (town centre)        |                  13    |             7.9  |                900 |                        14.4 |           5 | residential-led        |
+| Middle (suburban mixed)    |                   9.2  |             6.2  |               2800 |                         3.3 |           4 | residential-led        |
+| Scarce (low-density edge)  |                   5.9  |             3.2  |               6500 |                         0.9 |           3 | residential-led        |
+| Ealing Phase 1 (validated) |                  14.16 |             7.19 |               2148 |                         6.6 |          14 | anchor-led town centre |
+
 ## Archetype summary
 
-| Archetype                 |   Buildings |   Anchor (non-residential) buildings |   Total floor area (m²) |   Residential dwelling units |   Total connections |   Route length (m) |   Floor area per metre of route (m²/m) | Note                                                                |
-|:--------------------------|------------:|-------------------------------------:|------------------------:|-----------------------------:|--------------------:|-------------------:|---------------------------------------:|:--------------------------------------------------------------------|
-| Dense (town centre)       |           5 |                                    3 |                   83000 |                          720 |                 723 |                900 |                                   92.2 | Tight urban grid; short closely-packed connections.                 |
-| Middle (suburban mixed)   |           4 |                                    3 |                   52000 |                          480 |                 483 |               2800 |                                   18.6 | Estate-scale spacing; moderate branch lengths.                      |
-| Scarce (low-density edge) |           3 |                                    1 |                   25500 |                          320 |                 321 |               6500 |                                    3.9 | Spread housing clusters; long branch runs to reach few connections. |
+| Archetype                 |   Buildings |   Anchor (non-residential) buildings |   Total floor area (m²) |   Residential dwelling units |   Total connections |   Route length (m) |   Floor area per metre of route (m²/m) | Note                                                                                                             |
+|:--------------------------|------------:|-------------------------------------:|------------------------:|-----------------------------:|--------------------:|-------------------:|---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------|
+| Dense (town centre)       |           5 |                                    3 |                   81000 |                          720 |                 723 |                900 |                                   90   | Tight urban grid; short closely-packed connections. Calibrated to the validated Ealing Phase 1 density envelope. |
+| Middle (suburban mixed)   |           4 |                                    3 |                   59200 |                          480 |                 483 |               2800 |                                   21.1 | Estate-scale spacing; moderate branch lengths; existing individually-heated homes on uncertain take-up.          |
+| Scarce (low-density edge) |           3 |                                    1 |                   35100 |                          320 |                 321 |               6500 |                                    5.4 | Spread housing clusters; long branch runs to reach few connections; dispersed individual homes on low take-up.   |
 
 ## Per-building detail
 
-| Archetype                 | Building                        | Type                 | Type description                         |   Floor area (m²) |   Dwelling units |   Connections |   Connection year |   Connection probability |   Heat benchmark (kWh/m²/yr) |   Cool benchmark (kWh/m²/yr) |
-|:--------------------------|:--------------------------------|:---------------------|:-----------------------------------------|------------------:|-----------------:|--------------:|------------------:|-------------------------:|-----------------------------:|-----------------------------:|
-| Dense (town centre)       | Dense residential block A       | residential_existing | Residential (existing / retrofit target) |             30000 |              400 |           400 |                 1 |                     0.92 |                          130 |                            2 |
-| Dense (town centre)       | Dense residential block B       | residential_existing | Residential (existing / retrofit target) |             24000 |              320 |           320 |                 1 |                     0.9  |                          130 |                            2 |
-| Dense (town centre)       | Town centre offices             | office               | General office (naturally ventilated)    |             15000 |              nan |             1 |                 1 |                     1    |                          102 |                           30 |
-| Dense (town centre)       | High street retail              | retail               | Retail / high street shops               |              8000 |              nan |             1 |                 1 |                     0.9  |                           90 |                           60 |
-| Dense (town centre)       | Hotel                           | hotel                | Hotel                                    |              6000 |              nan |             1 |                 1 |                     1    |                          150 |                           30 |
-| Middle (suburban mixed)   | Suburban residential estate     | residential_existing | Residential (existing / retrofit target) |             36000 |              480 |           480 |                 1 |                     0.85 |                          130 |                            2 |
-| Middle (suburban mixed)   | Secondary school                | school               | Secondary school                         |              9000 |              nan |             1 |                 1 |                     1    |                          100 |                            8 |
-| Middle (suburban mixed)   | District retail parade          | retail               | Retail / high street shops               |              4000 |              nan |             1 |                 1 |                     0.85 |                           90 |                           60 |
-| Middle (suburban mixed)   | Health centre                   | hospital             | Hospital / acute healthcare              |              3000 |              nan |             1 |                 1 |                     1    |                          200 |                           55 |
-| Scarce (low-density edge) | Dispersed housing cluster A     | residential_existing | Residential (existing / retrofit target) |             15000 |              200 |           200 |                 1 |                     0.75 |                          130 |                            2 |
-| Scarce (low-density edge) | Dispersed housing cluster B     | residential_existing | Residential (existing / retrofit target) |              9000 |              120 |           120 |                 2 |                     0.7  |                          130 |                            2 |
-| Scarce (low-density edge) | Village hall / community retail | retail               | Retail / high street shops               |              1500 |              nan |             1 |                 1 |                     0.8  |                           90 |                           60 |
+| Archetype                 | Building                          | Type                 | Type description                         |   Floor area (m²) |   Dwelling units |   Connections |   Connection year |   Connection probability |   Heat benchmark (kWh/m²/yr) |   Cool benchmark (kWh/m²/yr) |
+|:--------------------------|:----------------------------------|:---------------------|:-----------------------------------------|------------------:|-----------------:|--------------:|------------------:|-------------------------:|-----------------------------:|-----------------------------:|
+| Dense (town centre)       | Dense residential block A         | residential_existing | Residential (existing / retrofit target) |             30000 |              400 |           400 |                 1 |                     0.85 |                          130 |                            2 |
+| Dense (town centre)       | Dense residential block B         | residential_existing | Residential (existing / retrofit target) |             24000 |              320 |           320 |                 2 |                     0.85 |                          130 |                            2 |
+| Dense (town centre)       | Town centre offices               | office               | General office (naturally ventilated)    |             15000 |              nan |             1 |                 1 |                     0.95 |                          102 |                           30 |
+| Dense (town centre)       | Department store / retail complex | retail               | Retail / high street shops               |              6000 |              nan |             1 |                 1 |                     0.9  |                           90 |                           60 |
+| Dense (town centre)       | Hotel                             | hotel                | Hotel                                    |              6000 |              nan |             1 |                 1 |                     0.95 |                          150 |                           30 |
+| Middle (suburban mixed)   | Suburban residential estate       | residential_existing | Residential (existing / retrofit target) |             43200 |              480 |           480 |                 2 |                     0.6  |                          130 |                            2 |
+| Middle (suburban mixed)   | Secondary school                  | school               | Secondary school                         |              9000 |              nan |             1 |                 1 |                     0.95 |                          100 |                            8 |
+| Middle (suburban mixed)   | District retail parade            | retail               | Retail / high street shops               |              4000 |              nan |             1 |                 1 |                     0.9  |                           90 |                           60 |
+| Middle (suburban mixed)   | Health centre (clinic)            | mixed_use            | Mixed-use development                    |              3000 |              nan |             1 |                 1 |                     0.95 |                          100 |                           20 |
+| Scarce (low-density edge) | Dispersed housing cluster A       | residential_existing | Residential (existing / retrofit target) |             21000 |              200 |           200 |                 2 |                     0.45 |                          130 |                            2 |
+| Scarce (low-density edge) | Dispersed housing cluster B       | residential_existing | Residential (existing / retrofit target) |             12600 |              120 |           120 |                 4 |                     0.4  |                          130 |                            2 |
+| Scarce (low-density edge) | Village hall (community use)      | school               | Secondary school                         |              1500 |              nan |             1 |                 1 |                     0.85 |                          100 |                            8 |
