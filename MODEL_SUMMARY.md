@@ -330,7 +330,8 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Dalkia roles & civils risk** | `analysis/dalkia_roles.py` | Five commercial roles under 0–51% civils overruns; break-even overrun; packaged-vs-separate civils procurement |
 | **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit; plus capturing the customer's avoided AC-purchase capex via connection charge, 0-100% |
 | **Climate scenario sweep** | `analysis/climate_scenario_sweep.py` | Heating and cooling investor NPV across baseline/2050 central/2050 high, 3 archetypes, 2-pipe vs 4-pipe |
-| **Connection (take-up) risk** | `analysis/connection_risk.py` | Owner NPV across the downside/central/upside residential connection-probability band, 3 archetypes; anchors held at base |
+| **Connection (take-up) risk** | `analysis/connection_risk.py` | Owner NPV across the downside/central/upside residential connection-probability band, 4 cases; anchors held at base |
+| **Sensitivity matrix** | `analysis/sensitivity_matrix.py` | 288-combination feasibility factorial (source × case × proposition × grant × capture) with PASS/FAIL on investor NPV, contractor/operator/owner NPV, and a physical-lever tier (heating/cooling dT, 2v4-pipe, climate, electricity price, discount rate) |
 | **Archetype reference table** | `analysis/archetype_reference_table.py` | Presentation-ready tables of the three density archetypes' composition and connection assumptions, plus a density calibration against validated Ealing Phase 1 (canonical definitions in `analysis/archetypes.py`) |
 
 > The three density archetypes were revised after external review to be defensible England/UK cases:

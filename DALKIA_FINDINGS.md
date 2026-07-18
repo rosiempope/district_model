@@ -38,6 +38,27 @@ validated feasibility result (−£2.25m on report inputs).
 size, against an Ofgem gas cap of 7.33p. That is the hole every other finding
 is trying to fill.
 
+## The whole pack in one matrix
+
+`python -m analysis.sensitivity_matrix` · figures `output/sensitivity_matrix/SM1-3`
+
+A feasible-range factorial (source × case/density × customer proposition × GHNF
+grant × avoided-capital capture = 288 combinations) with a PASS/FAIL (✓/✗) grid
+on investor NPV > 0, plus contractor/operator/owner NPV and a physical-lever tier
+(heating dT, cooling dT, 2- vs 4-pipe, climate, electricity price, discount rate).
+
+- **Only 3 of 288 combinations pass** — all the *real Ealing* mix, EfW + ASHP +
+  gas peak, heat-pump parity, with ≥50% grant **and** 50–100% avoided-capital
+  capture. Every stylised archetype fails on investor NPV in every combination.
+- **Contractor and operator are positive in essentially every scheme** (SM2) —
+  they are paid out of CAPEX/OPEX first; only the owner holds the residual.
+- **The physical levers barely move it** (SM3): heating flow temperature, cooling
+  dT, climate and electricity price shift owner NPV by ≲£2m. What dominates is the
+  commercial stack (proposition + grant + capture) and **the owner's discount
+  rate** — at a public/social 3.5% the real Ealing scheme is **+£11m**. The "who
+  should own this" answer falls out of the matrix: a patient/public owner, not a
+  10.5% commercial investor.
+
 ---
 
 ## 1. Is it affordable? — No scheme funds itself, and GHNF cannot close the gap
