@@ -8,11 +8,11 @@ shadow no-grant column makes grant dependency explicit.
 
 ## Headline
 
-- Best case at GHNF 40%: **Dense (town centre) / EfW + ASHP + gas peak / heat-pump parity (BUS netted)** — NPV **£-11.33m**, required tariff 24.855p vs affordable 15.072p.
+- Best case at GHNF 40%: **Ealing Phase 1 (real) / EfW + ASHP + gas peak / heat-pump parity (BUS netted)** — NPV **£-5.28m**, required tariff 18.129p vs affordable 14.156p.
 - Widest tariff gap at 40%: Scarce (low-density edge) / ASHP + gas peak (gas parity) — gap 104.02p/kWh.
 - Heat-pump parity is the stronger customer proposition everywhere: the customer's
   alternative is more expensive (even after BUS), so the affordable tariff is higher —
-  mean affordable tariff 19.3p vs 8.6p under gas parity.
+  mean affordable tariff 18.0p vs 8.4p under gas parity.
 
 ## Grant dependency
 
@@ -30,6 +30,10 @@ shadow no-grant column makes grant dependency explicit.
 | Scarce (low-density edge) | ASHP + gas peak       | heat-pump parity (BUS netted) |                   -24.49 |             3.97 |                            24.49 |                                        210 | no                          |
 | Scarce (low-density edge) | EfW + ASHP + gas peak | gas parity                    |                   -23.26 |             3.97 |                            23.26 |                                        196 | no                          |
 | Scarce (low-density edge) | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |                   -22.45 |             3.97 |                            22.45 |                                        189 | no                          |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | gas parity                    |                   -30.41 |             4.08 |                            30.41 |                                        298 | no                          |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | heat-pump parity (BUS netted) |                   -22.01 |             4.08 |                            22.01 |                                        216 | no                          |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | gas parity                    |                   -17.8  |             4.12 |                            17.8  |                                        173 | no                          |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |                    -9.4  |             4.12 |                             9.4  |                                         91 | no                          |
 
 ## Full frontier
 
@@ -71,6 +75,18 @@ shadow no-grant column makes grant dependency explicit.
 | Scarce (low-density edge) | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |            0    |              21.38 |                       0    |         0    | no grant                     |            21.38 |                 80.7 |                      22.94  |                   121.364 |                98.42 |              -22.45 | FAIL        |
 | Scarce (low-density edge) | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |           40    |              21.38 |                      11.88 |         3.97 | output cap (4.5p/kWh x 15yr) |            17.41 |                 80.7 |                      22.94  |                   102.298 |                79.36 |              -18.48 | FAIL        |
 | Scarce (low-density edge) | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |           49.99 |              21.38 |                      11.88 |         3.97 | output cap (4.5p/kWh x 15yr) |            17.41 |                 80.7 |                      22.94  |                   102.298 |                79.36 |              -18.48 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | gas parity                    |            0    |              19.95 |                       0    |         0    | no grant                     |            19.95 |                 65.4 |                       7.814 |                    30.771 |                22.96 |              -30.41 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | gas parity                    |           40    |              19.95 |                      10.19 |         4.08 | percentage cap               |            15.87 |                 65.4 |                       7.814 |                    27.692 |                19.88 |              -26.33 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | gas parity                    |           49.99 |              19.95 |                      10.19 |         5.09 | percentage cap               |            14.86 |                 65.4 |                       7.814 |                    26.923 |                19.11 |              -25.32 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | heat-pump parity (BUS netted) |            0    |              19.95 |                       0    |         0    | no grant                     |            19.95 |                 65.4 |                      14.156 |                    30.771 |                16.62 |              -22.01 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | heat-pump parity (BUS netted) |           40    |              19.95 |                      10.19 |         4.08 | percentage cap               |            15.87 |                 65.4 |                      14.156 |                    27.692 |                13.54 |              -17.94 | FAIL        |
+| Ealing Phase 1 (real)     | ASHP + gas peak       | heat-pump parity (BUS netted) |           49.99 |              19.95 |                      10.19 |         5.09 | percentage cap               |            14.86 |                 65.4 |                      14.156 |                    26.923 |                12.77 |              -16.92 | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | gas parity                    |            0    |              20.11 |                       0    |         0    | no grant                     |            20.11 |                 61.5 |                       7.814 |                    21.244 |                13.43 |              -17.8  | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | gas parity                    |           40    |              20.11 |                      10.31 |         4.12 | percentage cap               |            15.98 |                 61.5 |                       7.814 |                    18.129 |                10.32 |              -13.68 | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | gas parity                    |           49.99 |              20.11 |                      10.31 |         5.15 | percentage cap               |            14.95 |                 61.5 |                       7.814 |                    17.352 |                 9.54 |              -12.65 | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |            0    |              20.11 |                       0    |         0    | no grant                     |            20.11 |                 61.5 |                      14.156 |                    21.244 |                 7.09 |               -9.4  | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |           40    |              20.11 |                      10.31 |         4.12 | percentage cap               |            15.98 |                 61.5 |                      14.156 |                    18.129 |                 3.97 |               -5.28 | FAIL        |
+| Ealing Phase 1 (real)     | EfW + ASHP + gas peak | heat-pump parity (BUS netted) |           49.99 |              20.11 |                      10.31 |         5.15 | percentage cap               |            14.95 |                 61.5 |                      14.156 |                    17.352 |                 3.2  |               -4.25 | FAIL        |
 
 ## Reading notes
 

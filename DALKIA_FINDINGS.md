@@ -24,6 +24,15 @@ at ~0%, MODEL_SUMMARY §9): ~13 GWh / 7.9 MW sits right in real Ealing's envelop
 and the three archetypes plus real Ealing (6.6 MWh/m/yr) span DESNZ's 4 / 8
 MWh/m/yr zoning thresholds — one clearly-viable density, one marginal, one not.
 
+**Ealing Phase 1 is also run as a fourth comparison case** through the identical
+screening pipeline (affordability, source/density frontier, climate, take-up
+risk), so every comparison graph shows the three archetypes plus the real
+validated scheme. Two caveats travel with it on any slide: it is modelled
+building-level (connections = 1 per building, including its 2 residential blocks
+— so part of its low per-connection burden is aggregation, not only its anchor
+mix), and the pipeline NPV is a like-for-like screening figure, not the bespoke
+validated feasibility result (−£2.25m on report inputs).
+
 **One structural fact drives everything else** (cost-decomposition study):
 ~£13,900 per connection — 5.9p/kWh — of scheme cost does not move with scheme
 size, against an Ofgem gas cap of 7.33p. That is the hole every other finding
@@ -36,10 +45,16 @@ is trying to fill.
 `python -m analysis.ghnf_affordability` · figures `output/ghnf_affordability/AF1-3` 
 
 - Every archetype × stack × customer proposition **fails the 10.5% investor
-  test**, with GHNF at 40% and at the ~50% ceiling alike (best case, Dense /
-  EfW / heat-pump parity, is −£11.3m).
-- The grant needed for zero NPV is **177–340% of GHNF-eligible CAPEX** — three
-  to seven times the legal maximum. This is not a "with a bit more grant" gap.
+  test**, with GHNF at 40% and at the ~50% ceiling alike.
+- **The real Ealing mix is the least-bad case in the pack — the anchor thesis on
+  validated data.** Run through the same pipeline, its EfW / heat-pump-parity NPV
+  is −£5.3m at 40% grant (vs −£11.3m for the best archetype), and it needs "only"
+  91% grant to reach zero (vs 177–340% for the archetypes). Its 14 building-level
+  anchor connections spread the fixed cost that sinks the residential-led cases;
+  its required tariff, 18.1p, is the lowest of the four (see the caveats above).
+- For the stylised archetypes, the grant needed for zero NPV is **177–340% of
+  GHNF-eligible CAPEX** — three to seven times the legal maximum. Not a "bit more
+  grant" gap.
 - The Scarce archetype hits the **4.5p/kWh × 15yr output cap**: its grant
   freezes at £2.85m and *no* headline percentage can raise it. Low-demand
   schemes cannot grant-engineer their way out.

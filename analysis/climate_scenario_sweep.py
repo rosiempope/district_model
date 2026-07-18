@@ -45,7 +45,10 @@ from profiles.climate_scenarios import apply_climate_scenario
 from profiles.demand_synthesis import compute_climate_reference, synthesise_network
 from scenarios.fixed_cost_scaling import scaled_economics
 from scenarios.scenario_runner import run_scenario
-from analysis.archetypes import ARCHETYPES
+# 4-way comparison: three archetypes + real validated Ealing Phase 1. Ealing
+# carries no cooling load, so it is run heating-only (2-pipe) — it appears on the
+# heating-NPV and demand figures, not the incremental-cooling one.
+from analysis.archetypes import ARCHETYPES_WITH_EALING as ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED = (
@@ -108,7 +111,9 @@ for arch_label, cfg in ARCHETYPES.items():
             weather, {"demand_nodes": deepcopy(cfg["buildings"])},
             climate_reference=climate_reference,
         )
-        for include_cooling in (False, True):
+        # Ealing has no cooling demand — run it heating-only.
+        duties = (False,) if cfg.get("is_real") else (False, True)
+        for include_cooling in duties:
             rec = recommend_sizing(
                 demand_kW=demand["total_heat_kW"],
                 peak_demand_kW=demand["peak_heat_kW"],
@@ -183,17 +188,20 @@ incr_df.to_csv(OUT / "incremental_cooling_by_climate.csv", index=False)
 # ═══════════════════════════════════════════════════════════════════════════
 
 ARCH_COLOURS = {"Dense (town centre)": C_BLUE, "Middle (suburban mixed)": C_AQUA,
-                "Scarce (low-density edge)": C_YELLOW}
+                "Scarce (low-density edge)": C_YELLOW, "Ealing Phase 1 (real)": C_VIOLET}
 CLIMATE_ORDER = [CLIMATE_LABELS[c] for c in CLIMATE_SCENARIOS]
+# Ealing carries no cooling, so it appears on the heating/demand panels only.
+COOLING_ARCHS = [a for a in ARCHETYPES if not ARCHETYPES[a].get("is_real")]
 
 fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.6), sharey=False)
 for arch_label in ARCHETYPES:
     heat_only = df[(df["Archetype"] == arch_label)
                    & (df["Network"] == "2-pipe (heat only)")].set_index("Climate").loc[CLIMATE_ORDER]
-    four_pipe = df[(df["Archetype"] == arch_label)
-                   & (df["Network"] == "4-pipe (heat+cool)")].set_index("Climate").loc[CLIMATE_ORDER]
     axes[0].plot(CLIMATE_ORDER, heat_only["Investor NPV (£m)"], "-o",
                  color=ARCH_COLOURS[arch_label], lw=2, ms=6, label=arch_label)
+for arch_label in COOLING_ARCHS:
+    four_pipe = df[(df["Archetype"] == arch_label)
+                   & (df["Network"] == "4-pipe (heat+cool)")].set_index("Climate").loc[CLIMATE_ORDER]
     axes[1].plot(CLIMATE_ORDER, four_pipe["Investor NPV (£m)"], "-o",
                  color=ARCH_COLOURS[arch_label], lw=2, ms=6, label=arch_label)
 for ax in axes:
@@ -208,7 +216,7 @@ fig.suptitle("Investor NPV across climate scenarios — EfW + ASHP + gas peak, G
 _save(fig, "CS1_npv_by_climate.png")
 
 fig, ax = plt.subplots(figsize=(10.5, 5.6))
-for arch_label in ARCHETYPES:
+for arch_label in COOLING_ARCHS:
     sub = incr_df[incr_df["Archetype"] == arch_label].set_index("Climate").loc[CLIMATE_ORDER]
     ax.plot(CLIMATE_ORDER, sub["Incremental NPV of cooling (£m)"], "-o",
             color=ARCH_COLOURS[arch_label], lw=2, ms=6, label=arch_label)
@@ -226,6 +234,8 @@ for arch_label in ARCHETYPES:
              & (df["Network"] == "2-pipe (heat only)")].set_index("Climate").loc[CLIMATE_ORDER]
     axes[0].plot(CLIMATE_ORDER, sub2["Annual heat (GWh)"], "-o",
                  color=ARCH_COLOURS[arch_label], lw=2, ms=6, label=arch_label)
+    if ARCHETYPES[arch_label].get("is_real"):
+        continue
     sub4 = df[(df["Archetype"] == arch_label)
              & (df["Network"] == "4-pipe (heat+cool)")].set_index("Climate").loc[CLIMATE_ORDER]
     axes[1].plot(CLIMATE_ORDER, sub4["Annual cooling (GWh)"], "-o",
@@ -253,6 +263,10 @@ for arch_label in ARCHETYPES:
                  & (df["Network"] == "2-pipe (heat only)")]["Investor NPV (£m)"].iloc[0]
     two_high = df[(df["Archetype"] == arch_label) & (df["Climate"] == CLIMATE_LABELS["2050_high"])
                  & (df["Network"] == "2-pipe (heat only)")]["Investor NPV (£m)"].iloc[0]
+    if ARCHETYPES[arch_label].get("is_real"):
+        lines.append(f"- **{arch_label}** (heating only, no cooling load): heat-only NPV "
+                    f"moves £{two_base:.2f}m (baseline) → £{two_high:.2f}m (2050 high).")
+        continue
     incr_base = incr_df[(incr_df["Archetype"] == arch_label)
                         & (incr_df["Climate"] == CLIMATE_LABELS["baseline"])][
                             "Incremental NPV of cooling (£m)"].iloc[0]

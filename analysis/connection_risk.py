@@ -36,7 +36,12 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "connection_risk"
 OUT.mkdir(parents=True, exist_ok=True)
 
-from analysis.archetypes import ARCHETYPES, RESIDENTIAL_CONNECTION_SCENARIOS
+# 4-way comparison: three archetypes + real validated Ealing Phase 1. Ealing is
+# a committed anchor-led scheme with only two (building-level) residential
+# blocks, so its take-up band is deliberately tight — a nearly-flat line, which
+# is itself the point: anchor-led schemes carry little domestic take-up risk.
+from analysis.archetypes import (ARCHETYPES_WITH_EALING as ARCHETYPES,
+                                 RESIDENTIAL_CONNECTION_SCENARIOS)
 from optimisation.auto_size import recommend_sizing
 from profiles.demand_synthesis import synthesise_network
 from scenarios.fixed_cost_scaling import scaled_economics
@@ -128,7 +133,7 @@ df.to_csv(OUT / "connection_risk.csv", index=False)
 # ═══════════════════════════════════════════════════════════════════════════
 
 ARCH_COLOURS = {"Dense (town centre)": C_BLUE, "Middle (suburban mixed)": C_AQUA,
-                "Scarce (low-density edge)": C_YELLOW}
+                "Scarce (low-density edge)": C_YELLOW, "Ealing Phase 1 (real)": C_VIOLET}
 fig, ax = plt.subplots(figsize=(10.5, 5.8))
 for arch_label in ARCHETYPES:
     sub = df[df["Archetype"] == arch_label].set_index("Take-up level").loc[LEVELS]

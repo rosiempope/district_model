@@ -341,6 +341,10 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 > non-domestic buildings but treats individual residential differently. The Dense archetype is
 > calibrated to the validated Ealing Phase 1 density envelope. Connection *costs* were already priced
 > per building type (`economics/connection_costs.py`), so this is a demand/take-up realism revision.
+> The validated **Ealing Phase 1 mix is also run as a fourth comparison case** through the same
+> screening pipeline (affordability, source/density frontier, climate, take-up risk) — it is the
+> least-bad case in the pack (real anchor-led data), carried building-level; its pipeline NPV is a
+> like-for-like screening figure, distinct from the bespoke validated feasibility result (§9).
 
 ### Headline findings
 

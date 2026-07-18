@@ -13,7 +13,7 @@ Run directly against the model engine (`scenarios.scenario_runner.run_scenario`,
 ## 2. Gas-parity tariff pricing
 
 The model's default tariff mode (`counterfactual_bill_parity`) is already gas-parity: every customer's modelled district heat bill is held to **their own** modelled individual-gas-boiler bill (a full CAPEX+OPEX counterfactual per building, not a flat unit-rate proxy), so district heat can never look artificially cheaper than the gas alternative it's replacing.
-- Verified across all 12 technology x archetype runs: bill ratio (district/gas) is **<= 100% in every case** (`all_parity_ok = True`) — see `gas_parity_check.csv`.
+- Verified across all 16 technology x archetype runs: bill ratio (district/gas) is **<= 100% in every case** (`all_parity_ok = True`) — see `gas_parity_check.csv`.
 - The resulting *equivalent* year-1 heat tariff (p/kWh) is essentially **flat across technologies within an archetype** (chart 03) and varies only with the archetype's own gas-counterfactual bill — this is the parity mechanism working exactly as intended: revenue is capped at what customers already pay for gas, regardless of which technology delivers the heat. The technology/CAPEX difference shows up instead in the **required break-even tariff** (chart 04, 20-105 p/kWh) — the project's real cost-recovery need, which sits far above the ~8.3-8.5 p/kWh customers are actually charged. That gap (not the tariff mechanism) is why every NPV in section 4 is negative.
 - Reference external point: the live Ofgem regulated gas price cap is **7.33 p/kWh** (7.33p unit rate, household retail basis) — the model's parity mechanism is a full whole-bill comparison per building, not just this flat rate.
 
@@ -26,6 +26,7 @@ The model's default tariff mode (`counterfactual_bill_parity`) is already gas-pa
 | Dense (town centre)       |                          12990 |                    7.91 |                             900 |                            14.43 |
 | Middle (suburban mixed)   |                           9179 |                    6.22 |                            2800 |                             3.28 |
 | Scarce (low-density edge) |                           5884 |                    3.24 |                            6500 |                             0.91 |
+| Ealing Phase 1 (real)     |                          14161 |                    7.73 |                            2148 |                             6.59 |
 
 **Route lengths are illustrative placeholders**, not measured — they show the direction and scale of the density effect (dense: short branches, high linear density; scarce: long branches, low linear density), pending the real Exeter route geometry.
 
@@ -47,8 +48,12 @@ Four technology options x three archetypes, each auto-sized from the archetype's
 | Scarce (low-density edge) | ASHP + gas peak                             | PASS          | PASS           |                                   8.043 |              -25.29 | FAIL                 |
 | Scarce (low-density edge) | Data-centre waste heat + booster + gas peak | FAIL          | PASS           |                                   8.043 |              -24.22 | FAIL                 |
 | Scarce (low-density edge) | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   8.043 |              -23.26 | FAIL                 |
+| Ealing Phase 1 (real)     | Gas-only reference                          | FAIL          | PASS           |                                   7.814 |              -11.65 | FAIL                 |
+| Ealing Phase 1 (real)     | ASHP + gas peak                             | PASS          | PASS           |                                   7.814 |              -30.41 | FAIL                 |
+| Ealing Phase 1 (real)     | Data-centre waste heat + booster + gas peak | PASS          | PASS           |                                   7.814 |              -26.21 | FAIL                 |
+| Ealing Phase 1 (real)     | EfW heat export + ASHP + gas peak           | PASS          | PASS           |                                   7.814 |              -17.8  | FAIL                 |
 
-- **Best NPV among carbon-compliant (viable) options: Dense (town centre) — EfW heat export + ASHP + gas peak** (NPV £-18.95m, -2.17% IRR, screening: FAIL).
+- **Best NPV among carbon-compliant (viable) options: Ealing Phase 1 (real) — EfW heat export + ASHP + gas peak** (NPV £-17.80m, -4.56% IRR, screening: FAIL).
 - The gas-only reference case has a less-negative NPV than every low-carbon option in every archetype (it has no ASHP/EfW CAPEX to recover) but **fails the carbon gate everywhere** — it is retained deliberately as the counterfactual baseline, not as a candidate design. Do not read "best NPV overall" as "best option" without checking the carbon gate first.
 - Data-centre and EfW capacities here are generic (sized as a fraction of local demand); treat as "if a source of about this size existed nearby", not a confirmed offtake agreement.
 
@@ -68,6 +73,8 @@ The obvious next screening question — does UK Green Heat Network Fund capital 
 | Middle (suburban mixed)   | EfW heat export + ASHP + gas peak |                 3.87 |                   -22.1  |                         -18.23 | FAIL                            |
 | Scarce (low-density edge) | ASHP + gas peak                   |                 3.97 |                   -25.29 |                         -21.32 | FAIL                            |
 | Scarce (low-density edge) | EfW heat export + ASHP + gas peak |                 3.97 |                   -23.26 |                         -19.29 | FAIL                            |
+| Ealing Phase 1 (real)     | ASHP + gas peak                   |                 4.08 |                   -30.41 |                         -26.33 | FAIL                            |
+| Ealing Phase 1 (real)     | EfW heat export + ASHP + gas peak |                 4.12 |                   -17.8  |                         -13.68 | FAIL                            |
 
 Grant support materially narrows the NPV gap everywhere but does not flip any case to positive NPV on its own at this connection count — confirming that scale (connection count / linear density), not technology choice, is the binding constraint for these archetype sizes. See chart 07.
 

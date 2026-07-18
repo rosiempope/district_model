@@ -44,7 +44,10 @@ from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_runner import run_scenario
 from scenarios.fixed_cost_scaling import scaled_economics
 from economics.tariffs import OFGEM_GAS_CAP_P_PER_KWH
-from analysis.archetypes import ARCHETYPES
+# 4-way comparison: three archetypes + real validated Ealing Phase 1
+# (honesty notes in analysis/archetypes.py). The Dense-specific charts
+# (load-duration, stress test, 4-pipe) are unaffected.
+from analysis.archetypes import ARCHETYPES_WITH_EALING as ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (
@@ -385,12 +388,14 @@ TECH_COLOR = {
     "EfW heat export + ASHP + gas peak": C_VIOLET,
 }
 ARCH_ORDER = list(ARCHETYPES.keys())
-ARCH_MARKER = {"Dense (town centre)": "o", "Middle (suburban mixed)": "s", "Scarce (low-density edge)": "^"}
+ARCH_MARKER = {"Dense (town centre)": "o", "Middle (suburban mixed)": "s",
+               "Scarce (low-density edge)": "^", "Ealing Phase 1 (real)": "D"}
+ARCH_BAR_COLOURS = [C_BLUE, C_AQUA, C_ORANGE, C_VIOLET][:len(ARCH_ORDER)]
 
 # --- Chart 1: linear heat density by archetype ---
 fig, ax = plt.subplots(figsize=(6.4, 4.2))
 bars = ax.bar(archetype_df["Archetype"], archetype_df["Linear heat density (MWh/m/yr)"],
-               color=[C_BLUE, C_AQUA, C_ORANGE], width=0.55)
+               color=ARCH_BAR_COLOURS, width=0.55)
 for rect, val in zip(bars, archetype_df["Linear heat density (MWh/m/yr)"]):
     ax.text(rect.get_x() + rect.get_width() / 2, val, f"{val:.1f}", ha="center", va="bottom",
             fontsize=10, color=INK)
@@ -427,7 +432,7 @@ ax.legend(handles=handles, loc="lower left", fontsize=8.5, frameon=False)
 _save(fig, "02_npv_vs_carbon.png")
 
 # --- Chart 3: equivalent gas-parity heat tariff by technology, grouped by archetype ---
-fig, ax = plt.subplots(figsize=(8.4, 5.0))
+fig, ax = plt.subplots(figsize=(10.5, 5.0))
 width = 0.2
 x = np.arange(len(ARCH_ORDER))
 for i, (tech, color) in enumerate(TECH_COLOR.items()):
@@ -439,7 +444,7 @@ for i, (tech, color) in enumerate(TECH_COLOR.items()):
     ]
     ax.bar(x + (i - 1.5) * width, vals, width=width * 0.92, color=color, label=tech)
 ax.set_xticks(x)
-ax.set_xticklabels(ARCH_ORDER)
+ax.set_xticklabels(ARCH_ORDER, fontsize=9)
 ax.set_ylabel("Equivalent year-1 district heat tariff (p/kWh)")
 ax.set_title("Gas-parity equivalent heat tariff by technology and archetype", loc="left", fontsize=12, color=INK)
 ax.legend(fontsize=8, frameon=False, ncol=1, loc="upper left")

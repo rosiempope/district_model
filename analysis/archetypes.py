@@ -148,3 +148,52 @@ ARCHETYPES = {
                 "connections; dispersed individual homes on low take-up.",
     },
 }
+
+# ── Ealing Phase 1 as a fourth, REAL comparison case ─────────────────────────
+# The validated Ealing Town Centre Phase 1 building mix (SEL feasibility report,
+# June 2025 — scenarios/ealing_report_validation.py, 13/13 metrics at ~0%),
+# with the report's bespoke tariff and connection-charge overrides STRIPPED so
+# it runs through the SAME standard screening pipeline as the three archetypes
+# (auto-sized stack, generic scaled economics, gas parity, GHNF) and is directly
+# comparable on the same axes.
+#
+# Two honesty notes travel with this case, and belong on any slide that shows it:
+#   1. Ealing is modelled BUILDING-LEVEL — connections = 1 per building, including
+#      its two residential blocks — matching the validation and the DESNZ national
+#      opportunity assessment, NOT dwelling-level like the archetypes. Part of its
+#      very low per-connection fixed-cost burden is that aggregation, not only its
+#      anchor-heavy mix.
+#   2. The NPV this pipeline produces is NOT the bespoke validated feasibility
+#      result (-£2.25m on report-specific CAPEX, tariffs and sources — MODEL_SUMMARY
+#      §9). It is "Ealing's real demand under our standard screening assumptions",
+#      for like-for-like comparison with the archetypes only.
+from scenarios.ealing_report_validation import (  # noqa: E402
+    EALING_PHASE1_BUILDINGS as _EALING_RAW,
+)
+
+_EALING_KEEP = {"name", "type", "annual_heat_kWh", "annual_dhw_kWh",
+                "annual_cool_kWh", "peak_total_heat_kW", "connections",
+                "connection_year", "connection_probability"}
+
+EALING_PHASE1 = {
+    "buildings": [{k: v for k, v in b.items() if k in _EALING_KEEP}
+                  for b in _EALING_RAW],
+    "route_m": 2148.0,
+    "note": "Real validated anchor-led town-centre scheme (SEL June 2025), "
+            "building-level connections, standard screening pipeline.",
+    "is_real": True,
+}
+
+# For the heating/affordability/source/climate comparison studies that benefit
+# from the 4-way view. Cooling-specific studies (four-pipe) and the anchor-share
+# sweep keep the three matched archetypes — Ealing carries no cooling and is not
+# a constructed anchor-fraction zone.
+ARCHETYPES_WITH_EALING = {**ARCHETYPES, "Ealing Phase 1 (real)": EALING_PHASE1}
+
+# Take-up band for analysis/connection_risk.py. Ealing is a committed scheme with
+# only two (building-level) residential blocks, so its band is deliberately tight
+# — it barely moves, which is itself the point: anchor-led schemes carry little
+# domestic take-up risk.
+RESIDENTIAL_CONNECTION_SCENARIOS["Ealing Phase 1 (real)"] = {
+    "downside": 0.80, "central": 0.90, "upside": 1.00,
+}

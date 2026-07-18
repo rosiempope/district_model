@@ -48,7 +48,10 @@ from optimisation.auto_size import recommend_sizing
 from profiles.demand_synthesis import synthesise_network
 from scenarios.fixed_cost_scaling import scaled_economics
 from scenarios.scenario_runner import run_scenario
-from analysis.archetypes import ARCHETYPES
+# 4-way comparison: three archetypes + the real validated Ealing Phase 1 case
+# (honesty notes in analysis/archetypes.py). The per-stack frontier (SF1) stays
+# Dense-only for legibility; the density sweep (SF2) shows all four.
+from analysis.archetypes import ARCHETYPES_WITH_EALING as ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED, C_MAGENTA, C_ORANGE = (
@@ -232,7 +235,7 @@ print("\n=== Density frontier (EfW + ASHP + gas peak) ===")
 print(density_df.to_string(index=False))
 
 ARCH_COLOURS = {"Dense (town centre)": C_BLUE, "Middle (suburban mixed)": C_AQUA,
-                "Scarce (low-density edge)": C_YELLOW}
+                "Scarce (low-density edge)": C_YELLOW, "Ealing Phase 1 (real)": C_VIOLET}
 fig, axes = plt.subplots(1, 2, figsize=(13, 5.4))
 for arch_label in ARCHETYPES:
     sub = density_df[density_df["Archetype"] == arch_label].sort_values(

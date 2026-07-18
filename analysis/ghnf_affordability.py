@@ -46,7 +46,10 @@ from optimisation.auto_size import recommend_sizing
 from profiles.demand_synthesis import synthesise_network
 from scenarios.fixed_cost_scaling import scaled_economics
 from scenarios.scenario_runner import run_scenario
-from analysis.archetypes import ARCHETYPES
+# This study runs the 4-way comparison: the three archetypes + the real
+# validated Ealing Phase 1 case (see analysis/archetypes.py for the honesty
+# notes that travel with Ealing).
+from analysis.archetypes import ARCHETYPES_WITH_EALING as ARCHETYPES
 
 # ── Palette (validated categorical set, see dataviz skill) ──────────────────
 C_BLUE, C_AQUA, C_YELLOW, C_GREEN, C_VIOLET, C_RED = (
@@ -234,7 +237,7 @@ print(dep_df.to_string(index=False))
 GRANT_COLOURS = {0.0: C_YELLOW, 0.40: C_BLUE, 0.4999: C_AQUA}
 GRANT_LABELS = {0.0: "no grant", 0.40: "GHNF 40% (base)", 0.4999: "GHNF ~50% (ceiling)"}
 
-fig, axes = plt.subplots(1, 3, figsize=(15, 5.2), sharey=False)
+fig, axes = plt.subplots(1, len(ARCHETYPES), figsize=(5 * len(ARCHETYPES), 5.2), sharey=False)
 for ax, arch_label in zip(axes, ARCHETYPES):
     ypos, ylabels = [], []
     y = 0
@@ -332,7 +335,7 @@ _save(fig, "AF2_affordability_waterfall.png")
 fig, axes = plt.subplots(1, 2, figsize=(12.5, 5), sharey=True)
 STACK_COLOURS = {"ASHP + gas peak": C_BLUE, "EfW + ASHP + gas peak": C_AQUA}
 ARCH_STYLES = {"Dense (town centre)": "-", "Middle (suburban mixed)": "--",
-               "Scarce (low-density edge)": ":"}
+               "Scarce (low-density edge)": ":", "Ealing Phase 1 (real)": "-."}
 for ax, parity_label in zip(axes, PARITIES):
     for stack_label in STACKS:
         for arch_label in ARCHETYPES:
@@ -378,6 +381,14 @@ lines = [
     f"{best['Affordable tariff (p/kWh)']}p.",
     f"- Widest tariff gap at 40%: {worst_gap['Archetype']} / {worst_gap['Stack']} "
     f"({worst_gap['Customer proposition']}) — gap {worst_gap['Tariff gap (p/kWh)']}p/kWh.",
+    "- **Ealing Phase 1 (real) is the least-bad case in the pack** — the anchor thesis",
+    "  on validated data: 14 building-level anchor connections spread the fixed cost",
+    "  that sinks the residential-led archetypes, so its required tariff (18.1p) and",
+    "  its EfW/HP-parity NPV (−£5.3m at 40% grant) are the closest to viable anywhere.",
+    "  Two caveats travel with it: it is modelled BUILDING-LEVEL (connections=1 per",
+    "  building, incl. its 2 residential blocks — part of the low per-connection burden",
+    "  is that aggregation, not only the anchor mix), and this is the standard-pipeline",
+    "  result, NOT the bespoke validated feasibility (−£2.25m, report inputs, §9).",
     "- Heat-pump parity is the stronger customer proposition everywhere: the customer's",
     "  alternative is more expensive (even after BUS), so the affordable tariff is higher —",
     f"  mean affordable tariff {hp_rows['Affordable tariff (p/kWh)'].mean():.1f}p vs "
