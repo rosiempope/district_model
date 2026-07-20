@@ -22,6 +22,11 @@ from components.booster_heat_pump import (
     booster_cop,
 )
 from components.chiller import chiller_cop
+from components.cooling_common import wet_bulb_temp_C
+from components.water_cooled_chiller import water_cooled_chiller_cop
+from components.free_cooling_chiller import (
+    free_cooling_fraction, free_cooling_effective_cop,
+)
 
 
 class ASHPCopTests(unittest.TestCase):
@@ -155,6 +160,68 @@ class BoosterCopTests(unittest.TestCase):
         cops = booster_cop(source, sink)
         self.assertEqual(cops.shape, (8760,))
         self.assertTrue(np.all(np.isfinite(cops)))
+
+
+class WetBulbTests(unittest.TestCase):
+    def test_wet_bulb_never_exceeds_dry_bulb(self):
+        for T in (0.0, 10.0, 20.0, 35.0):
+            for RH in (10.0, 50.0, 90.0):
+                self.assertLessEqual(wet_bulb_temp_C(np.array([T]), np.array([RH]))[0], T + 1e-9)
+
+    def test_wet_bulb_equals_dry_bulb_at_saturation(self):
+        """At ~100% RH the air is saturated, so wet-bulb ≈ dry-bulb."""
+        T = 20.0
+        wb = wet_bulb_temp_C(np.array([T]), np.array([99.0]))[0]
+        self.assertAlmostEqual(wb, T, delta=0.6)
+
+    def test_wet_bulb_matches_known_psychrometric_point(self):
+        """25C dry-bulb / 50% RH -> ~18.0C wet-bulb (standard psychrometric chart)."""
+        wb = wet_bulb_temp_C(np.array([25.0]), np.array([50.0]))[0]
+        self.assertAlmostEqual(wb, 18.0, delta=0.5)
+
+
+class WaterCooledCopTests(unittest.TestCase):
+    def test_design_anchor_cop_58_at_24C_wetbulb(self):
+        """Module anchor 1: ~24C wet-bulb / 7C chilled -> COP ~5.8 (dT=17)."""
+        self.assertAlmostEqual(water_cooled_chiller_cop(np.array([24.0]), 7.0)[0], 5.8, delta=0.15)
+
+    def test_mild_anchor_cop_8_at_10C_wetbulb(self):
+        """Module anchor 2: ~10C wet-bulb / 7C chilled -> COP ~8 (dT=3)."""
+        self.assertAlmostEqual(water_cooled_chiller_cop(np.array([10.0]), 7.0)[0], 8.0, delta=0.2)
+
+    def test_water_cooled_beats_air_cooled_at_the_same_conditions(self):
+        """The whole point: rejecting to the wet-bulb (below dry-bulb) is a
+        smaller lift than rejecting to the dry-bulb, so COP is higher. Compare a
+        realistic warm-day pairing (30C dry-bulb, ~21C wet-bulb at 45% RH)."""
+        dry = 30.0
+        wet = wet_bulb_temp_C(np.array([dry]), np.array([45.0]))[0]
+        self.assertLess(wet, dry)
+        self.assertGreater(
+            water_cooled_chiller_cop(np.array([wet]), 7.0)[0],
+            chiller_cop(np.array([dry]), 7.0)[0],
+        )
+
+
+class FreeCoolingTests(unittest.TestCase):
+    def test_full_free_cooling_when_cold(self):
+        """Below (chilled supply - approach) the dry cooler carries the whole
+        load on fans/pumps alone -> free fraction 1."""
+        f = free_cooling_fraction(np.array([0.0]), cool_flow_temp_C=7.0, cool_return_temp_C=12.0)[0]
+        self.assertEqual(f, 1.0)
+
+    def test_no_free_cooling_when_warm(self):
+        f = free_cooling_fraction(np.array([25.0]), cool_flow_temp_C=7.0, cool_return_temp_C=12.0)[0]
+        self.assertEqual(f, 0.0)
+
+    def test_effective_cop_spikes_on_cold_hours_and_matches_mechanical_when_hot(self):
+        cop_cold, f_cold, _ = free_cooling_effective_cop(
+            np.array([0.0]), 7.0, cool_flow_temp_C=7.0, cool_return_temp_C=12.0)
+        cop_hot, f_hot, mech_hot = free_cooling_effective_cop(
+            np.array([30.0]), 7.0, cool_flow_temp_C=7.0, cool_return_temp_C=12.0)
+        self.assertEqual(f_cold[0], 1.0)
+        self.assertGreater(cop_cold[0], 15.0)                 # free cooling: fans+pumps only
+        self.assertEqual(f_hot[0], 0.0)
+        self.assertAlmostEqual(cop_hot[0], mech_hot[0], places=6)  # no free benefit at peak
 
 
 class CrossModelSanityTests(unittest.TestCase):

@@ -48,6 +48,15 @@ from components.datacentre_source import DataCentre, DC_PRESETS
 from components.booster_heat_pump import BoosterHeatPump, BOOSTER_PRESETS
 from components.peak_demand_option import GasBoiler, ElectricBoiler, CARBON_INTENSITY
 from components.chiller import AirCooledChiller, CHILLER_PRESETS
+from components.water_cooled_chiller import (
+    WaterCooledChiller, WATER_COOLED_CHILLER_PRESETS,
+)
+from components.free_cooling_chiller import (
+    FreeCoolingChiller, FREE_COOLING_CHILLER_PRESETS,
+)
+from components.absorption_chiller import (
+    AbsorptionChiller, ABSORPTION_CHILLER_PRESETS,
+)
 from components.water_ground_source_hp import (
     GroundSourceHeatPump, GSHP_PRESETS, WaterSourceHeatPump, WSHP_PRESETS,
 )
@@ -65,20 +74,36 @@ DEFAULT_WEATHER_CSV = ROOT / "profiles" / "weather_data.csv"
 HEAT_CLASSES = {"ashp": ASHPArray, "efw_chp": EfWChp, "data_centre": DataCentre,
                 "gas_boiler": GasBoiler, "electric_boiler": ElectricBoiler,
                 "wshp": WaterSourceHeatPump, "gshp": GroundSourceHeatPump}
-UNIT_TYPES = {"ashp", "booster_heat_pump", "air_cooled_chiller", "wshp", "gshp"}
+# Every cooling source type -> its component class. build_cooling_sources()
+# does a lookup here, mirroring HEAT_CLASSES, so adding a cooling technology is
+# a one-line change rather than a new branch.
+COOLING_CLASSES = {
+    "air_cooled_chiller":   AirCooledChiller,
+    "water_cooled_chiller": WaterCooledChiller,
+    "free_cooling_chiller": FreeCoolingChiller,
+    "absorption_chiller":   AbsorptionChiller,
+}
+UNIT_TYPES = {"ashp", "booster_heat_pump", "air_cooled_chiller", "wshp", "gshp",
+              "water_cooled_chiller", "free_cooling_chiller", "absorption_chiller"}
 PRESETS_BY_TYPE = {
     "ashp": ASHP_PRESETS,
     "booster_heat_pump": BOOSTER_PRESETS,
     "air_cooled_chiller": CHILLER_PRESETS,
+    "water_cooled_chiller": WATER_COOLED_CHILLER_PRESETS,
+    "free_cooling_chiller": FREE_COOLING_CHILLER_PRESETS,
+    "absorption_chiller": ABSORPTION_CHILLER_PRESETS,
     "data_centre": DC_PRESETS,
     "efw_chp": EFW_PRESETS,
     "wshp": WSHP_PRESETS,
     "gshp": GSHP_PRESETS,
 }
 
+# Sources whose running cost and carbon are driven by GRID ELECTRICITY. The
+# absorption chiller is deliberately NOT here: its primary input is heat, so its
+# carbon/cost belongs to the heat side, not the electricity side.
 ELECTRIC_SOURCE_TYPES = {
     "ashp", "booster_heat_pump", "air_cooled_chiller", "electric_boiler",
-    "wshp", "gshp",
+    "wshp", "gshp", "water_cooled_chiller", "free_cooling_chiller",
 }
 
 # CAPEX lines that the development/design, commissioning and contingency
@@ -94,6 +119,11 @@ REPLACEMENT_DEFAULTS = {
     "gshp": (20, 0.50),   # borehole field outlives the plant
     "booster_heat_pump": (15, 0.60),
     "air_cooled_chiller": (15, 0.60),
+    "water_cooled_chiller": (15, 0.60),
+    "free_cooling_chiller": (15, 0.60),
+    # Absorption machines are simpler thermally-driven vessels with a long life
+    # (no high-speed compressor) — a longer replacement interval, like a boiler.
+    "absorption_chiller": (20, 0.50),
     "gas_boiler": (20, 0.50),
     "electric_boiler": (20, 0.50),
     "data_centre": (25, 0.50),
@@ -519,7 +549,15 @@ def build_heat_sources(configs, weather, sink_temp_C, return_assets=False):
     return (sources, assets) if return_assets else sources
 
 def build_cooling_sources(configs, weather):
-    return [AirCooledChiller.from_preset(c["preset"], weather_df=weather, **_overrides(c)) for c in configs]
+    """Build every cooling source from its config dict, dispatching on `type`
+    through COOLING_CLASSES (mirrors build_heat_sources' HEAT_CLASSES lookup).
+    Every cooling component shares AirCooledChiller's from_preset(preset,
+    weather_df, **overrides) contract, so one line covers all technologies."""
+    sources = []
+    for c in configs:
+        cls = COOLING_CLASSES[c["type"]]
+        sources.append(cls.from_preset(c["preset"], weather_df=weather, **_overrides(c)))
+    return sources
 
 def _build_tree_topology(segments, demand, include_cooling):
     """

@@ -92,6 +92,15 @@ SOURCE_OM_RATES = {
     "data_centre":        0.005,
     "booster_heat_pump":  0.025,
     "air_cooled_chiller": 0.025,
+    # Water-cooled chiller carries a tower, condenser pumps and a water-treatment
+    # skid on top of the chiller, so more to maintain than an air-cooled unit.
+    "water_cooled_chiller": 0.030,
+    # Free-cooling (dry-cooler/glycol) unit is an air-cooled chiller plus a coil
+    # and changeover valves — the same O&M basis as air-cooled.
+    "free_cooling_chiller": 0.025,
+    # Absorption chiller: generator/absorber vessels + cooling tower + solution
+    # chemistry to maintain — the higher end of the cooling range.
+    "absorption_chiller": 0.030,
 }
 
 # Network (pipework) O&M — separate from source O&M

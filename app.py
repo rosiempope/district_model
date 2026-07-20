@@ -23,6 +23,9 @@ from components.datacentre_source import DC_PRESETS
 from components.booster_heat_pump import BOOSTER_PRESETS
 from components.peak_demand_option import GAS_BOILER_PRESETS, ELECTRIC_BOILER_PRESETS
 from components.chiller import CHILLER_PRESETS
+from components.water_cooled_chiller import WATER_COOLED_CHILLER_PRESETS
+from components.free_cooling_chiller import FREE_COOLING_CHILLER_PRESETS
+from components.absorption_chiller import ABSORPTION_CHILLER_PRESETS
 from scenarios.scenario_runner import run_scenario
 from optimisation.auto_size import recommend_sizing
 from scenarios.scenario_schema import apply_defaults, validate_scenario
@@ -50,7 +53,12 @@ HEAT_TYPE_LABELS = {
     "data_centre": "Data-centre waste heat",
     "booster_heat_pump": "Booster heat pump",
 }
-COOL_PRESETS = {"air_cooled_chiller": CHILLER_PRESETS}
+COOL_PRESETS = {
+    "air_cooled_chiller": CHILLER_PRESETS,
+    "water_cooled_chiller": WATER_COOLED_CHILLER_PRESETS,
+    "free_cooling_chiller": FREE_COOLING_CHILLER_PRESETS,
+    "absorption_chiller": ABSORPTION_CHILLER_PRESETS,
+}
 
 
 def _safe_name(value: str) -> str:
@@ -191,7 +199,8 @@ def _source_editor(prefix: str, source: dict[str, Any], allowed: dict[str, dict]
     capacity = cols[3].number_input("Total capacity (MW)", min_value=0.01,
                                      value=number(source.get("capacity_MW"), 1.0), step=0.1,
                                      key=f"{prefix}_capacity")
-    if source_type in {"ashp", "booster_heat_pump", "air_cooled_chiller"}:
+    if source_type in {"ashp", "booster_heat_pump", "air_cooled_chiller",
+                       "water_cooled_chiller", "free_cooling_chiller", "absorption_chiller"}:
         # When the compact scenario omits n_units, the runner uses the selected
         # preset's unit count. The UI must use that same default; forcing 1 on
         # render changed availability/OPEX without the user touching anything.

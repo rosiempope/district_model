@@ -8,7 +8,8 @@ from profiles.demand_synthesis import BUILDING_TYPES
 
 HEAT_SOURCE_TYPES = {"ashp", "gas_boiler", "electric_boiler", "data_centre",
                      "booster_heat_pump", "efw_chp", "wshp", "gshp"}
-COOLING_SOURCE_TYPES = {"air_cooled_chiller"}
+COOLING_SOURCE_TYPES = {"air_cooled_chiller", "water_cooled_chiller",
+                        "free_cooling_chiller", "absorption_chiller"}
 NETWORK_MODES = {"none", "generic_length", "tree"}
 TREE_ROOT_ID = "EC"   # the implicit energy-centre root every tree hangs off
 CLIMATE_SCENARIOS = {"baseline", "2050_central", "2050_high"}

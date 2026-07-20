@@ -44,7 +44,8 @@ individual-gas bill; cooling at their modelled individual-AC running cost. This 
 
 ### Sources
 8 heat source types (`ashp`, `wshp`, `gshp`, `gas_boiler`, `electric_boiler`, `data_centre`,
-`booster_heat_pump`, `efw_chp`) + 1 cooling type (`air_cooled_chiller`), each with named
+`booster_heat_pump`, `efw_chp`) + 4 cooling types (`air_cooled_chiller`, `water_cooled_chiller`,
+`free_cooling_chiller`, `absorption_chiller`), each with named
 presets. WSHP/GSHP run on their own source temperature and COP curve, not as a substituted
 ASHP — a 10 °C river or 12 °C ground source is a smaller, far more stable lift than UK winter
 air. Total installed capacity and unit count entered separately. Optional thermal storage.
@@ -102,7 +103,10 @@ Climate scenario applied on top: `baseline` / `2050_central` / `2050_high`.
 | Component | Method |
 |---|---|
 | **ASHP** | `COP = 6.08 − 0.09·ΔT + 0.0005·ΔT²` — **Ruhnau et al. (2019)**, *Scientific Data* 6:189, the regression used in PyPSA-Eur. Fitted to real manufacturer/field data, not theoretical Carnot. Plus a **defrost penalty** in the 0–5 °C icing band (~10% derate), which is what brings modelled COP into line with real UK trial data (2.2–2.7 annual). Bounded 1.2–6.0. |
-| **Air-cooled chiller** | `COP = 7.1136 − 0.1224·ΔT + 0.0004·ΔT²`, fitted to two real anchors (REHVA: EER 4.0 at 35 °C ambient / AHRI 550/590; measured 6–7 in Nov–Mar operation) + a measured gradient. Bounded 1.5–8.0. Hot-day capacity derate applied. |
+| **Air-cooled chiller** | `COP = 7.1136 − 0.1224·ΔT + 0.0004·ΔT²`, fitted to two real anchors (REHVA: EER 4.0 at 35 °C ambient / AHRI 550/590; measured 6–7 in Nov–Mar operation) + a measured gradient. Bounded 1.5–8.0. Hot-day capacity derate applied. ΔT is against **dry-bulb** ambient. |
+| **Water-cooled chiller + tower** | `COP = 8.5157 − 0.1745·ΔT + 0.000867·ΔT²`, ΔT against the **wet-bulb** (Stull 2011 approximation from dry-bulb + RH) — a cooling tower rejects near wet-bulb, always below dry-bulb, so a smaller lift and a higher COP than air-cooled (~7.2 vs ~5.6 delivered). Anchored to AHRI 550/590 water-cooled (~5.8 at 24 °C wet-bulb) + mild-condition ~8.0. Bounded 2.0–9.0. Carries a real evaporative **water OPEX** (~£5–6/MWh cooling). |
+| **Free-cooling (dry-cooler/glycol)** | An air-cooled chiller plus a glycol free-cooling coil. Compressor OFF below `T_chw − approach` (fans+pumps only, effective COP ~20); linear part-free band up to `T_return − approach`; plain air-cooled COP above. No water. Big electricity win on the UK's many mild hours; **no benefit at the hot-hour cooling peak**. |
+| **Absorption chiller (EfW heat)** | **Heat-driven**, not electric: thermal COP 0.7 (single-effect LiBr on ~90 °C EfW hot water), electric-parasitic COP ~25, wet-bulb tower rejection. Near-zero cooling electricity and ~75–80% lower cooling carbon; economics driven by the driving-heat price (default cheap EfW waste heat ~£12/MWh, cf. EfW export £8/MWh). Excluded from `ELECTRIC_SOURCE_TYPES`. |
 | **Booster heat pump** | **Carnot-efficiency-fraction** method: `COP = T_sink/(T_sink−T_source) × η`, with η = 0.244 fitted to *deployed* data-centre heat-recovery systems (real measured COP 2.5–3.5 at 37.5 °C source / 65 °C sink). Deliberately more conservative than the 45–65% textbook range and than a 4.92 lab result. |
 
 ### Network thermal (`network/topology_thermal.py`)
@@ -329,6 +333,7 @@ residual** for OPEX categories the public PDF names but doesn't quantify.
 | **Anchor/BUS customer-mix sweep** | `analysis/anchor_bus_sweep.py` | Anchor heat share 0–95% × {BUS, no BUS, social housing, gas parity}; what BUS costs the owner under HP-parity billing |
 | **Dalkia roles & civils risk** | `analysis/dalkia_roles.py` | Five commercial roles under 0–51% civils overruns; break-even overrun; packaged-vs-separate civils procurement |
 | **Four-pipe threshold** | `analysis/fourpipe_threshold.py` | Incremental NPV of adding cooling vs cooling density, at 0/25/50/75% shared-civils credit; plus capturing the customer's avoided AC-purchase capex via connection charge, 0-100% |
+| **Cooling-source comparison** | `analysis/cooling_source_comparison.py` | The 4 cooling technologies (air-cooled, water-cooled+tower, free-cooling glycol, absorption) on one 4-pipe scheme, across Dense/Middle/Scarce/Ealing-P1 × two demand variants (natural CDD cooling; AC commercial mix): investor NPV, whole-scheme LCOE and standalone cooling LCOC, plus cooling electricity/carbon. Finding: the efficient units cut cooling electricity ~20–25% and carbon up to ~78%, but at UK comfort-cooling load factors their CAPEX/REPEX premium ≈ cancels the electricity saving on LCOC — a carbon decision, not a cost one; the AC-mix (higher load factor) narrows the gap, and water-cooled reaches LCOC parity on Ealing's large cooling load |
 | **Climate scenario sweep** | `analysis/climate_scenario_sweep.py` | Heating and cooling investor NPV across baseline/2050 central/2050 high, 3 archetypes, 2-pipe vs 4-pipe |
 | **Connection (take-up) risk** | `analysis/connection_risk.py` | Owner NPV across the downside/central/upside residential connection-probability band, 4 cases; anchors held at base |
 | **Sensitivity matrix** | `analysis/sensitivity_matrix.py` | 288-combination feasibility factorial (source × case × proposition × grant × capture) with PASS/FAIL on investor NPV, contractor/operator/owner NPV, and a physical-lever tier (heating/cooling dT, 2v4-pipe, climate, electricity price, discount rate) |

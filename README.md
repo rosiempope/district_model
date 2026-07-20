@@ -25,7 +25,7 @@ python -m unittest discover -s tests    # 209 tests
 | `MODEL_SUMMARY.md` | Full capability summary — inputs, outputs, equations, benchmarks, case studies, limitations |
 | `scenarios/` | The scenario layer: JSON-compatible scenario definitions, the schema, and `scenario_runner.run_scenario()` — the single entry point. Consumed by both the UI and the report runners |
 | `profiles/` | Weather (London Heathrow TMYx 2011–2025), climate scenarios, 8,760-hour demand synthesis |
-| `components/` | Heat and cooling sources: ASHP, chiller, booster heat pump, data centre, EfW CHP, boilers, thermal storage |
+| `components/` | Heat and cooling sources: ASHP, chillers (air-cooled, water-cooled+tower, free-cooling glycol, absorption), booster heat pump, data centre, EfW CHP, boilers, thermal storage |
 | `network/` | Pipe catalog (hydraulics, sizing, heat loss, cost), tree topology, thermal physics, pumping |
 | `optimisation/` | Merit-order dispatch, auto-sizing, sizing helpers |
 | `economics/` | CAPEX, O&M rates, tariffs, cash flow, GHNF grant, individual-system counterfactuals |
